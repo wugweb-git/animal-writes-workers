@@ -29,7 +29,7 @@ or rate-limited is skipped for the rest of the run and the next key is used.
 `python3 scripts/sort_keys.py --github` tests a list of keys and loads every working one.
 
 ## Summary providers
-Tried in the order of the repository **variable** `LLM_PROVIDERS` (default `haiku,gemini,groq`).
+Tried in the order of the repository **variable** `LLM_PROVIDERS` (default `haiku,gemini,groq`; this repo sets `gemini,groq,haiku` so the free tiers are used up first).
 Haiku comes first for quality, capped at an estimated **$4/month** (variable `HAIKU_MONTHLY_BUDGET_USD`);
 once the cap is reached it is skipped until the next month. Gemini, then Groq, are used only if the one before it errors, is over budget,
 or its summary still fails the checks after one retry. Every provider must pass the same checks.
