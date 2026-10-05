@@ -36,7 +36,7 @@ def check(url: str, style: str, key: str) -> str:
             json.load(r)
             return "✅ works"
     except urllib.error.HTTPError as e:
-        if e.code in (401, 403):
+        if e.code in (401, 403) or (style == "google" and e.code == 400):  # Gemini: 400 = key not valid
             return f"❌ rejected (HTTP {e.code})"
         if e.code == 429:
             return "⚠️ valid but rate-limited / out of quota (HTTP 429)"
