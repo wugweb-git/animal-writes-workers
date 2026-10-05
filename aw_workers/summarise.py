@@ -20,6 +20,7 @@ Rules:
 - Do not copy phrases from the source. Never quote more than {max_quote} words.
 - If the source is not in English, write the summary in English.
 - If the item gives too little to summarise, state only what it says.
+- Do not say which outlets reported it or name any publication; describe only what happened.
 - Output only the summary text, nothing else.
 
 Source: {source}
@@ -267,7 +268,7 @@ class Summariser:
     def summarise(self, item: Item) -> str:
         prompt = PROMPT.format(
             max_quote=MAX_QUOTE_WORDS,
-            source=item.source.name,
+            source=item.publisher or item.source.name,
             title=item.title,
             date=item.date.isoformat() if item.date else "unknown",
             text=item.text[:4000] or "(no further details)",
