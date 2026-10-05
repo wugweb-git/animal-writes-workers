@@ -127,26 +127,53 @@ class ClaudeBackend:
         return "".join(b.text for b in msg.content if getattr(b, "type", "") == "text").strip()
 
 
+def _post_with_retry(session, url, *, headers, json, timeout, sleep, min_interval, state):
+    """Free tiers are rate-limited: keep a minimum gap between calls and back off on 429/5xx."""
+    import time
+
+    wait = min_interval - (time.monotonic() - state.get("last", 0.0))
+    if wait > 0:
+        sleep(wait)
+    delay = 10.0
+    for attempt in range(4):
+        state["last"] = time.monotonic()
+        resp = session.post(url, headers=headers, json=json, timeout=timeout)
+        if resp.status_code == 429 or resp.status_code >= 500:
+            if attempt < 3:
+                retry_after = str((getattr(resp, "headers", None) or {}).get("Retry-After", ""))
+                sleep(float(retry_after) if retry_after.isdigit() else delay)
+                delay *= 2
+                continue
+        resp.raise_for_status()
+        return resp
+    resp.raise_for_status()
+    return resp
+
+
 class GeminiBackend:
     """Google Gemini REST API (free tier)."""
 
     name = "gemini"
     URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 
-    def __init__(self, api_key: str, model: str = "gemini-flash-latest", session=None):
+    def __init__(self, api_key: str, model: str = "gemini-flash-latest", session=None, sleep=None,
+                 min_interval: float = 7.0):
+        import time
+
         import requests
 
         self.api_key, self.model = api_key, model
         self.session = session or requests.Session()
+        self.sleep, self.min_interval, self.state = sleep or time.sleep, min_interval, {}
 
     def ask(self, prompt: str) -> str:
-        resp = self.session.post(
+        resp = _post_with_retry(
+            self.session,
             self.URL.format(model=self.model),
             headers={"x-goog-api-key": self.api_key},
             json={"contents": [{"parts": [{"text": prompt}]}], "generationConfig": {"maxOutputTokens": 1024}},
-            timeout=60,
+            timeout=60, sleep=self.sleep, min_interval=self.min_interval, state=self.state,
         )
-        resp.raise_for_status()
         parts = resp.json()["candidates"][0]["content"].get("parts", [])
         return "".join(p.get("text", "") for p in parts if not p.get("thought")).strip()
 
@@ -157,20 +184,24 @@ class GroqBackend:
     name = "groq"
     URL = "https://api.groq.com/openai/v1/chat/completions"
 
-    def __init__(self, api_key: str, model: str = "llama-3.3-70b-versatile", session=None):
+    def __init__(self, api_key: str, model: str = "llama-3.3-70b-versatile", session=None, sleep=None,
+                 min_interval: float = 3.0):
+        import time
+
         import requests
 
         self.api_key, self.model = api_key, model
         self.session = session or requests.Session()
+        self.sleep, self.min_interval, self.state = sleep or time.sleep, min_interval, {}
 
     def ask(self, prompt: str) -> str:
-        resp = self.session.post(
+        resp = _post_with_retry(
+            self.session,
             self.URL,
             headers={"Authorization": f"Bearer {self.api_key}"},
             json={"model": self.model, "max_tokens": 300, "messages": [{"role": "user", "content": prompt}]},
-            timeout=60,
+            timeout=60, sleep=self.sleep, min_interval=self.min_interval, state=self.state,
         )
-        resp.raise_for_status()
         return (resp.json()["choices"][0]["message"]["content"] or "").strip()
 
 

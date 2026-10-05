@@ -82,8 +82,8 @@ def test_legal_note_added():
 
 
 class FakeResp:
-    def __init__(self, data, code=200):
-        self._data, self.status_code = data, code
+    def __init__(self, data, code=200, headers=None):
+        self._data, self.status_code, self.headers = data, code, headers or {}
 
     def json(self):
         return self._data
@@ -105,7 +105,7 @@ class FakeSession:
 def test_gemini_request_and_parse():
     sess = FakeSession([FakeResp({"candidates": [{"content": {"parts": [
         {"text": "thinking...", "thought": True}, {"text": GOOD}]}}]})])
-    b = summarise.GeminiBackend("gk", session=sess)
+    b = summarise.GeminiBackend("gk", session=sess, sleep=lambda s: None)
     assert b.ask("p") == GOOD
     url, headers, body = sess.calls[0]
     assert url.endswith("/models/gemini-flash-latest:generateContent")
@@ -114,7 +114,7 @@ def test_gemini_request_and_parse():
 
 def test_groq_request_and_parse():
     sess = FakeSession([FakeResp({"choices": [{"message": {"content": GOOD}}]})])
-    b = summarise.GroqBackend("qk", session=sess)
+    b = summarise.GroqBackend("qk", session=sess, sleep=lambda s: None)
     assert b.ask("p") == GOOD
     url, headers, body = sess.calls[0]
     assert url == "https://api.groq.com/openai/v1/chat/completions"
@@ -189,3 +189,20 @@ def test_over_budget_haiku_falls_back_to_free():
 def test_budget_default_is_four_dollars():
     [b] = summarise.backends_from_env({"ANTHROPIC_API_KEY": "a"})
     assert b.budget_usd == 4.0
+
+
+def test_free_tier_retries_on_429_and_503_then_succeeds():
+    ok = FakeResp({"candidates": [{"content": {"parts": [{"text": GOOD}]}}]})
+    sess = FakeSession([FakeResp({}, 429, {"Retry-After": "2"}), FakeResp({}, 503), ok])
+    slept = []
+    b = summarise.GeminiBackend("gk", session=sess, sleep=slept.append, min_interval=0)
+    assert b.ask("p") == GOOD
+    assert slept == [2.0, 20.0] and len(sess.calls) == 3  # Retry-After honoured, then exponential backoff
+
+
+def test_free_tier_gives_up_after_four_attempts():
+    sess = FakeSession([FakeResp({}, 429) for _ in range(4)])
+    b = summarise.GroqBackend("qk", session=sess, sleep=lambda s: None, min_interval=0)
+    with pytest.raises(RuntimeError, match="429"):
+        b.ask("p")
+    assert len(sess.calls) == 4
