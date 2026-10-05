@@ -37,6 +37,7 @@ class Item:
     url: str
     date: date | None
     text: str = ""  # whatever context we have for the summary (feed description etc.)
+    publisher: str = ""  # original publisher when the feed is an aggregator (Google News)
 
 
 TOPICS: dict[str, list[str]] = {}
@@ -105,7 +106,10 @@ def parse_rss(source: Source, body: str) -> list[Item]:
                 when = parsedate_to_datetime(e.published).astimezone(timezone.utc).date()
             except (TypeError, ValueError):
                 when = None
-        items.append(Item(source, title, link, when, _clean(e.get("summary", ""))))
+        publisher = _clean((e.get("source") or {}).get("title", ""))
+        if publisher and title.endswith(f" - {publisher}"):
+            title = title[: -len(publisher) - 3].strip()
+        items.append(Item(source, title, link, when, _clean(e.get("summary", "")), publisher))
     return items
 
 

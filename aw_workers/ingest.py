@@ -23,7 +23,7 @@ def build_payload(item: Item, summary: str) -> dict:
         "title": item.title,
         "summary": summary,
         "source_url": item.url,
-        "source_name": item.source.name,
+        "source_name": item.publisher or item.source.name,
         "source_date": item.date.isoformat() if item.date else "",
         "topics": topics_for(item),
     }

@@ -86,3 +86,10 @@ def test_short_keywords_match_whole_words_only():
     tags = sources.topics_for(item)
     assert "cruelty-prosecution" not in tags  # "fir" must not match "first"
     assert "laws-rules" not in tags           # "act" must not match "action"/"impact"
+
+
+def test_google_news_publisher_split(fixture_text):
+    items = sources.parse_rss(src("rss"), fixture_text("google_news.xml"))
+    first = items[0]
+    assert first.publisher == "BollySpice.com"
+    assert not first.title.endswith("BollySpice.com") and first.title.startswith("World Animal Day")
