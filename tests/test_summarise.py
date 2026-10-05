@@ -63,105 +63,18 @@ def test_quote_of_fifteen_words_allowed():
 
 def test_retry_then_success():
     client = FakeClient(["Too short.", GOOD])
-    out = summarise.Summariser([summarise.ClaudeBackend("k", client=client)]).summarise(item())
+    out = summarise.Summariser("k", client=client).summarise(item())
     assert out == GOOD and client.calls == 2
 
 
 def test_gives_up_after_retry():
     client = FakeClient(["Too short.", "Still short."])
     with pytest.raises(summarise.SummaryError):
-        summarise.Summariser([summarise.ClaudeBackend("k", client=client)]).summarise(item())
+        summarise.Summariser("k", client=client).summarise(item())
 
 
 def test_legal_note_added():
-    out = summarise.Summariser([summarise.ClaudeBackend("k", client=FakeClient([GOOD]))]).summarise(item(LEGAL))
+    out = summarise.Summariser("k", client=FakeClient([GOOD])).summarise(item(LEGAL))
     assert out.endswith("\n[Needs legal review]")
-    news = summarise.Summariser([summarise.ClaudeBackend("k", client=FakeClient([GOOD]))]).summarise(item())
+    news = summarise.Summariser("k", client=FakeClient([GOOD])).summarise(item())
     assert "legal review" not in news
-
-
-class FakeResp:
-    def __init__(self, data, code=200):
-        self._data, self.status_code = data, code
-
-    def json(self):
-        return self._data
-
-    def raise_for_status(self):
-        if self.status_code >= 400:
-            raise RuntimeError(f"HTTP {self.status_code}")
-
-
-class FakeSession:
-    def __init__(self, responses):
-        self.responses, self.calls = list(responses), []
-
-    def post(self, url, headers, json, timeout):
-        self.calls.append((url, headers, json))
-        return self.responses.pop(0)
-
-
-def test_gemini_request_and_parse():
-    sess = FakeSession([FakeResp({"candidates": [{"content": {"parts": [
-        {"text": "thinking...", "thought": True}, {"text": GOOD}]}}]})])
-    b = summarise.GeminiBackend("gk", session=sess)
-    assert b.ask("p") == GOOD
-    url, headers, body = sess.calls[0]
-    assert url.endswith("/models/gemini-flash-latest:generateContent")
-    assert headers == {"x-goog-api-key": "gk"} and body["contents"][0]["parts"][0]["text"] == "p"
-
-
-def test_groq_request_and_parse():
-    sess = FakeSession([FakeResp({"choices": [{"message": {"content": GOOD}}]})])
-    b = summarise.GroqBackend("qk", session=sess)
-    assert b.ask("p") == GOOD
-    url, headers, body = sess.calls[0]
-    assert url == "https://api.groq.com/openai/v1/chat/completions"
-    assert headers["Authorization"] == "Bearer qk" and body["model"] == "llama-3.3-70b-versatile"
-
-
-class Failing:
-    name = "haiku"
-
-    def ask(self, prompt):
-        raise RuntimeError("overloaded")
-
-
-class Fixed:
-    def __init__(self, name, reply):
-        self.name, self.reply, self.calls = name, reply, 0
-
-    def ask(self, prompt):
-        self.calls += 1
-        return self.reply
-
-
-def test_haiku_first_when_it_works():
-    haiku, gemini = Fixed("haiku", GOOD), Fixed("gemini", GOOD)
-    s = summarise.Summariser([haiku, gemini])
-    s.summarise(item())
-    assert (haiku.calls, gemini.calls) == (1, 0) and s.used == {"haiku": 1}
-
-
-def test_falls_back_on_error_and_on_failed_checks():
-    bad_quality = Fixed("gemini", "Too short.")
-    groq = Fixed("groq", GOOD)
-    s = summarise.Summariser([Failing(), bad_quality, groq])
-    assert s.summarise(item()) == GOOD
-    assert bad_quality.calls == 2 and s.used == {"groq": 1}
-
-
-def test_all_providers_fail():
-    with pytest.raises(summarise.SummaryError, match="haiku: overloaded"):
-        summarise.Summariser([Failing(), Fixed("groq", "Short.")]).summarise(item())
-
-
-def test_backends_from_env_order_and_skips_missing_keys():
-    env = {"GEMINI_API_KEY": "g", "GROQ_API_KEY": "q"}
-    assert [b.name for b in summarise.backends_from_env(env)] == ["gemini", "groq"]
-    env["ANTHROPIC_API_KEY"] = "a"
-    assert [b.name for b in summarise.backends_from_env(env)] == ["haiku", "gemini", "groq"]
-    env["LLM_PROVIDERS"] = "groq, haiku"
-    assert [b.name for b in summarise.backends_from_env(env)] == ["groq", "haiku"]
-    with pytest.raises(ValueError):
-        summarise.backends_from_env({"LLM_PROVIDERS": "deepseek"})

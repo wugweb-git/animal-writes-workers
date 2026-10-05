@@ -82,9 +82,7 @@ def finalise(summary: str, item: Item) -> str:
     return summary
 
 
-class ClaudeBackend:
-    name = "haiku"
-
+class Summariser:
     def __init__(self, api_key: str, client=None):
         if client is None:
             import anthropic
@@ -92,99 +90,13 @@ class ClaudeBackend:
             client = anthropic.Anthropic(api_key=api_key)
         self.client = client
 
-    def ask(self, prompt: str) -> str:
+    def _ask(self, prompt: str) -> str:
         msg = self.client.messages.create(
             model=MODEL,
             max_tokens=300,
             messages=[{"role": "user", "content": prompt}],
         )
         return "".join(b.text for b in msg.content if getattr(b, "type", "") == "text").strip()
-
-
-class GeminiBackend:
-    """Google Gemini REST API (free tier)."""
-
-    name = "gemini"
-    URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
-
-    def __init__(self, api_key: str, model: str = "gemini-flash-latest", session=None):
-        import requests
-
-        self.api_key, self.model = api_key, model
-        self.session = session or requests.Session()
-
-    def ask(self, prompt: str) -> str:
-        resp = self.session.post(
-            self.URL.format(model=self.model),
-            headers={"x-goog-api-key": self.api_key},
-            json={"contents": [{"parts": [{"text": prompt}]}], "generationConfig": {"maxOutputTokens": 1024}},
-            timeout=60,
-        )
-        resp.raise_for_status()
-        parts = resp.json()["candidates"][0]["content"].get("parts", [])
-        return "".join(p.get("text", "") for p in parts if not p.get("thought")).strip()
-
-
-class GroqBackend:
-    """Groq OpenAI-compatible chat API (free tier)."""
-
-    name = "groq"
-    URL = "https://api.groq.com/openai/v1/chat/completions"
-
-    def __init__(self, api_key: str, model: str = "llama-3.3-70b-versatile", session=None):
-        import requests
-
-        self.api_key, self.model = api_key, model
-        self.session = session or requests.Session()
-
-    def ask(self, prompt: str) -> str:
-        resp = self.session.post(
-            self.URL,
-            headers={"Authorization": f"Bearer {self.api_key}"},
-            json={"model": self.model, "max_tokens": 300, "messages": [{"role": "user", "content": prompt}]},
-            timeout=60,
-        )
-        resp.raise_for_status()
-        return (resp.json()["choices"][0]["message"]["content"] or "").strip()
-
-
-def backends_from_env(env) -> list:
-    """Providers in LLM_PROVIDERS order (default haiku,gemini,groq); ones without a key are skipped."""
-    makers = {
-        "haiku": lambda: env.get("ANTHROPIC_API_KEY") and ClaudeBackend(env["ANTHROPIC_API_KEY"]),
-        "gemini": lambda: env.get("GEMINI_API_KEY")
-        and GeminiBackend(env["GEMINI_API_KEY"], env.get("GEMINI_MODEL") or "gemini-flash-latest"),
-        "groq": lambda: env.get("GROQ_API_KEY")
-        and GroqBackend(env["GROQ_API_KEY"], env.get("GROQ_MODEL") or "llama-3.3-70b-versatile"),
-    }
-    order = [p.strip().lower() for p in (env.get("LLM_PROVIDERS") or "haiku,gemini,groq").split(",") if p.strip()]
-    unknown = [p for p in order if p not in makers]
-    if unknown:
-        raise ValueError(f"unknown LLM_PROVIDERS entries: {', '.join(unknown)}")
-    return [b for b in (makers[p]() for p in order) if b]
-
-
-class Summariser:
-    """Tries each provider in order. A provider is used only if its summary passes every check."""
-
-    def __init__(self, backends: list):
-        if not backends:
-            raise ValueError("no summary provider configured")
-        self.backends = backends
-        self.used: dict[str, int] = {}
-
-    def _try(self, backend, prompt: str, item: Item) -> str:
-        summary = backend.ask(prompt)
-        problems = check_summary(summary, item)
-        if problems:
-            summary = backend.ask(
-                prompt + "\n\nYour previous attempt broke these rules: " + "; ".join(problems)
-                + f"\nPrevious attempt: {summary}\nWrite a corrected summary."
-            )
-            problems = check_summary(summary, item)
-        if problems:
-            raise SummaryError("; ".join(problems))
-        return summary
 
     def summarise(self, item: Item) -> str:
         prompt = PROMPT.format(
@@ -194,22 +106,21 @@ class Summariser:
             date=item.date.isoformat() if item.date else "unknown",
             text=item.text[:4000] or "(no further details)",
         )
-        reasons = []
-        for backend in self.backends:
-            try:
-                summary = self._try(backend, prompt, item)
-            except Exception as exc:  # API error or failed checks: fall through to the next provider
-                reasons.append(f"{backend.name}: {str(exc)[:150]}")
-                continue
-            self.used[backend.name] = self.used.get(backend.name, 0) + 1
-            return finalise(summary, item)
-        raise SummaryError(" | ".join(reasons))
+        summary = self._ask(prompt)
+        problems = check_summary(summary, item)
+        if problems:
+            summary = self._ask(
+                prompt + "\n\nYour previous attempt broke these rules: " + "; ".join(problems)
+                + f"\nPrevious attempt: {summary}\nWrite a corrected summary."
+            )
+            problems = check_summary(summary, item)
+        if problems:
+            raise SummaryError("; ".join(problems))
+        return finalise(summary, item)
 
 
 class DryRunSummariser:
-    """Used in DRY_RUN when no provider key is available: no network, clearly marked output."""
-
-    used: dict = {}
+    """Used in DRY_RUN when no API key is available: no network, clearly marked output."""
 
     def summarise(self, item: Item) -> str:
         return finalise("[DRY RUN: summary not generated.] [DRY RUN: no API key set.]", item)
