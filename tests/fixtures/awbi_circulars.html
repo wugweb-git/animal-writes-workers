@@ -1,0 +1,3035 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="description" content="AWBI">
+<meta name="author" content="Animal Welfare Board of India">
+<meta name="keywords" content="Animal Welfare Board of India">
+<title>Animal Welfare Board of India</title>
+<link rel="shortcut icon" href="/Default/front/images/favicon.ico">
+ <!-- <link rel="stylesheet" href="/Default/assets/css/icons.css"/> -->
+<link rel="shortcut icon" href="images/favicon.ico">
+<link type="text/css" href="/Default/front/css/bootstrap.min.css" rel="stylesheet">
+<link type="text/css" href="/Default/front/css/style.css" rel="stylesheet">
+<link type="text/css" href="/Default/front/css/awbi-custom.css" rel="stylesheet">
+<link type="text/css" href="/Default/front/css/jquery.fancybox.css" rel="stylesheet">
+<link type="text/css" href="/Default/assets/general/css/common.css" rel="stylesheet">
+<link type="text/css" href="/Default/front/css/responsive.css" rel="stylesheet">
+<link type="text/css" href="/Default/assets/plugins/bootstrap-switch/bootstrap-switch.css" rel="stylesheet">
+<link type="text/css" href="/Default/assets/plugins/chosen/bootstrap-chosen.css" rel="stylesheet">
+<script type="text/javascript" src="/Default/front/js/modernizr.js"></script>
+<script type="text/javascript" src="/Default/front/js/jquery-min-3.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" integrity="sha256-eZrrJcwDc/3uDhsdt61sL2oOBY362qM3lon1gyExkL0=" crossorigin="anonymous">
+<script src="/Default/assets/plugins/jsencrypt.min.js"></script>
+
+<!-- 05022026 <script>
+$(document).ready(function() {
+
+    // Disable right-click globally
+    document.addEventListener('contextmenu', function(e) {
+        e.preventDefault();
+        return false;
+    });
+
+    // Disable Ctrl+C, Ctrl+V, Ctrl+X, Ctrl+S, Ctrl+U, Ctrl+Shift+I/J/C (DevTools)
+    document.addEventListener('keydown', function(e) {
+        if (
+            (e.ctrlKey && e.shiftKey && [73, 74, 67].includes(e.keyCode)) || // Ctrl+Shift+I/J/C
+            e.keyCode === 123 // F12
+        ) {
+            e.preventDefault();
+            return false;
+        }
+    });
+
+    // Disable drag and drop
+    document.addEventListener('dragstart', function(e) {
+        e.preventDefault();
+        return false;
+    });
+    document.addEventListener('drop', function(e) {
+        e.preventDefault();
+        return false;
+    });
+
+});
+</script> -->
+<!--[if lte IE 9]>
+  <script src="js/ie.js" type="text/javascript"></script>
+<![endif]-->
+</head>
+<body class="noJS">
+<noscript class="jsRequired">
+</noscript>
+<div id="loading">Loading...</div>
+<!--<div id="wrapper">-->
+<header class="">
+<div class="topHeader">    
+      <div class="topStrip">
+	  <div class="container">
+      <div class="row mb-0">
+      <div class="col-md-5">
+          <ul class="leftLink">
+            <li><a href="/view/index/sitemap">Sitemap</a></li>
+            <li><a href="/view/index/faqs">FAQ's</a></li>
+            <li><a href="/Feedback">Feedback</a></li>
+		    	<!-- <li><a href="/view/index/Archives">Archives</a></li> -->
+            <li><a href="/view/index/quick-links">Quick Links</a></li>
+          </ul>
+          </div>
+                    <div class="col-md-7">
+            <ul class="rightLinks">
+              <li><a tabindex="1" href="#content" class="skipContent">Skip to Main Content</a></li>
+              <li><a href="/view/index/screen-reader-access">Screen Reader Access</a></li>
+              <li class="fontResize">
+                <div id="accessControl" class="textResizeWrapper cf">
+                  <input type="button" name="normal" value="Standard View" id="normal" title="Standard View" class="contrastChanger normal">
+                  <input type="button" name="wob" value="High Contrast View" id="wob" title="High Contrast View" class="contrastChanger wob">
+                  <input type="button" name="font_normal" value="A-" id="font_smaller" title="Decrease Font Size" class="fontScaler normal font-normal" />
+                  <input type="button" name="font_normal" value="A" id="font_normal" title="Normal Font Size" class="fontScaler normal font-normal" />
+                  <input type="button" name="font_large" value="A+" id="font_large" title="Increase Font Size" class="fontScaler large font-large" />
+                </div>
+              </li>
+              <li>
+                <div class="language">
+                <form name="frmlang" id="frmlang" method="post" action="">
+                      <select class="customSelect" name="language" id="lang" onchange="this.form.submit();" title="Select Language">
+                        <option selected="selected" value="en">English</option>
+                        <option value="hi">हिन्दी</option>
+                      </select>
+                    </form>
+                </div>
+              </li>
+            </ul>
+          </div> 
+                </div> 
+       </div>		
+      </div>
+      </div>
+    <div class="headerRow">
+      <div class="container">
+        <div class="cf">
+          <div id="logo">
+		   		  <a href="/" title="Animal Welfare Board of India, Government of India"><img src="/Default/assets/frontand/images/logo-hindi.png" width="415" height="74" alt="Animal Welfare Board of India, Government of India"></a>
+					  </div>
+          <div class="headerRight">
+			<div class="registrationList">	
+            <ul>
+			                 <li><a href="/user/login" class="button">Sign In</a></li>
+                <li><a href="/registration" class="button green">Sign Up</a></li>
+              			  <li class="serBar">
+			     
+		        <div class="serachWrap">
+                  <div id="sb-search" class="sb-search">
+                    <form>
+                      <input class="sb-search-input" placeholder="Enter your search term..." type="text" value="" name="search" id="search" onkeyup="searchContent()">
+                      <input class="sb-search-submit" type="submit" value="">
+                      <span class="sb-icon-search"><i class="fa fa-search"></i></span>
+                      <ul class="list-group" id="resultBlock" style="display:none;">
+                        <div id="searchResult"></div>
+                      </ul>
+                    </form>
+                  </div>
+                </div>
+          			  </li>
+			 <li><a href="javascript:void(0);" class="navLink"><span class="fa fa-bars"></span></a></li>
+
+			<!--<li><img src="/Default/front/images/IndianFlag.gif" width="70" height="57" alt="Indian Flag" title="Indian Flag" class="navLink"></li>-->
+
+            </ul>
+		    </div>
+			<div class="rightLogo">
+			          
+              <img src="/Default/front/images/emblem.png" width="35" height="57" alt="सत्यमेव जयते" title="सत्यमेव जयते">
+              			</div>
+          </div>
+        </div>
+      </div>
+    </div>
+ 
+  <div id="mainNav" class="mainNavigation">
+	 <div class="container">
+     <div class="menuPart cf">
+              <ul id="nav">
+                                        <li>
+                                            <a href="/view/index/#">
+                                        Home                        </a>
+                </li>
+                                                        <li><a href="#">About Us</a>
+                  <ul>
+                                        <li>
+                                                        <a href="/view/index/introduction">
+                                                    Introduction                              </a>
+                      </li>
+                                          <li>
+                                                        <a href="/view/index/Mandate-and-Functions">
+                                                    Mandate and Functions                              </a>
+                      </li>
+                                          <li>
+                                                        <a href="/BoardMembers">
+                                                    Board Members                              </a>
+                      </li>
+                                          <li>
+                                                        <a href="/view/index/constitution">
+                                                    Constitution                              </a>
+                      </li>
+                                          <li>
+                                                        <a href="/view/index/committees-of-the-board">
+                                                    Committees of the Board                              </a>
+                      </li>
+                                          <li>
+                                                        <a href="/view/index/whos-who">
+                                                    Who's Who                              </a>
+                      </li>
+                                          <li>
+                                                        <a href="/view/index/organizational-structure">
+                                                    Organizational Structure                              </a>
+                      </li>
+                                      </ul>
+                </li>
+                                                        <li><a href="#">Act & Rules</a>
+                  <ul>
+                                        <li>
+                                                        <a href="/Document/acts">
+                                                    Acts                              </a>
+                      </li>
+                                          <li>
+                                                        <a href="/Document/rules">
+                                                    Rules                              </a>
+                      </li>
+                                          <li>
+                                                        <a href="/Document/general guidelines">
+                                                    Guidelines                              </a>
+                      </li>
+                                          <li>
+                                                        <a href="/view/index/../../circulars">
+                                                    Advisories / Circulars                               </a>
+                      </li>
+                                      </ul>
+                </li>
+                                                        <li><a href="#">Meetings</a>
+                  <ul>
+                                        <li>
+                                                        <a href="/Document/annual-general-meetings">
+                                                    Annual General Meetings                              </a>
+                      </li>
+                                          <li>
+                                                        <a href="/Document/general-meetings">
+                                                    General Meetings                              </a>
+                      </li>
+                                          <li>
+                                                        <a href="/Document/executive-committee-meetings">
+                                                    Executive Committee Meetings                              </a>
+                      </li>
+                                          <li>
+                                                        <a href="/view/index/Status-of-Application-of-PSP-and-NOC">
+                                                    Performing Animal Committee Meetings                              </a>
+                      </li>
+                                      </ul>
+                </li>
+                                                        <li><a href="#">Publication & Media</a>
+                  <ul>
+                                        <li>
+                                                        <a href="/photos">
+                                                    Photo Gallery                              </a>
+                      </li>
+                                          <li>
+                                                        <a href="/videos">
+                                                    Video Gallery                              </a>
+                      </li>
+                                          <li>
+                                                        <a href="/Document/annual-reports">
+                                                    Annual Reports                              </a>
+                      </li>
+                                          <li>
+                                                        <a href="/Document/magazines">
+                                                    Magazines                              </a>
+                      </li>
+                                          <li>
+                                                        <a href="/Document/newsletters">
+                                                    Newsletters                              </a>
+                      </li>
+                                          <li>
+                                                        <a href="/view/index/../../pressrelease">
+                                                    Press Release and News                              </a>
+                      </li>
+                                      </ul>
+                </li>
+                                                        <li><a href="#">Online Services</a>
+                  <ul>
+                                        <li>
+                                                        <a href="/view/index/../../recognition">
+                                                    Recognition                              </a>
+                      </li>
+                                          <li>
+                                                        <a href="/view/index/Project-Recognition-for-ABC">
+                                                    Project Recognition for ABC                              </a>
+                      </li>
+                                          <li>
+                                                        <a href="/view/index/financial-assistance">
+                                                    Financial Assistance                              </a>
+                      </li>
+                                          <li>
+                                                        <a href="/view/index/../../PerformingAnimal">
+                                                    Performing Animals                              </a>
+                      </li>
+                                          <li>
+                                                        <a href="/view/index/../../honorary-animal-welfare-representative">
+                                                    Honorary Animal Welfare Representative                              </a>
+                      </li>
+                                          <li>
+                                                        <a href="/view/index/../../colony-animal-care-taker">
+                                                    Colony Animal Care Taker                              </a>
+                      </li>
+                                          <li>
+                                                        <a href="/view/index/../../cruelty-complaint">
+                                                    Grievance                              </a>
+                      </li>
+                                          <li>
+                                                        <a href="/view/index/../../Cruelty">
+                                                    Cruelty                              </a>
+                      </li>
+                                      </ul>
+                </li>
+                                                        <li>
+                                            <a href="/view/index/contact-us">
+                                        Contact Us                        </a>
+                </li>
+                                </ul>
+      	  </div>
+     </div>
+    </div>
+  </header>
+ <script>
+ window.onload=function(){
+	if(document.getElementById("popuptexdt")){
+		document.getElementById("popuptexdt").click();
+		var hiddenval = $('input#dashboardpoup').val();
+		if(hiddenval == 'dashboardpoup') {
+		  document.getElementById("userlogindropdown").click();
+		}
+	}
+};
+
+notificationCount();
+setInterval(function(){
+  notificationCount();
+}, 1000000);
+
+  function notificationCount(){
+        // loginUserId = 30;
+        // formfields = 'login_user_id='+loginUserId;
+        theurl = '/admin/ajax/notificationCount';
+        $.ajax({
+            type: "POST",
+            url: theurl,
+            //data: formfields,
+            beforeSend: function( xhr ) {
+            }
+        }).done(function(data) {
+             $('#notificationDiv').html(data);
+        });
+  }
+
+  function notification(){
+        // loginUserId = 30;
+        // formfields = 'login_user_id='+loginUserId;
+
+        theurl = '/admin/ajax/loadNotification';
+        $.ajax({
+            type: "POST",
+            url: theurl,
+           // data: formfields,
+            beforeSend: function( xhr ) {
+            }
+        }).done(function(data) {
+            $('#notificationList').html(data);
+            // $('#historyModal').modal('show');
+        });
+    }
+
+$(document).ready(function(){
+	$( ".navLink" ).click(function() {  
+    if($('#collapseExample:visible').length)
+        $('#collapseExample').hide();
+		
+    else
+        $('#collapseExample').show();  
+		
+	});
+	$(".navLink").click(function() { 
+		$('.dashR').toggleClass("col-lg-10");
+	});
+});
+
+
+</script><main id="main">
+   <section class="innerBanner">
+      <img src="/Default/front/images/loginBack.jpg">
+      <div class="container">
+         <div class="innerCaption">
+            <h1>Advisories / Circulars</h1>
+         </div>
+      </div>
+   </section>
+   <div class="breadcrubArea">
+      <div class="container">
+         <ul class="breadcrumb">
+            <li><a href="/">Home</a></li>
+            <li>Circulars</li>
+         </ul>
+      </div>
+   </div>
+  <section id="content" class="innerContent">
+      <div class="container">
+      <div class="text-right viewAll mb-3"> <a href="/archivecirculars" >Archive View All <i class="arrow sprite"></i></a></div>
+       <div class="row">
+          <div class="col-md-12">
+            
+			<table border="1">
+			<tr>
+			<th style="width: 115px;">S. No.</th>
+
+			<th>Title</th>
+			<th style="width: 115px;">Date</th>
+			<th style="width: 115px;">Download</th>
+			</tr>
+			
+									<tr>	
+			
+			<td>1</td>                  <td>
+					    
+						  Observance of World Animal Day on 4th October, 2026
+                        <td>02-10-2026</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/179101213684Observance of World Animal Day (2).pdf" title="Observance of World Animal Day on 4th October, 2026" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>2</td>                  <td>
+					    
+						  Observance of World Rabies Day - 28 September 2026
+                        <td>22-09-2026</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/179014229257Observance of World Rabies Day.pdf" title="Observance of World Rabies Day - 28 September 2026" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>3</td>                  <td>
+					    
+						  Request to stop illegal transportation and slaughtering of animals, and promotion of humane treatment of animals dated - 14.09.2026
+                        <td>14-09-2026</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/178947431310Request to stop illegal transportation and slaughtering.pdf" title="Request to stop illegal transportation and slaughtering of animals, and promotion of humane treatment of animals dated - 14.09.2026" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>4</td>                  <td>
+					    
+						  Advisory on Rescue and Rehabilitation of Animals Affected by Severe Floods in Assam and Gujarat dated - 11.08.2026
+                        <td>11-08-2026</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/178963774825Advisory for rescue of animals in Assam and Gujaratt.pdf" title="Advisory on Rescue and Rehabilitation of Animals Affected by Severe Floods in Assam and Gujarat dated - 11.08.2026" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>5</td>                  <td>
+					    
+						  Request to stop illegal transportation and slaughtering of animals, and promotion of humane treatment of animals - dated 11.08.2026 
+                        <td>11-08-2026</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/178643971600Advisrory_Request to stop illegal transportation and slaughtering 11.08.2026.pdf" title="Request to stop illegal transportation and slaughtering of animals, and promotion of humane treatment of animals - dated 11.08.2026 " class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>6</td>                  <td>
+					    
+						  Implementation of the Prevention of Cruelty to Animals (Application of Fines) Rules, 1978 read with Section 38(2)(k) of the Prevention of Cruelty to Animals Act, 1960 dated - 31.07.2026
+                        <td>31-07-2026</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/178764909537Advisory PCA (Application of Fines)_31.07.2026_Eng_Hindi.pdf" title="Implementation of the Prevention of Cruelty to Animals (Application of Fines) Rules, 1978 read with Section 38(2)(k) of the Prevention of Cruelty to Animals Act, 1960 dated - 31.07.2026" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>7</td>                  <td>
+					    
+						  Strict compliance with the directions of the Hon'ble Supreme Court in Suo Motu Writ Petition (Civil) No. 5 of 2025, In Re: City Hounded by Strays, Kids Pay Price, the Standard Operating Procedures issued by the Animal Welfare Board of India dated 27.11.2025 and the Animal Birth Control Rules, 2023.
+                        <td>21-07-2026</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/178480784970document.pdf" title="Strict compliance with the directions of the Hon'ble Supreme Court in Suo Motu Writ Petition (Civil) No. 5 of 2025, In Re: City Hounded by Strays, Kids Pay Price, the Standard Operating Procedures issued by the Animal Welfare Board of India dated 27.11.2025 and the Animal Birth Control Rules, 2023." class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>8</td>                  <td>
+					    
+						  Request to provide temporary shelter and safeguard stray animals during the monsoon season - dated 14.07.2026
+                        <td>14-07-2026</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/178963785700Monsoon Advsiory 2026_merged_N.pdf" title="Request to provide temporary shelter and safeguard stray animals during the monsoon season - dated 14.07.2026" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>9</td>                  <td>
+					    
+						  Request to stop illegal transportation and slaughtering of animals, and promotion of humane treatment of animals dated 02.07.2026
+                        <td>02-07-2026</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/178331923833Advisory to prevent illegal transportation and slaughter of animals-02.07.2026.pdf" title="Request to stop illegal transportation and slaughtering of animals, and promotion of humane treatment of animals dated 02.07.2026" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>10</td>                  <td>
+					    
+						  Request to stop illegal transportation and slaughtering of animals, and promotion of humane treatment of animals dated - 22.05.2026
+                        <td>22-05-2026</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/178947510188Advisory illegal transportation and slaughtering of animals 01.pdf" title="Request to stop illegal transportation and slaughtering of animals, and promotion of humane treatment of animals dated - 22.05.2026" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>11</td>                  <td>
+					    
+						  Request to ensure care and protection of animals from direct heat during extreme hot weather conditions - 04.05.2026
+                        <td>04-05-2026</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/178038817614177789519989Care and protection of animals from direct heat during extreme hot (1).pdf" title="Request to ensure care and protection of animals from direct heat during extreme hot weather conditions - 04.05.2026" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>12</td>                  <td>
+					    
+						  Request for prevention of illegal transportation and slaughter of animals and promotion of humane treatment of animals dated - 08.04.2026
+                        <td>08-04-2026</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/177565182593Advisory to prevent illegal transportation and slaughter of animals.pdf" title="Request for prevention of illegal transportation and slaughter of animals and promotion of humane treatment of animals dated - 08.04.2026" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>13</td>                  <td>
+					    
+						  Request to prevent illegal transportation and illegal slaughtering of animals dated 17.03.2026
+                        <td>17-03-2026</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/177383800647Advisory illegal slaughter an transportation dated 17.03.2026.pdf" title="Request to prevent illegal transportation and illegal slaughtering of animals dated 17.03.2026" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>14</td>                  <td>
+					    
+						  Kambala Race events during the year 2026 in the State of Karnataka dated 17.03.2026
+                        <td>17-03-2026</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/177383812530Advisory on Kambala race dated 17.03.2026.pdf" title="Kambala Race events during the year 2026 in the State of Karnataka dated 17.03.2026" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>15</td>                  <td>
+					    
+						  Advisory on Humane and Compassionate Celebration of Holi
+                        <td>02-03-2026</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/177244374751Holi_advisory.pdf" title="Advisory on Humane and Compassionate Celebration of Holi" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>16</td>                  <td>
+					    
+						  Delegation of Powers for Issuance of Colony Animal Caretaker (CACT) Authorization by concerned States / UTs dated 01.03.2026
+                        <td>01-03-2026</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/177366921965Delegation of powers for nom of CACT auth letters 01.03.2026_N.pdf" title="Delegation of Powers for Issuance of Colony Animal Caretaker (CACT) Authorization by concerned States / UTs dated 01.03.2026" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>17</td>                  <td>
+					    
+						  Constitution/Reconstitution of Societies for Prevention of Cruelty to Animals at the district level in all the States and UTs dated 12.02.2026
+                        <td>12-02-2026</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/177728919308Constitution_Reconstitution of SPCA 12_02_2026.pdf" title="Constitution/Reconstitution of Societies for Prevention of Cruelty to Animals at the district level in all the States and UTs dated 12.02.2026" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>18</td>                  <td>
+					    
+						  Message to Celebrate Animal Welfare Fortnight 2026 And Jiv Jantu Kalyan Diwas on The Occasion of Vasant Panchami – dated 11.01.2026
+                        <td>11-01-2026</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/176819669528Vasant_panchami.pdf" title="Message to Celebrate Animal Welfare Fortnight 2026 And Jiv Jantu Kalyan Diwas on The Occasion of Vasant Panchami – dated 11.01.2026" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>19</td>                  <td>
+					    
+						  Request to issue the necessary amendment in the notification issued under the Environmental Protection Act, 1986, for the prohibition of all harmful sharp threads or Manjha used for kite flying activities - dated 11.01.2026
+                        <td>11-01-2026</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/176819679023Manjha.pdf" title="Request to issue the necessary amendment in the notification issued under the Environmental Protection Act, 1986, for the prohibition of all harmful sharp threads or Manjha used for kite flying activities - dated 11.01.2026" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>20</td>                  <td>
+					    
+						  Jallikattu events for the year 2026 in the State of Tamil Nadu - dated 11.01.2026
+                        <td>11-01-2026</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/176819689134Jallikattu.pdf" title="Jallikattu events for the year 2026 in the State of Tamil Nadu - dated 11.01.2026" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>21</td>                  <td>
+					    
+						  Observance of World Animal Day on 4th October, 2025 - Advisory
+                        <td>03-10-2025</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/175948151141World Animal Day Advisory_compressed.pdf" title="Observance of World Animal Day on 4th October, 2025 - Advisory" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>22</td>                  <td>
+					    
+						  Observance of World Rabies Day - 28.09.2025
+                        <td>26-09-2025</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/175898219977Rabies Day.pdf" title="Observance of World Rabies Day - 28.09.2025" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>23</td>                  <td>
+					    
+						  Request to prevent illegal transportation and slaughtering of animals dated 12.08.2025
+                        <td>12-08-2025</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/../regulations/175499588871Request to prevent illegal trans and slaughtering12.08.2025.pdf" title="Request to prevent illegal transportation and slaughtering of animals dated 12.08.2025" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>24</td>                  <td>
+					    
+						  Adoption of Revised ABC Module as Standard Operating Procedure (SOP) dated 11.08.2025
+                        <td>11-08-2025</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/../regulations/175489769357SOP - Adoption of Revised ABC Module.pdf" title="Adoption of Revised ABC Module as Standard Operating Procedure (SOP) dated 11.08.2025" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>25</td>                  <td>
+					    
+						  Advisory for Establishment of 24x7 Helpline and Provision of Emergency Veterinary Services for Injured and Sick Animals dated 04.08.2025
+                        <td>04-08-2025</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/../regulations/175438462007Advisory for 24x7 veterinary helpline dated 04.08.2025.pdf" title="Advisory for Establishment of 24x7 Helpline and Provision of Emergency Veterinary Services for Injured and Sick Animals dated 04.08.2025" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>26</td>                  <td>
+					    
+						   Mandatory Certificate of Project Recognition under Rule 3 of the Animal Birth Control Rules, 2023 - dated 04.08.2025
+                        <td>04-08-2025</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/../regulations/175438483146Advisory for Mandatory Project Recognition dated 04.08.2025.pdf" title=" Mandatory Certificate of Project Recognition under Rule 3 of the Animal Birth Control Rules, 2023 - dated 04.08.2025" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>27</td>                  <td>
+					    
+						  Request for Strict Compliance with the Prevention of Cruelty to Animals (Slaughter House) Rules, 2001 (as amended in 2010), and Mandatory Stunning of Animals Prior to Slaughter - dated 04.08.2025
+                        <td>04-08-2025</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/../regulations/175438491484Advisory for mandatory stunning before slaughter dated 04.08.2025.pdf" title="Request for Strict Compliance with the Prevention of Cruelty to Animals (Slaughter House) Rules, 2001 (as amended in 2010), and Mandatory Stunning of Animals Prior to Slaughter - dated 04.08.2025" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>28</td>                  <td>
+					    
+						  Advisory to Prevent and Prohibit the Illegal Conduct of Greyhound Races in Various Parts of the Country - dated 04.08.2025
+                        <td>04-08-2025</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/../regulations/175438498810Advisory of illegal Greyhound Races dated 04.08.2025.pdf" title="Advisory to Prevent and Prohibit the Illegal Conduct of Greyhound Races in Various Parts of the Country - dated 04.08.2025" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>29</td>                  <td>
+					    
+						  Request for Issuance of Directions to All Medical Institutions for Separate Recording of Dog Bites by Pet Dogs and Street Dogs - dated 04.08.2025
+                        <td>04-08-2025</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/../regulations/175438510056Advisory of seperate Dog bite Data dated 04.08.2025.pdf" title="Request for Issuance of Directions to All Medical Institutions for Separate Recording of Dog Bites by Pet Dogs and Street Dogs - dated 04.08.2025" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>30</td>                  <td>
+					    
+						  Implementation of ABC rules 2023 - Guideline for Local Bodies, RWAs and AOAs dated 17.07.2025
+                        <td>17-07-2025</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/../regulations/175275423709Implementation of ABC.pdf" title="Implementation of ABC rules 2023 - Guideline for Local Bodies, RWAs and AOAs dated 17.07.2025" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>31</td>                  <td>
+					    
+						  Constitution of committees as per Rule 9(3) of ABC Rules 2023 dated 17.07.2025
+                        <td>17-07-2025</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/../regulations/175275435108Constitution of committees as per Rule 9(3) of ABC Rules 2023.pdf" title="Constitution of committees as per Rule 9(3) of ABC Rules 2023 dated 17.07.2025" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>32</td>                  <td>
+					    
+						  Joint Advisories from the Ministry of Housing & Urban Affairs, Department of Animal Husbandry and Dairying, and the Ministry of Panchayati Raj dated 16.07.2025
+                        <td>16-07-2025</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/../regulations/175439942841Joint Advisory Secretaries 16.07.2025.pdf" title="Joint Advisories from the Ministry of Housing & Urban Affairs, Department of Animal Husbandry and Dairying, and the Ministry of Panchayati Raj dated 16.07.2025" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>33</td>                  <td>
+					    
+						  One-day training program for Police Officials / Traffic Police Officials on  “Animal Welfare Laws”
+                        <td>10-06-2025</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/176908523980Letter to DGP of all the States and UTs.pdf" title="One-day training program for Police Officials / Traffic Police Officials on  “Animal Welfare Laws”" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>34</td>                  <td>
+					    
+						  Advisory to prevent illegal Slaughtering and tranportation dated 03.06.2025
+                        <td>03-06-2025</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/../regulations/174923141101illegal slaughtering adv.pdf" title="Advisory to prevent illegal Slaughtering and tranportation dated 03.06.2025" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>35</td>                  <td>
+					    
+						  Circular issued by the Ministry of Road Transport and Highways regarding the display of a slogan on Animal Welfare on Public Transport - dated 25.02.2025
+                        <td>10-03-2025</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/178333745338Display of Slogan on Animal Welfare on Public Transport - 25.02.2025 issued by MoRTH.pdf" title="Circular issued by the Ministry of Road Transport and Highways regarding the display of a slogan on Animal Welfare on Public Transport - dated 25.02.2025" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>36</td>                  <td>
+					    
+						  Observance of “Animal Husbandry and Animal Welfare Awareness Month” dated 10.02.2025
+                        <td>10-02-2025</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/173925820990DO letter to ACS_PS_Secy_AH&AWA Month001.pdf" title="Observance of “Animal Husbandry and Animal Welfare Awareness Month” dated 10.02.2025" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>37</td>                  <td>
+					    
+						  Celebration of Animal Welfare Fortnight 2025 and Jiv Jantu Kalyan Diwas on the occasion of Vasant Panchami dated 14.01.2025
+                        <td>14-01-2025</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/173722874005Animal Welfare Fortnight 2025_compressed.pdf" title="Celebration of Animal Welfare Fortnight 2025 and Jiv Jantu Kalyan Diwas on the occasion of Vasant Panchami dated 14.01.2025" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>38</td>                  <td>
+					    
+						  Advisories to be Followed for Control of Dog Population and Reducing the Dog Bite Cases dated 11.11.2024
+                        <td>11-11-2024</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/../regulations/175439915778DAHD advisory dated 11.11.24 (1)_compressed.pdf" title="Advisories to be Followed for Control of Dog Population and Reducing the Dog Bite Cases dated 11.11.2024" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>39</td>                  <td>
+					    
+						  Urgent request to ensure Compliance of Transport of Animals Rules, 1978 (amended in 2OO1 and 2OO9) under the Prevention of Cruelty to Animals Act, 196O (PCA Act) in regard to Illegal Cattle Transportation at the India-Nepal Border - dated 29.10.2024
+                        <td>29-10-2024</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/../regulations/173021937534Illegal cattle transportation(1).pdf" title="Urgent request to ensure Compliance of Transport of Animals Rules, 1978 (amended in 2OO1 and 2OO9) under the Prevention of Cruelty to Animals Act, 196O (PCA Act) in regard to Illegal Cattle Transportation at the India-Nepal Border - dated 29.10.2024" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>40</td>                  <td>
+					    
+						  Message to celebrate a compassionate and eco-friendly Deepavali dated 29.10.2024
+                        <td>29-10-2024</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/../regulations/173021962864Message-Dr. Abhijit Mitra Chairman AWBI- Dipawali (2).pdf" title="Message to celebrate a compassionate and eco-friendly Deepavali dated 29.10.2024" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>41</td>                  <td>
+					    
+						  Request for closure of slaughter house(s) on the auspicious occasion of Mahatma Gandhi Jayanthi being celebrated in the Country on 02.10.2024
+                        <td>02-10-2024</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/../regulations/172780565149Advisory -1.10.2024.pdf" title="Request for closure of slaughter house(s) on the auspicious occasion of Mahatma Gandhi Jayanthi being celebrated in the Country on 02.10.2024" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>42</td>                  <td>
+					    
+						  Implementation of Animal Birth Control Rules, 2023 dated 01.10.2024
+                        <td>01-10-2024</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/../regulations/172949592201Implementation of Animal Birth Control Rules, 2023 01-10-2024.pdf" title="Implementation of Animal Birth Control Rules, 2023 dated 01.10.2024" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>43</td>                  <td>
+					    
+						  Message on World Rabies Day 2024 dated 06.09.2024
+                        <td>06-09-2024</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/172605344240Message for World Rabies Day_compressed.pdf" title="Message on World Rabies Day 2024 dated 06.09.2024" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>44</td>                  <td>
+					    
+						  Request for closure of slaughter house(s) on the auspicious occasion of Paryushan/Daslaskhan Parva being celebrated in the country - dated 31.08.2024
+                        <td>31-08-2024</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/../regulations/172572151674Paryushan Parva and Daklakshan Parva.pdf" title="Request for closure of slaughter house(s) on the auspicious occasion of Paryushan/Daslaskhan Parva being celebrated in the country - dated 31.08.2024" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>45</td>                  <td>
+					    
+						  Request for Providing Temporary Shelter and Safeguarding Stray Animals During the Monsoon Season dated 10.07.2024
+                        <td>10-07-2024</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/../regulations/172060220538Monsoon Advisory.pdf" title="Request for Providing Temporary Shelter and Safeguarding Stray Animals During the Monsoon Season dated 10.07.2024" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>46</td>                  <td>
+					    
+						  Rescue and Rehabilitation of Animals Affected by Severe Floods in Assam dated 09.07.2024
+                        <td>09-07-2024</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/172053145580Appeal for Assam.pdf" title="Rescue and Rehabilitation of Animals Affected by Severe Floods in Assam dated 09.07.2024" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>47</td>                  <td>
+					    
+						  Stopping of illegal killing/sacrifices of cows/calves, camels and other animals on the occasion of Bakrid dated 05.06.2024
+                        <td>05-06-2024</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/../regulations/171775469368Advisory_Bakrid_2024.pdf" title="Stopping of illegal killing/sacrifices of cows/calves, camels and other animals on the occasion of Bakrid dated 05.06.2024" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>48</td>                  <td>
+					    
+						  Request to issue necessary amendment in the notification issued under the Environmental Protection Act, 1986, for the prohibition of all harmful sharp threads or Manjha used for kite flying activities dated 25.04.2024
+                        <td>25-04-2024</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/../regulations/171439650276Advisory for Manjha_001.pdf" title="Request to issue necessary amendment in the notification issued under the Environmental Protection Act, 1986, for the prohibition of all harmful sharp threads or Manjha used for kite flying activities dated 25.04.2024" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>49</td>                  <td>
+					    
+						  Public Notice regarding ban on dangerous dog breeds dated 19.03.2024
+                        <td>19-03-2024</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/171085647820Public Notice regarding Ban on Dog Breeds.pdf" title="Public Notice regarding ban on dangerous dog breeds dated 19.03.2024" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>50</td>                  <td>
+					    
+						  Public Notice regarding the cancellation of nomination as HAWO/HDAWO/HSAWO/HLAWO dated 26.02.2024
+                        <td>26-02-2024</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/170981719610Public Notice regarding HAWR.pdf" title="Public Notice regarding the cancellation of nomination as HAWO/HDAWO/HSAWO/HLAWO dated 26.02.2024" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>51</td>                  <td>
+					    
+						  Assistance of State/UT Fire services Department for Animal Rescue in Precarious Situations - Request for Cooperation dated 05.02.2024
+                        <td>05-02-2024</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/../regulations/170746755226Advisory to Fire Service Department for Animal Rescue.pdf" title="Assistance of State/UT Fire services Department for Animal Rescue in Precarious Situations - Request for Cooperation dated 05.02.2024" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>52</td>                  <td>
+					    
+						  Celebration of Animal Welfare Fortnight 2024 and Jiv Jantu Kalyan Diwas on the occasion of Vasant Panchami dated 02.01.2024
+                        <td>02-01-2024</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/170428721183AWFNC 2024.pdf" title="Celebration of Animal Welfare Fortnight 2024 and Jiv Jantu Kalyan Diwas on the occasion of Vasant Panchami dated 02.01.2024" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>53</td>                  <td>
+					    
+						  Implementation of Dog Breeding & Marketing Rules, 2017 and Pet Shop Rules, 2018 dated 28.12.2023
+                        <td>28-12-2023</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/175569207358Implementation of Dog Breeding & Marketing Rules 2O17 and Pet Shop Rules 2018.pdf" title="Implementation of Dog Breeding & Marketing Rules, 2017 and Pet Shop Rules, 2018 dated 28.12.2023" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>54</td>                  <td>
+					    
+						  Provide bedding and cots to stray animals during the winter dated 26.12.2023
+                        <td>26-12-2023</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/../regulations/170370610538Appeal for Welfare of Animals in Winter 26.12.2023.pdf" title="Provide bedding and cots to stray animals during the winter dated 26.12.2023" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>55</td>                  <td>
+					    
+						  Rescue and Rehabilitation of Animals Affected in Cyclone dated 04.12.2023
+                        <td>04-12-2023</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/../regulations/170169683280AWBI letter dated 4.12.2023_0001.pdf" title="Rescue and Rehabilitation of Animals Affected in Cyclone dated 04.12.2023" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>56</td>                  <td>
+					    
+						  Advisory on International Meatless Day dated 24.11.2023
+                        <td>24-11-2023</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/../regulations/170091669610Advisory on International Meatless Day.pdf" title="Advisory on International Meatless Day dated 24.11.2023" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>57</td>                  <td>
+					    
+						  Advisory on the use of products made from Panchagavya on Diwali, dated 06.11.2023
+                        <td>06-11-2023</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/../regulations/169951289980Dipawali appeal_page-0002.pdf" title="Advisory on the use of products made from Panchagavya on Diwali, dated 06.11.2023" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>58</td>                  <td>
+					    
+						  Message on World Rabies Day 2023 dated 12.09.2023
+                        <td>12-09-2023</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/169501821718WRD_12092023.pdf" title="Message on World Rabies Day 2023 dated 12.09.2023" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>59</td>                  <td>
+					    
+						  Stopping of illegal killing/sacrifices of cows/calves, camels and other animals on the occasion of Bakrid dated 21.06.2023
+                        <td>21-06-2023</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/../regulations/168775880126Advisory for Bakrid_00011.pdf" title="Stopping of illegal killing/sacrifices of cows/calves, camels and other animals on the occasion of Bakrid dated 21.06.2023" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>60</td>                  <td>
+					    
+						  Rescue and rehabilitation of animals affected by Cyclone Biparjoy in Gujarat dated 14.06.2023
+                        <td>14-06-2023</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/../regulations/168677068631Biprajoy Cyclone in Gujarat_page-0001.pdf" title="Rescue and rehabilitation of animals affected by Cyclone Biparjoy in Gujarat dated 14.06.2023" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>61</td>                  <td>
+					    
+						  Request to avoid exposure of direct heat to draught and pack animal and to take care of animals during extreme hot weather during transportation on foot dated 01.06.2023
+                        <td>01-06-2023</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/../regulations/168677028878Heat Advisory_0001.pdf" title="Request to avoid exposure of direct heat to draught and pack animal and to take care of animals during extreme hot weather during transportation on foot dated 01.06.2023" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>62</td>                  <td>
+					    
+						   Implementation of the provisions of the Animal Birth Control Rules, 2023 dated 31.03.2023
+                        <td>31-03-2023</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/175518126254Letter for implement the ABC Rules 2023 31-03-2023.pdf" title=" Implementation of the provisions of the Animal Birth Control Rules, 2023 dated 31.03.2023" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>63</td>                  <td>
+					    
+						  Request for the Establishment of the DSPCAs dated 27.03.2023
+                        <td>27-03-2023</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/168241312082Establishment the DSPCAs dated 27.03.2023.pdf" title="Request for the Establishment of the DSPCAs dated 27.03.2023" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>64</td>                  <td>
+					    
+						  Implement the Animal Birth Control Rules, 2023 for effective operation of the animal birth control programme dated 27.03.2023
+                        <td>27-03-2023</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/175518103486Circulation of ABC Rules 27.03.2023 (1).pdf" title="Implement the Animal Birth Control Rules, 2023 for effective operation of the animal birth control programme dated 27.03.2023" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>65</td>                  <td>
+					    
+						  Request for closure of slaughter house(s) on the auspicious occasion of Mahavir Jayanthi being celebrated on 04.04.2023 dated 20.03.2023
+                        <td>20-03-2023</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/167998505214AWBI letter for closure of slaughter house_0001.pdf" title="Request for closure of slaughter house(s) on the auspicious occasion of Mahavir Jayanthi being celebrated on 04.04.2023 dated 20.03.2023" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>66</td>                  <td>
+					    
+						  20.03.2023 को विश्व गौरैया दिवस मनाने का अनुरोध
+                        <td>20-03-2023</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/../regulations/167907759914IMG-20230317-WA0004.pdf" title="20.03.2023 को विश्व गौरैया दिवस मनाने का अनुरोध" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>67</td>                  <td>
+					    
+						  Request for placing of water bowls for the birds and animals dated 27.02.2023
+                        <td>27-02-2023</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/../regulations/167774582609advisory dated27.02.2023.pdf" title="Request for placing of water bowls for the birds and animals dated 27.02.2023" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>68</td>                  <td>
+					    
+						  Withdrawal of the APPEAL issued for celebration of Cow Hug Day dated 10.02.2023
+                        <td>10-02-2023</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/167603068349Withdrawal Letter.pdf" title="Withdrawal of the APPEAL issued for celebration of Cow Hug Day dated 10.02.2023" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>69</td>                  <td>
+					    
+						  Mass killing of dogs and stray dogs menace dated 10.10.2022
+                        <td>10-10-2022</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/../regulations/167966075529Mass killing of dogs and stray dogs menace_0001_compressed.pdf" title="Mass killing of dogs and stray dogs menace dated 10.10.2022" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>70</td>                  <td>
+					    
+						  World Rabies Day dated 05.09.2022
+                        <td>05-09-2022</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/168051572581World Rabies Day.pdf" title="World Rabies Day dated 05.09.2022" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>71</td>                  <td>
+					    
+						  Request for closure of slaughter house(s) on the auspicious occasion of Paryushan Daslaskhan Parva being celebrated in the country dated 17.08.2022
+                        <td>17-08-2022</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/../regulations/172492271755Advisory for Paryushan-Daslaskhan Parva _11zon.pdf" title="Request for closure of slaughter house(s) on the auspicious occasion of Paryushan Daslaskhan Parva being celebrated in the country dated 17.08.2022" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>72</td>                  <td>
+					    
+						  General Awareness in regard to the Lumpy (Skin) Disease in Cattle/Bovine dated 05.08.2022
+                        <td>05-08-2022</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/../regulations/167966092844LSD_Advisory.pdf" title="General Awareness in regard to the Lumpy (Skin) Disease in Cattle/Bovine dated 05.08.2022" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>73</td>                  <td>
+					    
+						  Request to make an adequate number of animal crematoriums and incinerators in each district of every state and UTs to dispose of the cadavers in an environmentally acceptable manner, dated 02.08.2022
+                        <td>02-08-2022</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/../regulations/167966095868PCA Act 02.8.2022_0001.pdf" title="Request to make an adequate number of animal crematoriums and incinerators in each district of every state and UTs to dispose of the cadavers in an environmentally acceptable manner, dated 02.08.2022" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>74</td>                  <td>
+					    
+						  Stopping of illegal killing/sacrifices of Cows/calves and other animals and taking action against the offenders for violation of Transport of animals, Rules on the occation of Bakrid dated 07.06.2022
+                        <td>07-06-2022</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/165596646164Bakrid_2022.pdf" title="Stopping of illegal killing/sacrifices of Cows/calves and other animals and taking action against the offenders for violation of Transport of animals, Rules on the occation of Bakrid dated 07.06.2022" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>75</td>                  <td>
+					    
+						  Revised rate for Animal Birth Control Programme for Dogs as per the Animal Birth Control Rules, 2001 AWBI ABC Module dated 05.04.2022
+                        <td>05-04-2022</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/165596639018ABC 5.4.2022_0001.pdf" title="Revised rate for Animal Birth Control Programme for Dogs as per the Animal Birth Control Rules, 2001 AWBI ABC Module dated 05.04.2022" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>76</td>                  <td>
+					    
+						  Endorsement by AWBI for IGNOU's PG Diploma in Animal Welfare (Open and Distance Learning) dated 11.03.2022
+                        <td>11-03-2022</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/165596635176Circular 11.03.2022.pdf" title="Endorsement by AWBI for IGNOU's PG Diploma in Animal Welfare (Open and Distance Learning) dated 11.03.2022" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>77</td>                  <td>
+					    
+						  Request to ensure proper implementation of AWBI Advisories/Circulars issued to prevent unnecessary pain and suffering to animals amid the COVID-19 pandemic dated 21.01.2022
+                        <td>21-01-2022</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/../regulations/165597065968Implementation of AWBI advisories_00001_comp.pdf" title="Request to ensure proper implementation of AWBI Advisories/Circulars issued to prevent unnecessary pain and suffering to animals amid the COVID-19 pandemic dated 21.01.2022" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>78</td>                  <td>
+					    
+						  Celebration of Jiv Jantu Kalyan Diwas and Animal Welfare Fortnight 2022 - dated 11.01.2022
+                        <td>11-01-2022</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/165596626428AWBI Fortnight 2022.pdf" title="Celebration of Jiv Jantu Kalyan Diwas and Animal Welfare Fortnight 2022 - dated 11.01.2022" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>79</td>                  <td>
+					    
+						  Advisory for the Care and Maintenance of Case Property Animals dated 27.12.2021
+                        <td>27-12-2021</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/../regulations/174011417259Advisory for Care and Maintenace of Case Property animals 27.12.2021.pdf" title="Advisory for the Care and Maintenance of Case Property Animals dated 27.12.2021" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>80</td>                  <td>
+					    
+						  Advisory for the implementation of the Animal Birth Control Programme dated 17.12.2021
+                        <td>17-12-2021</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/../regulations/165597055132Implementation of Animal Birth Control Programme0001.pdf" title="Advisory for the implementation of the Animal Birth Control Programme dated 17.12.2021" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>81</td>                  <td>
+					    
+						  Advisory to use artistic and technological means instead of live animals in films, advertisements, TV-shows and on digital content dated 22.11.2021
+                        <td>22-11-2021</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/../regulations/165597031529Advisory to use CG animals1.pdf" title="Advisory to use artistic and technological means instead of live animals in films, advertisements, TV-shows and on digital content dated 22.11.2021" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>82</td>                  <td>
+					    
+						  Circular for Film/Television/Advertisement Producers dated 28.09.2021
+                        <td>28-09-2021</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/163282560265circular_film_producers.pdf" title="Circular for Film/Television/Advertisement Producers dated 28.09.2021" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>83</td>                  <td>
+					    
+						  Message on World Rabies Day dated 16.09.2021
+                        <td>16-09-2021</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/165596620483Message on World Rabies Day_1.pdf" title="Message on World Rabies Day dated 16.09.2021" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>84</td>                  <td>
+					    
+						  Message of Hon'ble Minister on Hindi Fortnight dated 14.09.2021
+                        <td>14-09-2021</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/165596609532Message of Honble Minister on Hindi Fortnight_1.pdf" title="Message of Hon'ble Minister on Hindi Fortnight dated 14.09.2021" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>85</td>                  <td>
+					    
+						  Letter to Director, AHD regarding SPCA dated 23.08.2021
+                        <td>23-08-2021</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/165596499430letter to Dir, AHD regarding SPCA (1).pdf" title="Letter to Director, AHD regarding SPCA dated 23.08.2021" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>86</td>                  <td>
+					    
+						  Advisory to ensure ban on keeping the aerial birds in cages dated 22.07.2021
+                        <td>22-07-2021</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/../regulations/163310220544bird Advisory22072021.pdf" title="Advisory to ensure ban on keeping the aerial birds in cages dated 22.07.2021" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>87</td>                  <td>
+					    
+						  Effective implementation of the provisions of the Animal Birth Control (Dogs) Rules, 2001 for sterlisation and immunization of the stray dogs dated 01.07.2021
+                        <td>01-07-2021</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/165596474581ABC_effective_implementation_1.pdf" title="Effective implementation of the provisions of the Animal Birth Control (Dogs) Rules, 2001 for sterlisation and immunization of the stray dogs dated 01.07.2021" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>88</td>                  <td>
+					    
+						  Request to initiate actions for making effective utilization of veterinary hospitals and to provide 24-hour veterinary service dated 28.06.2021
+                        <td>28-06-2021</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/../regulations/163310209998Vet_service_24hr.pdf" title="Request to initiate actions for making effective utilization of veterinary hospitals and to provide 24-hour veterinary service dated 28.06.2021" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>89</td>                  <td>
+					    
+						  Request to initiate action on animal welfare issues dated 28.06.2021
+                        <td>28-06-2021</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/../regulations/163310213027Action_on_Animal_WelFare_Issues.pdf" title="Request to initiate action on animal welfare issues dated 28.06.2021" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>90</td>                  <td>
+					    
+						  Request to initiate necessary action on the following points regarding animal welfare issues dated 28.06.2021
+                        <td>28-06-2021</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/../regulations/163310215935Dog feeder.pdf" title="Request to initiate necessary action on the following points regarding animal welfare issues dated 28.06.2021" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>91</td>                  <td>
+					    
+						  Request to activate the functioning of the State Animal Welfare Board dated 28.06.2021
+                        <td>28-06-2021</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/../regulations/163310218372Functioning_of_SAWB.pdf" title="Request to activate the functioning of the State Animal Welfare Board dated 28.06.2021" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>92</td>                  <td>
+					    
+						  Stopping of illegal killing/sacrifices of Cows/Calves, Camels and other animals and taking action against the offenders for violation of Transport of Animals Rules on the occasion of Bakra Id dated 25.06.2021
+                        <td>25-06-2021</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/../regulations/163310207238Bakreid.pdf" title="Stopping of illegal killing/sacrifices of Cows/Calves, Camels and other animals and taking action against the offenders for violation of Transport of Animals Rules on the occasion of Bakra Id dated 25.06.2021" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>93</td>                  <td>
+					    
+						  Advisory for proper implementation of Care and Maintenance of case property Animals Rules, 2017 dated 15.06.2021
+                        <td>15-06-2021</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/../regulations/163310204812Care and Maintenance of Case Property Animals (1).pdf" title="Advisory for proper implementation of Care and Maintenance of case property Animals Rules, 2017 dated 15.06.2021" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>94</td>                  <td>
+					    
+						  Request to implement the Guidelines for Birth Control and Immunization of stray cats dated 03.06.2021
+                        <td>03-06-2021</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/163281879557Circular reg. guidelines for birth control and imm of stray cats.pdf" title="Request to implement the Guidelines for Birth Control and Immunization of stray cats dated 03.06.2021" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>95</td>                  <td>
+					    
+						  Request to ensure proper implementation of AWBI Advisories/Circulars issued to prevent unnecessary pain and sufferings to animals amid COVID-19 pandemic dated 27.05.2021
+                        <td>27-05-2021</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/../regulations/163310198894Letter for proper implementation of advosires during Covid .pdf" title="Request to ensure proper implementation of AWBI Advisories/Circulars issued to prevent unnecessary pain and sufferings to animals amid COVID-19 pandemic dated 27.05.2021" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>96</td>                  <td>
+					    
+						  Allocation of funds for feeding community animals and recognition of veterinary service providers, animal activities and animal feeders as frontline workers dated 21.05.2021
+                        <td>21-05-2021</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/../regulations/163310195861Letter to all CS.pdf" title="Allocation of funds for feeding community animals and recognition of veterinary service providers, animal activities and animal feeders as frontline workers dated 21.05.2021" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>97</td>                  <td>
+					    
+						  Advisory to identify sufficient number of feeding spots for stray dogs in every district and to properly implement the (AWBI Revised Guidelines on Pet dogs and street dogs)  dated 03.03.2021
+                        <td>03-03-2021</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/../regulations/163310193039feeding spots for stray dogs.pdf" title="Advisory to identify sufficient number of feeding spots for stray dogs in every district and to properly implement the (AWBI Revised Guidelines on Pet dogs and street dogs)  dated 03.03.2021" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>98</td>                  <td>
+					    
+						  Request for disclosing the particulars of Gochar/grazing land available in each village and make the same available for grazing of cows in respective states dated 23-02-2021
+                        <td>23-02-2021</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/../regulations/170323653136Gochar_Land_23.02.2021_001.pdf" title="Request for disclosing the particulars of Gochar/grazing land available in each village and make the same available for grazing of cows in respective states dated 23-02-2021" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>99</td>                  <td>
+					    
+						  Strict directions to ban completely on Nylone Manjha on the occassion of Makarsankranti dated 07.01.2021
+                        <td>08-01-2021</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/163281874158ban nylon Manjha.pdf" title="Strict directions to ban completely on Nylone Manjha on the occassion of Makarsankranti dated 07.01.2021" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>100</td>                  <td>
+					    
+						  Strict directions to ban the use of Glue Traps dated 16.11.2020
+                        <td>16-11-2020</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/163281872681Directions to ban the glue traps.pdf" title="Strict directions to ban the use of Glue Traps dated 16.11.2020" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>101</td>                  <td>
+					    
+						  Circular to all District Magistrate for effective implementation of Animal Birth Control programmes dated 18.08.2020 and Corrigendum dated 10.11.2020
+                        <td>10-11-2020</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/163281870346ABC control programme.pdf" title="Circular to all District Magistrate for effective implementation of Animal Birth Control programmes dated 18.08.2020 and Corrigendum dated 10.11.2020" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>102</td>                  <td>
+					    
+						  Message on World Rabies Day dated 16.09.2020
+                        <td>16-09-2020</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/163282225337World Rabies Day.pdf" title="Message on World Rabies Day dated 16.09.2020" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>103</td>                  <td>
+					    
+						  Letter to Chief Secretary and Director General of Police of all State and UTs regarding - Harassment of citizens showing compassion to animals dated 14.08.2020
+                        <td>14-08-2020</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/163281868291Harassment of citizens.pdf" title="Letter to Chief Secretary and Director General of Police of all State and UTs regarding - Harassment of citizens showing compassion to animals dated 14.08.2020" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>104</td>                  <td>
+					    
+						  Withdrawing letter dated 06.08.2020 for closure of slaughter house on the occasion of Paryushan Parva dated 11.08.2020
+                        <td>11-08-2020</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/../regulations/163310188049Withdraw Paryushan Parva_compressed.pdf" title="Withdrawing letter dated 06.08.2020 for closure of slaughter house on the occasion of Paryushan Parva dated 11.08.2020" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>105</td>                  <td>
+					    
+						  WITHDRAW - Request for closure of slaughter house(s) on the auspicious occasion of Paryushan Parva from 15-08-2020 to 24-08-2020. dated 06.08.2020
+                        <td>06-08-2020</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/../regulations/163310170609Paryushan Parva.pdf" title="WITHDRAW - Request for closure of slaughter house(s) on the auspicious occasion of Paryushan Parva from 15-08-2020 to 24-08-2020. dated 06.08.2020" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>106</td>                  <td>
+					    
+						  Request to restrict the trade of animals in the E-commerce platform without proper registration dated 09.07.2020
+                        <td>09-07-2020</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/163281866363PCA E-Commerce.pdf" title="Request to restrict the trade of animals in the E-commerce platform without proper registration dated 09.07.2020" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>107</td>                  <td>
+					    
+						  Request to establish and/or District SPCAs and register the Animal Welfare organisations which are functioning in the District with the AWBI dated 30.06.2020
+                        <td>30-06-2020</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/163281875932Distt_SPCA_registration.pdf" title="Request to establish and/or District SPCAs and register the Animal Welfare organisations which are functioning in the District with the AWBI dated 30.06.2020" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>108</td>                  <td>
+					    
+						  Stopping of illegal Killing/sacrifices of Cows/calves, Camels and animals and taking action against the offenders for violation of Transport of Animals Rules on the occasion of Bakrid 2020 dated 18.06.2020
+                        <td>18-06-2020</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/163281865056Bakrid 2020.pdf" title="Stopping of illegal Killing/sacrifices of Cows/calves, Camels and animals and taking action against the offenders for violation of Transport of Animals Rules on the occasion of Bakrid 2020 dated 18.06.2020" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>109</td>                  <td>
+					    
+						  Letter to Chief Secretary for establisment of SAWBs and SPCAs dated 16.06.2020
+                        <td>16-06-2020</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/163281861395SAWB JS.pdf" title="Letter to Chief Secretary for establisment of SAWBs and SPCAs dated 16.06.2020" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>110</td>                  <td>
+					    
+						  Letter to Principal Secretary, AHD activate the functioning of State Animal Welfare Board dated 01.06.2020
+                        <td>01-06-2020</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/163282174942SAWB.pdf" title="Letter to Principal Secretary, AHD activate the functioning of State Animal Welfare Board dated 01.06.2020" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>111</td>                  <td>
+					    
+						  Circular to allow pet owners to take their pets out for nature’s calls and walks/exercise due to the COVID19 dated 01.06.2020
+                        <td>01-06-2020</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/../regulations/163310166785Circular and Guideline for pet owner.pdf" title="Circular to allow pet owners to take their pets out for nature’s calls and walks/exercise due to the COVID19 dated 01.06.2020" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>112</td>                  <td>
+					    
+						  Rescue and rehabilitation of Animals affected by Cyclone dated 21.05.2020
+                        <td>21-05-2020</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/163282180073Cyclone Amphan.pdf" title="Rescue and rehabilitation of Animals affected by Cyclone dated 21.05.2020" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>113</td>                  <td>
+					    
+						  Letter to Principal Secretary, AHD for implementation of PCA (Dog Breeding and Marketin) Rule, 2017 and PCA Pet Shop Rule, 2018 dated 01.05.2020
+                        <td>01-05-2020</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/163282184507Pet Shop Rules.pdf" title="Letter to Principal Secretary, AHD for implementation of PCA (Dog Breeding and Marketin) Rule, 2017 and PCA Pet Shop Rule, 2018 dated 01.05.2020" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>114</td>                  <td>
+					    
+						  Advisory on feeding the birds and animals during COVID 19 dated 25.04.2020
+                        <td>25-04-2020</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/../regulations/163310162972Advisory for animal feeding 25.4.2020.pdf" title="Advisory on feeding the birds and animals during COVID 19 dated 25.04.2020" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>115</td>                  <td>
+					    
+						  Circular dated 07.04.2020 requesting inter state movement and supply of animal feed/foodder to Gaushalas, Pinjrapoles and shelter houses to feed their animals dated 07.04.2020
+                        <td>07-04-2020</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/../regulations/163310159395circular 07.04.2020.pdf" title="Circular dated 07.04.2020 requesting inter state movement and supply of animal feed/foodder to Gaushalas, Pinjrapoles and shelter houses to feed their animals dated 07.04.2020" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>116</td>                  <td>
+					    
+						  Circular regarding evacuation of animals and birds from the Pet Shops by District Authorities dated 24.03.2020
+                        <td>24-03-2020</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/../regulations/163310154799Advisory on petshop evacuation 24.3.2020.pdf" title="Circular regarding evacuation of animals and birds from the Pet Shops by District Authorities dated 24.03.2020" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>117</td>                  <td>
+					    
+						  Circular dated 23.03.2020 allowing individuals/volunteers to provide food and water to street animals and birds dated 23.03.2020
+                        <td>23-03-2020</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/../regulations/163310139572Advisory for feed animals and birds during COVID19  23.3.20.pdf" title="Circular dated 23.03.2020 allowing individuals/volunteers to provide food and water to street animals and birds dated 23.03.2020" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>118</td>                  <td>
+					    
+						  Order regarding inspection of Animal Welfare Organization or Circusses or any other establishments dated 13.03.2020
+                        <td>13-03-2020</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/163282221149Circular.pdf" title="Order regarding inspection of Animal Welfare Organization or Circusses or any other establishments dated 13.03.2020" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>119</td>                  <td>
+					    
+						  Restriction of unauthorized inspection of Organization/Individuals inspecting AWOs/Gaushalas/Circuses etc. dated 13.03.2020
+                        <td>13-03-2020</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/../regulations/170471607986Circular_13.03.2020.pdf" title="Restriction of unauthorized inspection of Organization/Individuals inspecting AWOs/Gaushalas/Circuses etc. dated 13.03.2020" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>120</td>                  <td>
+					    
+						  Circular dated 11.03.2020 regarding all animals lovers not to leave their pet animals or inffict cruelty due to the Covid - 19 dated 11.03.2020
+                        <td>11-03-2020</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/../regulations/163310130343Circular 11.03.2020.pdf" title="Circular dated 11.03.2020 regarding all animals lovers not to leave their pet animals or inffict cruelty due to the Covid - 19 dated 11.03.2020" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>121</td>                  <td>
+					    
+						  Request to take action against the animal owners who are straying their cattle on the roads inflicting cruelty to animals dated 27.02.2020
+                        <td>27-02-2020</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/../regulations/163310113553AdvisoryOnStrayAnimals2020.pdf" title="Request to take action against the animal owners who are straying their cattle on the roads inflicting cruelty to animals dated 27.02.2020" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>122</td>                  <td>
+					    
+						  Inviting objections and comments on the draft Prevention of Cruelty to Animals (Egg Laying Hens) Rules, 2019 by 28.05.2019
+                        <td>28-05-2019</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/163282197497Circuler28_5_2019.pdf" title="Inviting objections and comments on the draft Prevention of Cruelty to Animals (Egg Laying Hens) Rules, 2019 by 28.05.2019" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>123</td>                  <td>
+					    
+						  Inviting comments/Suggestions to the draft Performing Animals (Registration) (Amendment) Rules, 2018 by 28-12-2018
+                        <td>28-12-2018</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/163282201832REGD_NO_D_L_33004_99.PDF" title="Inviting comments/Suggestions to the draft Performing Animals (Registration) (Amendment) Rules, 2018 by 28-12-2018" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>124</td>                  <td>
+					    
+						  Inviting comments/Suggestions on draft the Prevention of Cruelty to Animals (State Animal Welfare Board) Rules 2018 within one month by 31.10.2018
+                        <td>31-10-2018</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/163282238993Draft_PCA_Rules2018.pdf" title="Inviting comments/Suggestions on draft the Prevention of Cruelty to Animals (State Animal Welfare Board) Rules 2018 within one month by 31.10.2018" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>125</td>                  <td>
+					    
+						  Advisory to sterilize and immunize stray cats-(16-10-18)
+                        <td>16-10-2018</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/../regulations/163310110504Advisory 16.10.18.pdf" title="Advisory to sterilize and immunize stray cats-(16-10-18)" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>126</td>                  <td>
+					    
+						  Advisory on Immense cruelty and illegality perpetrated during export of live animal/live stocks including small ruminants such as sheep, goats etc. specially during their transport-(1-10-18)
+                        <td>01-10-2018</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/../regulations/163310105975Advisory_on_livestock_cruelty_1_10_18.pdf" title="Advisory on Immense cruelty and illegality perpetrated during export of live animal/live stocks including small ruminants such as sheep, goats etc. specially during their transport-(1-10-18)" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>127</td>                  <td>
+					    
+						  Advisory to Establish and/or Activate District Society for Prevention of Cruelty to Animals(SPCAs) in every district - Draft memorandum/bye-laws attached for adoption as per your requirement-(1-10-18)
+                        <td>01-10-2018</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/../regulations/163310108710Advisory_to_Establish_01_10_18.pdf" title="Advisory to Establish and/or Activate District Society for Prevention of Cruelty to Animals(SPCAs) in every district - Draft memorandum/bye-laws attached for adoption as per your requirement-(1-10-18)" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>128</td>                  <td>
+					    
+						  Inviting Quotations for printing file folder. Dated - 12.9.2018. Extended upto 31.10.2018
+                        <td>12-09-2018</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/163282229118Circular_for_inviting_Quotations_12_9_18.pdf" title="Inviting Quotations for printing file folder. Dated - 12.9.2018. Extended upto 31.10.2018" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>129</td>                  <td>
+					    
+						  Letter dated 20-07-2018 regarding stopping of illegal killing/sacrifice of animals on the occasion of Bakrid
+                        <td>20-07-2018</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/163299323282bakrid.pdf" title="Letter dated 20-07-2018 regarding stopping of illegal killing/sacrifice of animals on the occasion of Bakrid" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>130</td>                  <td>
+					    
+						  Prevention of Sacrifice / Slaughtering and transportation of the Animals in violation of the Laws, Rules, Regulations, directions.-(20-07-18)
+                        <td>20-07-2018</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/../regulations/163310104222Advisory_on_illegal_sacrifice_of_animals_20_7_18.pdf" title="Prevention of Sacrifice / Slaughtering and transportation of the Animals in violation of the Laws, Rules, Regulations, directions.-(20-07-18)" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>131</td>                  <td>
+					    
+						  Advisory to initiate necessary action for rescue and rehabilitation of stray animals-(12-07-18)
+                        <td>12-07-2018</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/../regulations/163310101621Advisory_on_stray_animals_12_7_18.pdf" title="Advisory to initiate necessary action for rescue and rehabilitation of stray animals-(12-07-18)" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>132</td>                  <td>
+					    
+						  Advisory to all States/UTs regarding nomination of HDAWO/HSAWO/HSLAWO-(08-06-18)
+                        <td>08-06-2018</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/../regulations/163310099234Nomination_of_HDAWO_8_6_18.pdf" title="Advisory to all States/UTs regarding nomination of HDAWO/HSAWO/HSLAWO-(08-06-18)" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>133</td>                  <td>
+					    
+						  Advisory for necessary action for the implementation of the provisions of PCA (Care and Maintenance of Case Property Animals) Rules 2017-(03-05-18)
+                        <td>03-05-2018</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/../regulations/163310097262PCA_Case_Property_3_5_18.pdf" title="Advisory for necessary action for the implementation of the provisions of PCA (Care and Maintenance of Case Property Animals) Rules 2017-(03-05-18)" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>134</td>                  <td>
+					    
+						  Advisory on Gochar land.-(05-03-18)
+                        <td>05-03-2018</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/../regulations/163310091537Gochar_Land_05_03_18.pdf" title="Advisory on Gochar land.-(05-03-18)" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>135</td>                  <td>
+					    
+						  Advisory on furnishing the details of the one or two Municipal Council / Municipalities facing financial problem for implementation of the Animal Birth Control Programme for sterilization and immunization of stray dogs.-(05-03-18)
+                        <td>05-03-2018</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/../regulations/163310093985Advisory_on_furnishing_the_details_5_3_18.pdf" title="Advisory on furnishing the details of the one or two Municipal Council / Municipalities facing financial problem for implementation of the Animal Birth Control Programme for sterilization and immunization of stray dogs.-(05-03-18)" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>136</td>                  <td>
+					    
+						  Guidelines on conduct of Jallikattu event dated 20.01.2018
+                        <td>20-01-2018</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/163299330532guidelines_jallikattu_jan2018.pdf" title="Guidelines on conduct of Jallikattu event dated 20.01.2018" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>137</td>                  <td>
+					    
+						  Letter sent to DGP of all States/UTs requesting to file FIRs on the complaints of HAWOs dated 31.07.2017
+                        <td>31-07-2017</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/163299310141dgps_hawos.pdf" title="Letter sent to DGP of all States/UTs requesting to file FIRs on the complaints of HAWOs dated 31.07.2017" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>138</td>                  <td>
+					    
+						  letter to Chief Secretary of all States/UTs dated 30-6-2017 regarding criteria to be adhered by AWOs implementing ABC/AR Programme (for street dogs) dated 30.06.2017
+                        <td>30-06-2017</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/163299300742lr_cs_criteria_abc.pdf" title="letter to Chief Secretary of all States/UTs dated 30-6-2017 regarding criteria to be adhered by AWOs implementing ABC/AR Programme (for street dogs) dated 30.06.2017" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>139</td>                  <td>
+					    
+						  Circular regarding Re-Recognition of AWOs for conducting Animal Birth Control Program for street dogs by AWOs-reg. dated 30.06.2017
+                        <td>30-06-2017</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/163299305794re_recog_abc.pdf" title="Circular regarding Re-Recognition of AWOs for conducting Animal Birth Control Program for street dogs by AWOs-reg. dated 30.06.2017" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>140</td>                  <td>
+					    
+						  Letter dated 15-11-2016 sent to Delhi Development Authority - Guidelines for allowing Pet Dogs in the Public Parks dated 15.11.2016
+                        <td>15-11-2016</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/163299296801guidelines_petdogs_parks.pdf" title="Letter dated 15-11-2016 sent to Delhi Development Authority - Guidelines for allowing Pet Dogs in the Public Parks dated 15.11.2016" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>141</td>                  <td>
+					    
+						  Niti Aayog - NGOs Registration - MOST IMPORTANT AND URGENT - AWBI's letter and Sample Application Form dated 28.09.2016
+                        <td>28-09-2016</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/163282209937lr_niti_aayog.pdf" title="Niti Aayog - NGOs Registration - MOST IMPORTANT AND URGENT - AWBI's letter and Sample Application Form dated 28.09.2016" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>142</td>                  <td>
+					    
+						  Letter sent to Chief Secretary, DGP, Govt.of Tamil nadu and Commissioner of Police, Chennai on animal sacrifice during Bakrid dated 09.09.2016
+                        <td>09-09-2016</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/163299284829bakrid_lr_tn.pdf" title="Letter sent to Chief Secretary, DGP, Govt.of Tamil nadu and Commissioner of Police, Chennai on animal sacrifice during Bakrid dated 09.09.2016" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>143</td>                  <td>
+					    
+						  Letter sent to Chief Secretary, DGP and AHDs of all States on animal sacrifice during Bakrid dated 04.07.2016
+                        <td>04-07-2016</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/163299290466bakrid_lr_allstates.pdf" title="Letter sent to Chief Secretary, DGP and AHDs of all States on animal sacrifice during Bakrid dated 04.07.2016" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>144</td>                  <td>
+					    
+						  Expression of Interest invited by Uttarakhand Government for Sterilisation and Vaccination of stray dogs in Dehradun, Mussoorie and Nainital dated 01.06.2016
+                        <td>01-06-2016</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/163299262394eoi_abc_uk_2016.pdf" title="Expression of Interest invited by Uttarakhand Government for Sterilisation and Vaccination of stray dogs in Dehradun, Mussoorie and Nainital dated 01.06.2016" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>145</td>                  <td>
+					    
+						  Animal Welfare Guidelines for Equines at Equine Trade Fairs in India dated 25.05.2016
+                        <td>25-05-2016</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/163299255207guidelines_equines_fair.pdf" title="Animal Welfare Guidelines for Equines at Equine Trade Fairs in India dated 25.05.2016" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>146</td>                  <td>
+					    
+						  Animal Welfare guidelines for Equines at Pilgirm Sites dated 01.03.2016
+                        <td>01-03-2016</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/163299143128aw_guidelines_equines_pilgrimsites.pdf" title="Animal Welfare guidelines for Equines at Pilgirm Sites dated 01.03.2016" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>147</td>                  <td>
+					    
+						  Expression of Interest - National Rabies Control Programme, Haryana dated 22.02.2016
+                        <td>22-02-2016</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/163299237400eoi_nrcp_hr.pdf" title="Expression of Interest - National Rabies Control Programme, Haryana dated 22.02.2016" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>148</td>                  <td>
+					    
+						  Request for ban on glass coated, metal, plastic or other sharp Manja thread dated 13.01.2016
+                        <td>13-01-2016</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/170204002662Ban use of Manjha-13.01.2016.pdf" title="Request for ban on glass coated, metal, plastic or other sharp Manja thread dated 13.01.2016" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>149</td>                  <td>
+					    
+						  Order of State Human Rights Commission, Tamil Nadu on killing of stray dogs dated 29.12.2015
+                        <td>29-12-2015</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/163299228648shrc_order.pdf" title="Order of State Human Rights Commission, Tamil Nadu on killing of stray dogs dated 29.12.2015" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>150</td>                  <td>
+					    
+						  Letter sent to Chief Secretaries of all States forwarding the order of SC dated 18-11-2015 on ABC dated 30.11.2015
+                        <td>30-11-2015</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/163299221599lr_sc_abc.pdf" title="Letter sent to Chief Secretaries of all States forwarding the order of SC dated 18-11-2015 on ABC dated 30.11.2015" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>151</td>                  <td>
+					    
+						  Letter dated 28-10-2015 to DGPs of all States/UTs regarding harassment to Citizens showing compassion to animals dated 28.10.2015
+                        <td>28-10-2015</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/163299207170harassment_citizens_281015.pdf" title="Letter dated 28-10-2015 to DGPs of all States/UTs regarding harassment to Citizens showing compassion to animals dated 28.10.2015" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>152</td>                  <td>
+					    
+						  Letter addressed by Hon'ble Minister, MoEF & CC dated 14-10-2015 to Smt Maneka Gandhi, Hon'ble Minister of Women and Child Development regarding movement of Captive Elephants in to the State of Bihar dated 14.10.2015
+                        <td>14-10-2015</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/163299200437lr_min_cap_ele_bihar.pdf" title="Letter addressed by Hon'ble Minister, MoEF & CC dated 14-10-2015 to Smt Maneka Gandhi, Hon'ble Minister of Women and Child Development regarding movement of Captive Elephants in to the State of Bihar dated 14.10.2015" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>153</td>                  <td>
+					    
+						  Press release regarding AWBI Tipline for gathering information on illegal dog killing in Kerala dated 13.10.2015
+                        <td>13-10-2015</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/163299194975press_note_tipline_kerala_13102015.pdf" title="Press release regarding AWBI Tipline for gathering information on illegal dog killing in Kerala dated 13.10.2015" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>154</td>                  <td>
+					    
+						  AWBI's letter to DGP, Kerala and reply from DGP, Kerala regarding illegal killing of stray dogs in Kerala dated 24.09.2015
+                        <td>24-09-2015</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/163299176100dgp_kerala_letter.pdf" title="AWBI's letter to DGP, Kerala and reply from DGP, Kerala regarding illegal killing of stray dogs in Kerala dated 24.09.2015" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>155</td>                  <td>
+					    
+						  Order dated 17-9-2015 of the LSGD, Govt. of Kerala on stray dog population management
+                        <td>17-09-2015</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/163299182672lsg_order_17092015.pdf" title="Order dated 17-9-2015 of the LSGD, Govt. of Kerala on stray dog population management" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>156</td>                  <td>
+					    
+						  Expression of Interest for Census/Survey of Stray Dogs in NDMC Area dated 26.08.2015
+                        <td>26-08-2015</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/163299166113ndmc_eoi.pdf" title="Expression of Interest for Census/Survey of Stray Dogs in NDMC Area dated 26.08.2015" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>157</td>                  <td>
+					    
+						  Letter dated 25-08-2015 to DGPs of all States/UTs regarding harassment to Citizens showing compassion to animals
+                        <td>25-08-2015</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/163299189893lr_25082015_dgps_harassment.pdf" title="Letter dated 25-08-2015 to DGPs of all States/UTs regarding harassment to Citizens showing compassion to animals" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>158</td>                  <td>
+					    
+						  Recommendation of Law Commission regarding Pet Shop, Dog Breeding and Aquarium Rules dated 20-08-2015
+                        <td>20-08-2015</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/163298975568lawcommissionreport.pdf" title="Recommendation of Law Commission regarding Pet Shop, Dog Breeding and Aquarium Rules dated 20-08-2015" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>159</td>                  <td>
+					    
+						  Letter to AWOs doing ABC Programme-28-07-2015
+                        <td>28-07-2015</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/163298940781abcletter_2872015.pdf" title="Letter to AWOs doing ABC Programme-28-07-2015" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>160</td>                  <td>
+					    
+						  Circular regarding forwarding of Financial Assistance Application Forms through SAWBs/AHDs with the endorsement of DC/DM dated 21.07.2015
+                        <td>21-07-2015</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/163299134219letter_dcs_fa.pdf" title="Circular regarding forwarding of Financial Assistance Application Forms through SAWBs/AHDs with the endorsement of DC/DM dated 21.07.2015" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>161</td>                  <td>
+					    
+						  Notification of Ministry of Road Transport and Highways dated 08-07-2015 regarding Amendment to Central Motor Vehicles Rules for special requirements of Motor Vehicles for transporting Livestock
+                        <td>08-07-2015</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/163298936650trans_notif_872015.pdf" title="Notification of Ministry of Road Transport and Highways dated 08-07-2015 regarding Amendment to Central Motor Vehicles Rules for special requirements of Motor Vehicles for transporting Livestock" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>162</td>                  <td>
+					    
+						  Circular/Show Cause Notice to Recognised AWOs of AWBI who have not submitted/furnished activity reports, Annual Reports and Audited Accounts dated 22.06.2015
+                        <td>22-06-2015</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/163298919327circular_awos_showcause.pdf" title="Circular/Show Cause Notice to Recognised AWOs of AWBI who have not submitted/furnished activity reports, Annual Reports and Audited Accounts dated 22.06.2015" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>163</td>                  <td>
+					    
+						  Circular to all Cantonment Boards in India to implement ABC (Dogs) Rules, 2001 dated 18-06-2015
+                        <td>18-06-2015</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/163298924127circular_abc_cantonmentboards.pdf" title="Circular to all Cantonment Boards in India to implement ABC (Dogs) Rules, 2001 dated 18-06-2015" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>164</td>                  <td>
+					    
+						  Applicants to send intimation of Shooting to SAWBs/District SPCAs for overseeing use of Performing Animals by SAWBs/District SPCAs dated 12.06.2015
+                        <td>12-06-2015</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/163282815191circular_performinganimals_sawbs.pdf" title="Applicants to send intimation of Shooting to SAWBs/District SPCAs for overseeing use of Performing Animals by SAWBs/District SPCAs dated 12.06.2015" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>165</td>                  <td>
+					    
+						  Letter dated 06-05-2015 and Certificate for Transport of Animals under Rule 96 - Proforma dated 06.05.2015
+                        <td>06-05-2015</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/163282273964transcert.pdf" title="Letter dated 06-05-2015 and Certificate for Transport of Animals under Rule 96 - Proforma dated 06.05.2015" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>166</td>                  <td>
+					    
+						  otification of Govt. of Haryana - NRCP (Animal Component) dated 04.03.2015
+                        <td>04-03-2015</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/163299242077notif_hr_nrcp.pdf" title="otification of Govt. of Haryana - NRCP (Animal Component) dated 04.03.2015" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>167</td>                  <td>
+					    
+						  Assam Government order regarding animal races dated 12.01.2015
+                        <td>12-01-2015</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/163282609776assam_order.pdf" title="Assam Government order regarding animal races dated 12.01.2015" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>168</td>                  <td>
+					    
+						  Ban on movement of Elephants in Municipal Corporations of Maharashtra dated 08.12.2014
+                        <td>08-12-2014</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/163282606570ban_elephant_mh.pdf" title="Ban on movement of Elephants in Municipal Corporations of Maharashtra dated 08.12.2014" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>169</td>                  <td>
+					    
+						  FSSAI's Letter dated 14-11-2014 regarding enforcement of legal provisions regarding meat and meat products, operations and management of slaughter houses and animal handling practices dated 14.11.2014
+                        <td>14-11-2014</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/163282601506fssai_14-11-14.pdf" title="FSSAI's Letter dated 14-11-2014 regarding enforcement of legal provisions regarding meat and meat products, operations and management of slaughter houses and animal handling practices dated 14.11.2014" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>170</td>                  <td>
+					    
+						  Request to stop the use of Chinese Dor and glass-coated manjha dated 09.09.2014
+                        <td>09-09-2014</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/170203992576Ministry_s_lr_to_ban_Manjha.pdf" title="Request to stop the use of Chinese Dor and glass-coated manjha dated 09.09.2014" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>171</td>                  <td>
+					    
+						  Letter regarding slaughtering of animals not permissible under the FSS Act and Regulations dated 06.08.2014
+                        <td>06-08-2014</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/163282596969fss.pdf" title="Letter regarding slaughtering of animals not permissible under the FSS Act and Regulations dated 06.08.2014" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>172</td>                  <td>
+					    
+						   lmplementation of provisions of the Prevention of Cruelty to Animals (Application of fines) Rule, 1978 under Prevention of Cruelty to Animals Act, 1960 dated - 25.07.2014
+                        <td>25-07-2014</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/178576345618Advisory PCA (Application of Fines)_25.07.2014.pdf" title=" lmplementation of provisions of the Prevention of Cruelty to Animals (Application of fines) Rule, 1978 under Prevention of Cruelty to Animals Act, 1960 dated - 25.07.2014" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>173</td>                  <td>
+					    
+						  Letter to Chief Secretaries of all States/UTs - Request to impose ban on trading, manufacturing and possession of spiked thorn bits dated 01.07.2014
+                        <td>01-07-2014</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/163282579011letter_thorn_bits.pdf" title="Letter to Chief Secretaries of all States/UTs - Request to impose ban on trading, manufacturing and possession of spiked thorn bits dated 01.07.2014" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>174</td>                  <td>
+					    
+						  Dog catching Training Programme conducted by SDMC, Delhi - Circular letter for HAWOs/Co-opted Members of Delhi dated 10.06.2014
+                        <td>10-06-2014</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/163282574129dog_catching_trg.pdf" title="Dog catching Training Programme conducted by SDMC, Delhi - Circular letter for HAWOs/Co-opted Members of Delhi dated 10.06.2014" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>175</td>                  <td>
+					    
+						  OM on Protection of the National Bird - Indian Peafowl dated 07.05.2014
+                        <td>07-05-2014</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/163282570233om_peacock.pdf" title="OM on Protection of the National Bird - Indian Peafowl dated 07.05.2014" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>176</td>                  <td>
+					    
+						  Mandatory CSR provision under the Companies Act, 2013 dated 27.02.2014
+                        <td>27-02-2014</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/163282592822csr.pdf" title="Mandatory CSR provision under the Companies Act, 2013 dated 27.02.2014" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>177</td>                  <td>
+					    
+						  Circular regarding consideration of Regular Grant dated 29.11.2013
+                        <td>29-11-2013</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/163282556063circular_awos_uc.pdf" title="Circular regarding consideration of Regular Grant dated 29.11.2013" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>178</td>                  <td>
+					    
+						  lmplementation of provisions of the Prevention of Cruelty to Animals (Application of fines) Rule, 1978 under Prevention of Cruelty to Animals Act, 1960 dated - 11.11.2013
+                        <td>11-11-2013</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/178576337305Advisory PCA (Application of Fines)_11.11.2013.pdf" title="lmplementation of provisions of the Prevention of Cruelty to Animals (Application of fines) Rule, 1978 under Prevention of Cruelty to Animals Act, 1960 dated - 11.11.2013" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>179</td>                  <td>
+					    
+						  Order regarding prohibiting entry of Elephants in to Mumbai, Navi Mumbai and Thane dated 28.10.2013
+                        <td>28-10-2013</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/163282550677order_elephants.pdf" title="Order regarding prohibiting entry of Elephants in to Mumbai, Navi Mumbai and Thane dated 28.10.2013" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>180</td>                  <td>
+					    
+						  Furnishing of Bank particulars of your Organisation for Electronic transfer of grants dated 24.08.2013
+                        <td>24-08-2013</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/163282317966circular_awos_ecs.pdf" title="Furnishing of Bank particulars of your Organisation for Electronic transfer of grants dated 24.08.2013" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>181</td>                  <td>
+					    
+						  Letter of Director, AHD, Uttarakhand to AWBI regarding Appeal to AWOs dated 04.07.2013
+                        <td>04-07-2013</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/163282259668lr_ahd_uttarakhand.pdf" title="Letter of Director, AHD, Uttarakhand to AWBI regarding Appeal to AWOs dated 04.07.2013" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>182</td>                  <td>
+					    
+						  Circular for following Rule 96 of Transport of Animals (Amendment) Rules, 2001 dated 02.07.2013
+                        <td>02-07-2013</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/163282268334circular_transport_of_animals.pdf" title="Circular for following Rule 96 of Transport of Animals (Amendment) Rules, 2001 dated 02.07.2013" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>183</td>                  <td>
+					    
+						  Circulars issued by Central Board of Excise & Customs, Dept. of Revenue, Ministry of Finance and application forms for import of Pets in to India dated 01.07.2013
+                        <td>01-07-2013</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/163299214146customs_circular.pdf" title="Circulars issued by Central Board of Excise & Customs, Dept. of Revenue, Ministry of Finance and application forms for import of Pets in to India dated 01.07.2013" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>184</td>                  <td>
+					    
+						  Circular to Recognised AWOs/SPCAs reg relief operations for animals in Uttarakhand dated 26.06.2013
+                        <td>26-06-2013</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/163282283750circular_uttarakhand.pdf" title="Circular to Recognised AWOs/SPCAs reg relief operations for animals in Uttarakhand dated 26.06.2013" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>185</td>                  <td>
+					    
+						  Letter from Chairman to Chamoli District Officials dated 24.06.2013
+                        <td>26-06-2013</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/163282291643lr_relief_animals.pdf" title="Letter from Chairman to Chamoli District Officials dated 24.06.2013" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>186</td>                  <td>
+					    
+						  Request for ban on glass coated, metal, plastic or other sharp Manja thread dated 14.05.2013
+                        <td>14-05-2013</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/170203969666Lr_to_ban_Manjha_Thread.pdf" title="Request for ban on glass coated, metal, plastic or other sharp Manja thread dated 14.05.2013" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>187</td>                  <td>
+					    
+						   lmplementation of provisions of the Prevention of Cruelty to Animals (Application of fines) Rule, 1978 under Prevention of Cruelty to Animals Act, 1960 - dated 04.02.2013
+                        <td>04-02-2013</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/178575193270Advisory PCA (Application of Fines) _04.02.2013.pdf" title=" lmplementation of provisions of the Prevention of Cruelty to Animals (Application of fines) Rule, 1978 under Prevention of Cruelty to Animals Act, 1960 - dated 04.02.2013" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>188</td>                  <td>
+					    
+						  lmplementation of provisions of the Prevenlion of Cruelty to Anlmals (Application of Fines) Rule, 1978 under Prevention of Cruelty to Animals Act, 1960 - dated 18.08.2010
+                        <td>18-08-2010</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/178575182462Advisory PCA (Application of Fines)_18.08.2010.pdf" title="lmplementation of provisions of the Prevenlion of Cruelty to Anlmals (Application of Fines) Rule, 1978 under Prevention of Cruelty to Animals Act, 1960 - dated 18.08.2010" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>189</td>                  <td>
+					    
+						  Circular regarding issue of Certificate under Rule 96 of Transportation of Animals by Railways/Trucks dated 11.08.2010
+                        <td>11-08-2010</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/163282322660circular_trans_cert.pdf" title="Circular regarding issue of Certificate under Rule 96 of Transportation of Animals by Railways/Trucks dated 11.08.2010" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>190</td>                  <td>
+					    
+						  Prevention of Cruelty to Animals (Application of Fines) Rules, 1978 - dated 25.06.2002
+                        <td>25-06-2002</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/178575161189Advisory PCA (Application of Fines)_25.06.2002.pdf" title="Prevention of Cruelty to Animals (Application of Fines) Rules, 1978 - dated 25.06.2002" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					 			<tr>	
+			
+			<td>191</td>                  <td>
+					    
+						  Circular for issuing necessary directions for ban of Glue Traps dated 04.08.2001
+                        <td>04-08-2001</td>
+						<td><img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">
+							<a href="/uploads/circular/171818292366GlueTrap Circular_4-8-2001.pdf" title="Circular for issuing necessary directions for ban of Glue Traps dated 04.08.2001" class="downBtn" target="_blank">Download</a> 
+                    </td>
+					
+					
+                 
+                    </td>
+					                 </ul></tr></table>
+         </div>
+     </div>
+   </div>
+   </section>
+     <footer id="footer">
+    <!-- Render Footer Upper Section -->
+    <div class="contactFooter">
+    <div class="container">
+      <div class="row">
+          <div class="col-md-4">
+<div class="emblemFooter"><img src="/Default/front/images/emblemFooter.png" /></div>
+
+<div class="campusRight">
+<h3>Animal Welfare Board of India,</h3>
+
+<p>Ministry of Fisheries, Animal Husbandry and Dairying (Department of Animal Husbandry and Dairying)</p>
+
+<p>42 Milestone, Delhi-Agra Highway, NH-2, Village-Seekri, Ballabhgarh, Faridabad, Haryana-121 004 India</p>
+</div>
+</div>
+
+<div class="col-md-4">
+<div class="contHrs">
+<h3>Opening Hours</h3>
+
+<p class="openHrs">Monday-Friday: 9:00 AM to 5:30 PM<br />
+Saturday, Sunday & Govt. holidays: Off</p>
+
+<h3>Contact Info</h3>
+
+<p>0129-2555700</p>
+
+<p>support[at]awbi[dot]gov[dot]in / support-awbi[at]awbi[dot]gov[dot]in</p>
+</div>
+</div>
+          <div class="col-md-4">
+        <div class="contactSocial">
+          <h3>Connect with us</h3>
+          <ul class="footerSocial">
+                          <li>
+                <a href="https://twitter.com/AwbiBallabhgarh">
+                  <i class="fa fa-twitter" aria-hidden="true"></i>
+                </a>
+              </li>
+                          <li>
+                <a href="https://www.facebook.com/Animal-Welfare-Board-Of-India-104742494310960">
+                  <i class="fa fa-facebook	" aria-hidden="true"></i>
+                </a>
+              </li>
+                          <li>
+                <a href="#">
+                  <i class="fa fa-instagram" aria-hidden="true"></i>
+                </a>
+              </li>
+                          <li>
+                <a href="https://www.youtube.com/channel/UC9iSjvUnRwRbQz-nSlcE9Vw">
+                  <i class="fa fa-youtube" aria-hidden="true"></i>
+                </a>
+              </li>
+                      </ul>
+        </div>
+          </div>
+      </div>
+  </div>
+</div>
+<!-- Render Footer Lower Section -->
+<div class="siteCopyright">
+  <div class="container">
+    <div class="row">
+      <div class="col-md-12">
+        <div class="footerMenuLeft">
+          <ul class="footerMenu">
+                          <li>
+                                  <a href="/view/index/terms-of-use">
+                                      <!-- </a> -->
+                    Terms of Use</a>
+              </li>
+                          <li>
+                                  <a href="/view/index/privacy-policy">
+                                      <!-- </a> -->
+                    Privacy Policy</a>
+              </li>
+                          <li>
+                                  <a href="/view/index/copyright-policy">
+                                      <!-- </a> -->
+                    Copyright Policy</a>
+              </li>
+                          <li>
+                                  <a href="/view/index/disclaimer">
+                                      <!-- </a> -->
+                    Disclaimer</a>
+              </li>
+                          <li>
+                                  <a href="/view/index/hyperlinking-policy">
+                                      <!-- </a> -->
+                    Hyperlinking Policy</a>
+              </li>
+                          <li>
+                                  <a href="/view/index/help">
+                                      <!-- </a> -->
+                    Help</a>
+              </li>
+                          <li>
+                                  <a href="/view/index/accessibility-statement">
+                                      <!-- </a> -->
+                    Accessibility Statement</a>
+              </li>
+                      </ul>
+          <p class="copyrightText">© Copyright 2022, Animal Welfare Board of India. All Rights Reserved.</p>
+</div>
+        <div class="visiterRight">
+            <p>Last Updated:25-09-2026</p>
+            <p>Visitors : 12423849            </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</footer>
+<a href="#top" id="backtotop" title="Back to Top"><span class="edgtf-icon-stack">
+<span class="angle-up"></span></span><span class="textIndent">Back to Top</span></a>
+<script type="text/javascript" src="/Default/front/js/bootstrap.min.js"></script>
+<script type="text/javascript" src="/Default/front/js/functions.js"></script>
+<script type="text/javascript" src="/Default/front/js/general.js"></script>
+<script type="text/javascript" src="/Default/front/js/mixitup.min.js"></script>
+<script type="text/javascript" src="/Default/front/js/jquery.fancybox.min.js"></script>
+<script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAXgGP3EeP3UaXCE772XOCL_iiR3UOu-hA&libraries=places,geometry"></script>
+<script type="text/javascript">
+  $(function() {
+    $('#loading').hide();
+    // bind change event to select
+    $('#dynamic_select').on('change', function() {
+      var url = $(this).val(); // get selected value
+      if (url) { // require a URL
+        window.location = url; // redirect
+      }
+      return false;
+    });
+  });
+
+  $(document).ready(function() {
+    $("#document_act_reg_date").datepicker({
+      todayHighlight: true,
+      format: 'dd-mm-yyyy',
+      autoclose: true,
+      endDate: '-3y'
+    });
+  });
+</script>
+</div>
+</body>
+</html>   
+</main>

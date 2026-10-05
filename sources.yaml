@@ -1,0 +1,76 @@
+# Sources for the Animal Writes sourcing workers (v1).
+# Edit freely. Each source needs: id, name, kind, type (news | legal), url.
+#   kind: rss         -> any RSS/Atom feed
+#         awbi        -> AWBI circulars/advisories table page
+# keywords (optional): an item is kept only if its title/summary contains one of these
+#   (case-insensitive). Leave out to keep every item.
+# Supreme Court / High Court sources come in v2.
+
+defaults:
+  lookback_days: 14        # ignore items older than this
+  max_items_per_source: 15 # cap per run, protects the API budget
+
+keywords: &animal_keywords
+  - animal welfare
+  - animal cruelty
+  - cruelty to animals
+  - stray
+  - street dog
+  - community dog
+  - cattle
+  - cow shelter
+  - gaushala
+  - wildlife
+  - veterinary
+  - rabies
+  - animal birth control
+  - "ABC Rules"
+  - PCA Act
+  - Prevention of Cruelty
+  - AWBI
+  - Animal Welfare Board
+  - पशु
+  - जानवर
+  - पशुपालन
+  - रेबीज
+
+sources:
+  - id: gnews-animal-welfare
+    name: Google News – animal welfare India
+    kind: rss
+    type: news
+    url: "https://news.google.com/rss/search?q=%22animal+welfare%22+India&hl=en-IN&gl=IN&ceid=IN:en"
+
+  - id: gnews-animal-cruelty
+    name: Google News – animal cruelty India
+    kind: rss
+    type: news
+    url: "https://news.google.com/rss/search?q=%22animal+cruelty%22+India&hl=en-IN&gl=IN&ceid=IN:en"
+
+  - id: the-hindu-environment
+    name: The Hindu – Energy & Environment
+    kind: rss
+    type: news
+    url: "https://www.thehindu.com/sci-tech/energy-and-environment/feeder/default.rss"
+    keywords: *animal_keywords
+
+  - id: awbi-circulars
+    name: Animal Welfare Board of India – Circulars
+    kind: awbi
+    type: legal
+    url: "https://awbi.gov.in/circulars"
+
+  - id: awbi-notifications
+    name: Animal Welfare Board of India – Notifications
+    kind: awbi
+    type: legal
+    url: "https://awbi.gov.in/notifications"
+
+  # PIB's own RSS (pib.gov.in/RssMain.aspx) answers 403 to automated clients,
+  # so PIB releases come through a Google News query limited to pib.gov.in.
+  - id: pib-releases
+    name: Press Information Bureau
+    kind: rss
+    type: legal
+    url: "https://news.google.com/rss/search?q=site:pib.gov.in+(animal+OR+rabies+OR+veterinary+OR+livestock+OR+wildlife)&hl=en-IN&gl=IN&ceid=IN:en"
+    keywords: *animal_keywords

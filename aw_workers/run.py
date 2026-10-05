@@ -1,0 +1,150 @@
+"""Entry point: python -m aw_workers.run"""
+
+from __future__ import annotations
+
+import json
+import logging
+import os
+import sys
+from dataclasses import dataclass, field
+from pathlib import Path
+
+from . import ingest, sources, summarise
+
+log = logging.getLogger("aw_workers")
+
+SEEN_FILE = Path(os.environ.get("AW_SEEN_FILE", ".state/seen.json"))
+
+
+@dataclass
+class Stats:
+    fetched: int = 0
+    new: int = 0
+    duplicate: int = 0
+    failed: int = 0
+    errors: list[str] = field(default_factory=list)
+
+
+def truthy(value: str | None, default: bool) -> bool:
+    if value is None or value.strip() == "":
+        return default
+    return value.strip().lower() in ("1", "true", "yes", "on")
+
+
+def load_seen(path: Path) -> set[str]:
+    try:
+        return set(json.loads(path.read_text()))
+    except (OSError, ValueError):
+        return set()
+
+
+def save_seen(path: Path, seen: set[str]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(sorted(seen)))
+
+
+def run(
+    source_list,
+    defaults: dict,
+    *,
+    dry_run: bool,
+    summariser,
+    client,
+    fetch=sources.fetch,
+    today=None,
+    seen: set[str] | None = None,
+) -> Stats:
+    today = today or sources.utc_today()
+    seen = seen if seen is not None else set()
+    lookback = int(defaults.get("lookback_days", 14))
+    limit = int(defaults.get("max_items_per_source", 15))
+    stats = Stats()
+
+    for src in source_list:
+        try:
+            items = sources.collect(src, fetch(src.url), today, lookback, limit)
+        except Exception as exc:  # one broken source must not stop the others
+            stats.failed += 1
+            stats.errors.append(f"{src.id}: fetch/parse failed: {exc}")
+            log.error("%s: fetch/parse failed: %s", src.id, exc)
+            continue
+        stats.fetched += len(items)
+        log.info("%s: %d item(s) after filters", src.id, len(items))
+
+        for item in items:
+            if item.url in seen:
+                stats.duplicate += 1
+                continue
+            try:
+                summary = summariser.summarise(item)
+                payload = ingest.build_payload(item, summary)
+                if dry_run:
+                    log.info("DRY_RUN would POST: %s", json.dumps(payload, ensure_ascii=False))
+                    stats.new += 1
+                    continue
+                result = client.post(payload)
+            except ingest.AuthError:
+                raise
+            except Exception as exc:
+                stats.failed += 1
+                stats.errors.append(f"{src.id}: {item.url}: {exc}")
+                log.error("%s: failed %s: %s", src.id, item.url, exc)
+                continue
+            seen.add(item.url)
+            if result == "duplicate":
+                stats.duplicate += 1
+            else:
+                stats.new += 1
+    return stats
+
+
+def main() -> int:
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
+    dry_run = truthy(os.environ.get("DRY_RUN"), default=True)
+    api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+
+    source_list, defaults = sources.load_sources(os.environ.get("AW_SOURCES", "sources.yaml"))
+
+    if dry_run and not api_key:
+        log.warning("DRY_RUN without ANTHROPIC_API_KEY: summaries are placeholders")
+        summariser = summarise.DryRunSummariser()
+    else:
+        if not api_key:
+            log.error("ANTHROPIC_API_KEY is not set")
+            return 2
+        summariser = summarise.Summariser(api_key)
+
+    client = None
+    if not dry_run:
+        missing = [k for k in ("WP_BASE_URL", "WP_INGEST_USER", "WP_INGEST_APP_PASSWORD") if not os.environ.get(k)]
+        if missing:
+            log.error("missing secrets: %s", ", ".join(missing))
+            return 2
+        client = ingest.Client(
+            os.environ["WP_BASE_URL"], os.environ["WP_INGEST_USER"], os.environ["WP_INGEST_APP_PASSWORD"]
+        )
+
+    seen = load_seen(SEEN_FILE)
+    log.info("mode: %s", "DRY_RUN" if dry_run else "LIVE")
+    try:
+        stats = run(source_list, defaults, dry_run=dry_run, summariser=summariser, client=client, seen=seen)
+    except ingest.AuthError as exc:
+        log.error("AUTH FAILURE, stopping: %s", exc)
+        print(f"::error::Ingest authentication failed: {exc}")
+        return 3
+    if not dry_run:
+        save_seen(SEEN_FILE, seen)
+
+    print(f"fetched={stats.fetched} new={stats.new} duplicate={stats.duplicate} failed={stats.failed}")
+    summary_file = os.environ.get("GITHUB_STEP_SUMMARY")
+    if summary_file:
+        with open(summary_file, "a") as fh:
+            fh.write(
+                f"### {'DRY_RUN' if dry_run else 'LIVE'} run\n\n| fetched | new | duplicate | failed |\n|---|---|---|---|\n"
+                f"| {stats.fetched} | {stats.new} | {stats.duplicate} | {stats.failed} |\n"
+            )
+    return 1 if stats.failed and not stats.new and not stats.duplicate else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
