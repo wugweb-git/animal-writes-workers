@@ -184,7 +184,7 @@ class GroqBackend:
     name = "groq"
     URL = "https://api.groq.com/openai/v1/chat/completions"
 
-    def __init__(self, api_key: str, model: str = "llama-3.3-70b-versatile", session=None, sleep=None,
+    def __init__(self, api_key: str, model: str = "openai/gpt-oss-120b", session=None, sleep=None,
                  min_interval: float = 3.0):
         import time
 
@@ -220,7 +220,7 @@ def backends_from_env(env, ledger: dict | None = None) -> list:
         "haiku": lambda: [ClaudeBackend(k, budget_usd=budget, ledger=ledger) for k in _keys(env.get("ANTHROPIC_API_KEY"))],
         "gemini": lambda: [GeminiBackend(k, env.get("GEMINI_MODEL") or "gemini-flash-latest")
                            for k in _keys(env.get("GEMINI_API_KEY"))],
-        "groq": lambda: [GroqBackend(k, env.get("GROQ_MODEL") or "llama-3.3-70b-versatile")
+        "groq": lambda: [GroqBackend(k, env.get("GROQ_MODEL") or "openai/gpt-oss-120b")
                          for k in _keys(env.get("GROQ_API_KEY"))],
     }
     order = [p.strip().lower() for p in (env.get("LLM_PROVIDERS") or "haiku,gemini,groq").split(",") if p.strip()]

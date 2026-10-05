@@ -33,7 +33,7 @@ Tried in the order of the repository **variable** `LLM_PROVIDERS` (default `haik
 Haiku comes first for quality, capped at an estimated **$4/month** (variable `HAIKU_MONTHLY_BUDGET_USD`);
 once the cap is reached it is skipped until the next month. Gemini, then Groq, are used only if the one before it errors, is over budget,
 or its summary still fails the checks after one retry. Every provider must pass the same checks.
-Optional variables: `GEMINI_MODEL` (default `gemini-flash-latest`), `GROQ_MODEL` (default `llama-3.3-70b-versatile`).
+Optional variables: `GEMINI_MODEL` (default `gemini-flash-latest`), `GROQ_MODEL` (default `openai/gpt-oss-120b`).
 Each run logs how many summaries each provider wrote. Free tiers have rate limits, and on
 Gemini's free tier Google may use prompts to improve its models (the input here is public news).
 

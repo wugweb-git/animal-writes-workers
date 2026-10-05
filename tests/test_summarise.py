@@ -118,7 +118,7 @@ def test_groq_request_and_parse():
     assert b.ask("p") == GOOD
     url, headers, body = sess.calls[0]
     assert url == "https://api.groq.com/openai/v1/chat/completions"
-    assert headers["Authorization"] == "Bearer qk" and body["model"] == "llama-3.3-70b-versatile"
+    assert headers["Authorization"] == "Bearer qk" and body["model"] == "openai/gpt-oss-120b"
 
 
 class Failing:
