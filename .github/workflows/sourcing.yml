@@ -3,6 +3,7 @@ name: Sourcing workers
 on:
   schedule:
     - cron: "17 */6 * * *" # every 6 hours
+    - cron: "47 2-23/6 * * *" # backup, 2.5 hours later (seen-items state makes repeats harmless)
   workflow_dispatch:
     inputs:
       dry_run:
