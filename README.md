@@ -41,7 +41,7 @@ Gemini's free tier Google may use prompts to improve its models (the input here 
 Edit `sources.yaml`. Its `topics:` section maps each site topic (by slug) to keywords; items are tagged
 with every topic whose keywords appear in the title or feed text. AWBI and PIB items also send a `source_type`. Kinds: `rss` (any feed) and `awbi` (AWBI table pages). `type` maps to the site:
 `news` → News, `legal` → Legal. Legal summaries end with `[Needs legal review]`.
-Supreme Court / High Court sources: v2.
+Court news (Supreme Court, High Courts, NGT) comes from LiveLaw, Bar & Bench and SC Observer, tagged by the court named in the headline.
 
 Notes:
 - PIB's own RSS refuses automated clients (403), so PIB comes via a Google News query limited to `pib.gov.in`.

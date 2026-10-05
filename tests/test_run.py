@@ -18,6 +18,8 @@ def fake_fetch(fixture_text):
     def fetch(url):
         if "pib.gov.in" in url:  # PIB source URL is a Google News query containing site:pib.gov.in
             return fixture_text("pib_sample.xml")
+        if "livelaw" in url or "barandbench" in url or "scobserver" in url:
+            return fixture_text("pib.xml")  # no animal keywords -> 0 items
         if "thehindu" in url:
             return fixture_text("pib.xml")  # nothing matches the keywords -> 0 items
         return fixture_text(files["awbi" if "awbi" in url else "rss"])
@@ -103,3 +105,18 @@ def test_dry_run_default_on(monkeypatch):
     assert run.truthy(None, default=True) is True
     assert run.truthy("", default=True) is True
     assert run.truthy("false", default=True) is False
+
+
+def test_court_type_from_headline():
+    assert ingest.court_type("Supreme Court stays order on community dogs") == "supreme-court"
+    assert ingest.court_type("Delhi HC seeks reply on cattle transport") == "high-court"
+    assert ingest.court_type("Bombay High Court on feeding spots") == "high-court"
+    assert ingest.court_type("NGT notice over bird deaths") == "national-green-tribunal"
+    assert ingest.court_type("Ministry issues advisory") == ""
+
+
+def test_court_type_prefers_deciding_court():
+    t = "Public Suffering Due To Authorities' Failure To Implement SC Directions On Stray Dogs: Delhi High Court"
+    assert ingest.court_type(t) == "high-court"
+    assert ingest.court_type("Cattle Transport Can't Be Presumed To Be For Slaughter: Supreme Court") == "supreme-court"
+    assert ingest.court_type("Supreme Court upholds High Court order on feeding") == "supreme-court"

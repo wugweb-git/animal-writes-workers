@@ -4,7 +4,7 @@
 #         awbi        -> AWBI circulars/advisories table page
 # keywords (optional): an item is kept only if its title/summary contains one of these
 #   (case-insensitive). Leave out to keep every item.
-# Supreme Court / High Court sources come in v2.
+# v2: court news (Supreme Court, High Courts, NGT) from legal-news publishers, filtered for animals.
 
 defaults:
   lookback_days: 14        # ignore items older than this
@@ -70,6 +70,31 @@ sources:
 
   # PIB's own RSS (pib.gov.in/RssMain.aspx) answers 403 to automated clients,
   # so PIB releases come through a Google News query limited to pib.gov.in.
+  # Court news (v2). source_type "auto-court" tags Supreme Court / High Court / NGT from the headline.
+  - id: livelaw-top
+    name: LiveLaw
+    kind: rss
+    type: legal
+    source_type: auto-court
+    url: "https://www.livelaw.in/category/top-stories/google_feeds.xml"
+    keywords: *animal_keywords
+
+  - id: barandbench
+    name: Bar & Bench
+    kind: rss
+    type: legal
+    source_type: auto-court
+    url: "https://www.barandbench.com/feed"
+    keywords: *animal_keywords
+
+  - id: court-news-animals
+    name: Court news (LiveLaw, Bar & Bench, SC Observer)
+    kind: rss
+    type: legal
+    source_type: auto-court
+    url: "https://news.google.com/rss/search?q=(site:livelaw.in+OR+site:barandbench.com+OR+site:scobserver.in)+(animal+OR+animals+OR+dogs+OR+cattle+OR+cow+OR+wildlife+OR+cruelty+OR+stray)&hl=en-IN&gl=IN&ceid=IN:en"
+    keywords: *animal_keywords
+
   - id: pib-releases
     name: Press Information Bureau
     kind: rss

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 import requests
 
 from .sources import Item, topics_for
@@ -17,6 +19,33 @@ class IngestError(Exception):
     pass
 
 
+_COURTS = [
+    ("supreme-court", r"supreme court|\bsc\b"),
+    ("high-court", r"high court|\bhc\b"),
+    ("national-green-tribunal", r"green tribunal|\bngt\b"),
+]
+
+
+def court_type(title: str) -> str:
+    """Which court decided, from a headline. Legal-news headlines name the deciding court after
+    the last colon ("...: Delhi High Court"), so that part wins; then full names over abbreviations."""
+    t = title.lower()
+    tail = t.rsplit(":", 1)[1] if ":" in t else ""
+    for part in (tail, t):
+        if not part:
+            continue
+        for full_only in (True, False):
+            hits = []
+            for slug, pat in _COURTS:
+                pat = pat.split("|")[0] if full_only else pat
+                m = re.search(pat, part)
+                if m:
+                    hits.append((m.start(), slug))
+            if hits:
+                return min(hits)[1]
+    return ""
+
+
 def build_payload(item: Item, summary: str) -> dict:
     payload = {
         "type": item.source.type,
@@ -27,8 +56,9 @@ def build_payload(item: Item, summary: str) -> dict:
         "source_date": item.date.isoformat() if item.date else "",
         "topics": topics_for(item),
     }
-    if item.source.source_type:
-        payload["source_type"] = item.source.source_type
+    source_type = court_type(item.title) if item.source.source_type == "auto-court" else item.source.source_type
+    if source_type:
+        payload["source_type"] = source_type
     if item.image:
         payload["image_url"] = item.image
     return payload
