@@ -58,12 +58,14 @@ sources:
     name: Animal Welfare Board of India – Circulars
     kind: awbi
     type: legal
+    source_type: awbi
     url: "https://awbi.gov.in/circulars"
 
   - id: awbi-notifications
     name: Animal Welfare Board of India – Notifications
     kind: awbi
     type: legal
+    source_type: awbi
     url: "https://awbi.gov.in/notifications"
 
   # PIB's own RSS (pib.gov.in/RssMain.aspx) answers 403 to automated clients,
@@ -72,5 +74,28 @@ sources:
     name: Press Information Bureau
     kind: rss
     type: legal
+    source_type: pib
     url: "https://news.google.com/rss/search?q=site:pib.gov.in+(animal+OR+rabies+OR+veterinary+OR+livestock+OR+wildlife)&hl=en-IN&gl=IN&ceid=IN:en"
     keywords: *animal_keywords
+
+# Topic tagging: an item gets every topic whose keywords appear in its title or summary
+# (case-insensitive). Keys are topic slugs on the site; unknown slugs are ignored by the site.
+topics:
+  community-dogs: [stray dog, street dog, community dog, stray dogs, street dogs, community animals, कुत्त]
+  animal-birth-control: [animal birth control, abc rules, abc programme, abc program, sterilis, steriliz, neuter]
+  rabies-public-health: [rabies, रेबीज, dog bite, anti-rabies, vaccination drive]
+  cruelty-prosecution: [cruelty, fir, arrested, prosecution, torture, abuse, poison]
+  feeders-caregivers: [feeder, feeding, caregiver]
+  cattle-gaushalas: [cattle, cow, gaushala, gaushalas, bovine, बैल, गाय]
+  transport-slaughter: [slaughter, transportation of animals, illegal transport, smuggl]
+  wildlife: [wildlife, tiger, leopard, elephant, pangolin, forest department, poach, sanctuary, national park]
+  birds: [bird, birds, avian, pigeon, kite, peacock]
+  pets-breeding: [pet shop, breeder, breeding, dog breed, pet]
+  adoption: [adopt, adoption]
+  performing-captive-animals: [circus, performing animals, captive, zoo, elephant ride]
+  laws-rules: [act, rules, amendment, notification, guidelines, circular, gazette]
+  courts-judgments: [supreme court, high court, court, judgment, bench, petition, tribunal]
+  policy-government: [ministry, government, minister, municipal, corporation, policy, scheme, cabinet]
+  disaster-rescue: [flood, cyclone, earthquake, disaster, rescue operation]
+  veterinary-care: [veterinary, vet, hospital, clinic]
+  campaigns-civic-action: [campaign, petition, protest, letter, signature, awareness]

@@ -27,6 +27,7 @@ class Source:
     type: str
     url: str
     keywords: list[str] = field(default_factory=list)
+    source_type: str = ""
 
 
 @dataclass
@@ -38,8 +39,26 @@ class Item:
     text: str = ""  # whatever context we have for the summary (feed description etc.)
 
 
+TOPICS: dict[str, list[str]] = {}
+
+
+def topics_for(item: "Item") -> list[str]:
+    """Topic slugs whose keywords occur in the item's title or feed text (whole-word for short ASCII keys)."""
+    hay = f" {item.title} {item.text} ".lower()
+    found = []
+    for slug, words in TOPICS.items():
+        for w in words:
+            w = w.lower()
+            if (re.search(rf"\b{re.escape(w)}\b", hay) if w.isascii() and len(w) <= 4 else w in hay):
+                found.append(slug)
+                break
+    return found
+
+
 def load_sources(path: str | Path = "sources.yaml") -> tuple[list[Source], dict]:
     data = yaml.safe_load(Path(path).read_text(encoding="utf-8"))
+    TOPICS.clear()
+    TOPICS.update({k: [str(w) for w in v] for k, v in (data.get("topics") or {}).items()})
     sources = []
     for s in data.get("sources", []):
         if s["type"] not in ("news", "legal"):
@@ -54,6 +73,7 @@ def load_sources(path: str | Path = "sources.yaml") -> tuple[list[Source], dict]
                 type=s["type"],
                 url=s["url"],
                 keywords=list(s.get("keywords") or []),
+                source_type=s.get("source_type", ""),
             )
         )
     return sources, data.get("defaults", {})

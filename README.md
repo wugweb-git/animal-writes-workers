@@ -38,7 +38,8 @@ Each run logs how many summaries each provider wrote. Free tiers have rate limit
 Gemini's free tier Google may use prompts to improve its models (the input here is public news).
 
 ## Sources
-Edit `sources.yaml`. Kinds: `rss` (any feed) and `awbi` (AWBI table pages). `type` maps to the site:
+Edit `sources.yaml`. Its `topics:` section maps each site topic (by slug) to keywords; items are tagged
+with every topic whose keywords appear in the title or feed text. AWBI and PIB items also send a `source_type`. Kinds: `rss` (any feed) and `awbi` (AWBI table pages). `type` maps to the site:
 `news` → News, `legal` → Legal. Legal summaries end with `[Needs legal review]`.
 Supreme Court / High Court sources: v2.
 

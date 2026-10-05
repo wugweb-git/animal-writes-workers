@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import requests
 
-from .sources import Item
+from .sources import Item, topics_for
 
 TIMEOUT = 30
 
@@ -18,15 +18,18 @@ class IngestError(Exception):
 
 
 def build_payload(item: Item, summary: str) -> dict:
-    return {
+    payload = {
         "type": item.source.type,
         "title": item.title,
         "summary": summary,
         "source_url": item.url,
         "source_name": item.source.name,
         "source_date": item.date.isoformat() if item.date else "",
-        "topics": [],  # sent empty until the topic list is defined
+        "topics": topics_for(item),
     }
+    if item.source.source_type:
+        payload["source_type"] = item.source.source_type
+    return payload
 
 
 class Client:

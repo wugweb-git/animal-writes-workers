@@ -40,7 +40,7 @@ def test_dry_run_end_to_end(fixture_text, caplog):
     assert stats.fetched > 0 and stats.new == stats.fetched and stats.failed == 0
     assert "DRY_RUN would POST" in caplog.text
     assert '"type": "legal"' in caplog.text and '"type": "news"' in caplog.text
-    assert '"topics": []' in caplog.text
+    assert '"topics": [' in caplog.text
 
 
 def test_broken_source_is_counted_not_fatal(fixture_text):
@@ -81,7 +81,8 @@ def test_live_counts_created_and_duplicate(fixture_text):
                     fetch=fake_fetch(fixture_text), today=TODAY, seen=seen)
     assert (stats.new, stats.duplicate, stats.failed) == (1, 1, 0)
     assert len(seen) == 2
-    assert set(session.sent[0]) == {"type", "title", "summary", "source_url", "source_name", "source_date", "topics"}
+    assert set(session.sent[0]) == {"type", "title", "summary", "source_url", "source_name", "source_date", "topics", "source_type"}
+    assert session.sent[0]["source_type"] == "pib"
     assert session.sent[0]["type"] == "legal" and session.sent[0]["source_date"] == "2026-10-05"
     # second run: both already seen, nothing POSTed
     stats2 = run.run(src, {}, dry_run=False, summariser=DryRunSummariser(), client=client,
