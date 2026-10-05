@@ -1,6 +1,6 @@
 # Animal Writes – sourcing workers
 
-Finds Indian animal-welfare news and legal notices, summarises each with Claude (`claude-haiku-4-5`),
+Finds Indian animal-welfare news and legal notices, summarises each with an AI model,
 and sends them to the Animal Writes site, where they land as **Pending Review**. Nothing is published automatically.
 
 ## How it runs
@@ -19,7 +19,20 @@ Each run reports `fetched / new / duplicate / failed` in the job summary. A reje
 | `WP_BASE_URL` | Site address, e.g. `https://slategray-donkey-829925.hostingersite.com` |
 | `WP_INGEST_USER` | The `ingest` WordPress user (Editor role) |
 | `WP_INGEST_APP_PASSWORD` | That user's Application Password |
-| `ANTHROPIC_API_KEY` | Anthropic API key |
+| `ANTHROPIC_API_KEY` | Anthropic API key (Claude Haiku 4.5, paid, about $1–2/month) |
+| `GEMINI_API_KEY` | Google AI Studio key (Gemini, free tier) |
+| `GROQ_API_KEY` | Groq key (free tier) |
+
+At least one of the three summary keys is needed; providers without a key are skipped.
+
+## Summary providers
+Tried in the order of the repository **variable** `LLM_PROVIDERS` (default `haiku,gemini,groq`).
+Haiku comes first for quality, capped at an estimated **$4/month** (variable `HAIKU_MONTHLY_BUDGET_USD`);
+once the cap is reached it is skipped until the next month. Gemini, then Groq, are used only if the one before it errors, is over budget,
+or its summary still fails the checks after one retry. Every provider must pass the same checks.
+Optional variables: `GEMINI_MODEL` (default `gemini-flash-latest`), `GROQ_MODEL` (default `llama-3.3-70b-versatile`).
+Each run logs how many summaries each provider wrote. Free tiers have rate limits, and on
+Gemini's free tier Google may use prompts to improve its models (the input here is public news).
 
 ## Sources
 Edit `sources.yaml`. Kinds: `rss` (any feed) and `awbi` (AWBI table pages). `type` maps to the site:

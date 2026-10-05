@@ -38,6 +38,12 @@ jobs:
       WP_INGEST_USER: ${{ secrets.WP_INGEST_USER }}
       WP_INGEST_APP_PASSWORD: ${{ secrets.WP_INGEST_APP_PASSWORD }}
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      LLM_PROVIDERS: ${{ vars.LLM_PROVIDERS || 'haiku,gemini,groq' }}
+      HAIKU_MONTHLY_BUDGET_USD: ${{ vars.HAIKU_MONTHLY_BUDGET_USD || '4' }}
+      GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+      GROQ_MODEL: ${{ vars.GROQ_MODEL }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -53,7 +59,7 @@ jobs:
           restore-keys: seen-
       - run: python -m aw_workers.run
       - name: Save seen-items state
-        if: always() && hashFiles('.state/seen.json') != ''
+        if: always() && hashFiles('.state/**') != ''
         uses: actions/cache/save@v4
         with:
           path: .state

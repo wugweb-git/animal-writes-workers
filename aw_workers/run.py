@@ -14,6 +14,7 @@ from . import ingest, sources, summarise
 log = logging.getLogger("aw_workers")
 
 SEEN_FILE = Path(os.environ.get("AW_SEEN_FILE", ".state/seen.json"))
+SPEND_FILE = Path(os.environ.get("AW_SPEND_FILE", ".state/haiku_spend.json"))
 
 
 @dataclass
@@ -101,18 +102,23 @@ def run(
 def main() -> int:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     dry_run = truthy(os.environ.get("DRY_RUN"), default=True)
-    api_key = os.environ.get("ANTHROPIC_API_KEY", "")
 
     source_list, defaults = sources.load_sources(os.environ.get("AW_SOURCES", "sources.yaml"))
 
-    if dry_run and not api_key:
-        log.warning("DRY_RUN without ANTHROPIC_API_KEY: summaries are placeholders")
+    try:
+        ledger = json.loads(SPEND_FILE.read_text())
+    except (OSError, ValueError):
+        ledger = {}
+    backends = summarise.backends_from_env(os.environ, ledger=ledger)
+    if dry_run and not backends:
+        log.warning("DRY_RUN without any provider key: summaries are placeholders")
         summariser = summarise.DryRunSummariser()
     else:
-        if not api_key:
-            log.error("ANTHROPIC_API_KEY is not set")
+        if not backends:
+            log.error("no summary provider key set (ANTHROPIC_API_KEY, GEMINI_API_KEY or GROQ_API_KEY)")
             return 2
-        summariser = summarise.Summariser(api_key)
+        summariser = summarise.Summariser(backends)
+        log.info("summary providers, in order: %s", ", ".join(b.name for b in backends))
 
     client = None
     if not dry_run:
@@ -134,8 +140,15 @@ def main() -> int:
         return 3
     if not dry_run:
         save_seen(SEEN_FILE, seen)
+    if ledger:
+        SPEND_FILE.parent.mkdir(parents=True, exist_ok=True)
+        SPEND_FILE.write_text(json.dumps(ledger))
+        month = max(ledger)
+        print(f"haiku spend {month}: ${ledger[month]:.4f} (cap ${float(os.environ.get('HAIKU_MONTHLY_BUDGET_USD') or 4):.2f})")
 
     print(f"fetched={stats.fetched} new={stats.new} duplicate={stats.duplicate} failed={stats.failed}")
+    if summariser.used:
+        print("summaries by provider: " + ", ".join(f"{k}={v}" for k, v in sorted(summariser.used.items())))
     summary_file = os.environ.get("GITHUB_STEP_SUMMARY")
     if summary_file:
         with open(summary_file, "a") as fh:
