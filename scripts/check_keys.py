@@ -23,6 +23,35 @@ PROVIDERS = [
 ]
 
 
+def fetch_models(url: str, style: str, key: str):
+    """Returns (status_text, model_ids or None)."""
+    headers = {"User-Agent": "key-check"}
+    if style == "bearer":
+        headers["Authorization"] = f"Bearer {key}"
+    elif style == "anthropic":
+        headers.update({"x-api-key": key, "anthropic-version": "2023-06-01"})
+    elif style == "google":
+        headers["x-goog-api-key"] = key
+    try:
+        with urllib.request.urlopen(urllib.request.Request(url, headers=headers), timeout=20) as r:
+            data = json.load(r)
+    except urllib.error.HTTPError as e:
+        if e.code in (401, 403) or (style == "google" and e.code == 400):
+            return f"❌ rejected (HTTP {e.code})", None
+        if e.code == 429:
+            return "⚠️ valid but rate-limited / out of quota (HTTP 429)", None
+        return f"⚠️ HTTP {e.code}", None
+    except Exception as e:
+        return f"⚠️ could not check: {type(e).__name__}", None
+    items = data.get("data") or data.get("models") or []
+    ids = []
+    if isinstance(items, list):
+        for m in items:
+            if isinstance(m, dict):
+                ids.append(str(m.get("id") or m.get("name") or "").replace("models/", ""))
+    return "✅ works", [i for i in ids if i]
+
+
 def check(url: str, style: str, key: str) -> str:
     headers = {"User-Agent": "key-check"}
     if style == "bearer":
