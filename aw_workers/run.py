@@ -9,7 +9,7 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from . import ingest, sources, summarise
+from . import enrich, ingest, sources, summarise
 
 log = logging.getLogger("aw_workers")
 
@@ -54,6 +54,7 @@ def run(
     fetch=sources.fetch,
     today=None,
     seen: set[str] | None = None,
+    enricher=None,
 ) -> Stats:
     today = today or sources.utc_today()
     seen = seen if seen is not None else set()
@@ -76,6 +77,13 @@ def run(
             if item.url in seen:
                 stats.duplicate += 1
                 continue
+            if enricher:
+                original = item.url
+                item.url, item.image = enricher(item.url)
+                if item.url != original and item.url in seen:
+                    seen.add(original)
+                    stats.duplicate += 1
+                    continue
             try:
                 summary = summariser.summarise(item)
                 payload = ingest.build_payload(item, summary)
@@ -92,11 +100,19 @@ def run(
                 log.error("%s: failed %s: %s", src.id, item.url, exc)
                 continue
             seen.add(item.url)
+            if enricher and original != item.url:
+                seen.add(original)
             if result == "duplicate":
                 stats.duplicate += 1
             else:
                 stats.new += 1
     return stats
+
+
+def default_enricher(url: str) -> tuple[str, str]:
+    """Publisher URL (resolving Google News links) and its preview image."""
+    real = enrich.resolve_google_news(url)
+    return real, enrich.og_image(real)
 
 
 def main() -> int:
@@ -133,7 +149,8 @@ def main() -> int:
     seen = load_seen(SEEN_FILE)
     log.info("mode: %s", "DRY_RUN" if dry_run else "LIVE")
     try:
-        stats = run(source_list, defaults, dry_run=dry_run, summariser=summariser, client=client, seen=seen)
+        stats = run(source_list, defaults, dry_run=dry_run, summariser=summariser, client=client, seen=seen,
+                    enricher=default_enricher)
     except ingest.AuthError as exc:
         log.error("AUTH FAILURE, stopping: %s", exc)
         print(f"::error::Ingest authentication failed: {exc}")

@@ -29,6 +29,8 @@ def build_payload(item: Item, summary: str) -> dict:
     }
     if item.source.source_type:
         payload["source_type"] = item.source.source_type
+    if item.image:
+        payload["image_url"] = item.image
     return payload
 
 

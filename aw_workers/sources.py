@@ -38,6 +38,7 @@ class Item:
     date: date | None
     text: str = ""  # whatever context we have for the summary (feed description etc.)
     publisher: str = ""  # original publisher when the feed is an aggregator (Google News)
+    image: str = ""  # preview image URL (linked, never downloaded)
 
 
 TOPICS: dict[str, list[str]] = {}

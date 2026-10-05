@@ -45,7 +45,7 @@ Supreme Court / High Court sources: v2.
 
 Notes:
 - PIB's own RSS refuses automated clients (403), so PIB comes via a Google News query limited to `pib.gov.in`.
-- Google News items link to `news.google.com` article URLs, not the publisher's.
+- Google News links are resolved to the publisher's own URL, and each article's preview image (og:image) is linked, never downloaded.
 - AWBI items are summarised from their titles only (the PDFs are not read).
 
 ## Summary rules (checked in code, one retry, otherwise the item fails)
