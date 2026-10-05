@@ -24,6 +24,9 @@ Each run reports `fetched / new / duplicate / failed` in the job summary. A reje
 | `GROQ_API_KEY` | Groq key (free tier) |
 
 At least one of the three summary keys is needed; providers without a key are skipped.
+Each of these secrets may hold **several keys, one per line**. A key that is rejected, out of credit
+or rate-limited is skipped for the rest of the run and the next key is used.
+`python3 scripts/sort_keys.py --github` tests a list of keys and loads every working one.
 
 ## Summary providers
 Tried in the order of the repository **variable** `LLM_PROVIDERS` (default `haiku,gemini,groq`).

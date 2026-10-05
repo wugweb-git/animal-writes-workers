@@ -206,3 +206,38 @@ def test_free_tier_gives_up_after_four_attempts():
     with pytest.raises(RuntimeError, match="429"):
         b.ask("p")
     assert len(sess.calls) == 4
+
+
+def test_multiple_keys_per_provider():
+    env = {"GEMINI_API_KEY": "g1\ng2", "GROQ_API_KEY": "q1, q2 ,q3", "ANTHROPIC_API_KEY": "a1"}
+    names = [b.name for b in summarise.backends_from_env(env)]
+    assert names == ["haiku", "gemini", "gemini", "groq", "groq", "groq"]
+
+
+class Dead:
+    def __init__(self, name, msg):
+        self.name, self.msg, self.calls = name, msg, 0
+
+    def ask(self, prompt):
+        self.calls += 1
+        raise RuntimeError(self.msg)
+
+
+def test_dead_keys_are_skipped_for_rest_of_run():
+    no_credit = Dead("haiku", "Error code: 400 - Your credit balance is too low")
+    limited = Dead("gemini", "429 Client Error: Too Many Requests")
+    good = Fixed("gemini", GOOD)
+    s = summarise.Summariser([no_credit, limited, good])
+    s.summarise(item())
+    s.summarise(item())
+    assert (no_credit.calls, limited.calls, good.calls) == (1, 1, 2)
+    assert s.used == {"gemini": 2}
+
+
+def test_bad_summary_does_not_kill_key():
+    flaky = Fixed("haiku", "Too short.")
+    backup = Fixed("gemini", GOOD)
+    s = summarise.Summariser([flaky, backup])
+    s.summarise(item())
+    s.summarise(item())
+    assert flaky.calls == 4  # tried (with retry) on both items

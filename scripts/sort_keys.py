@@ -9,7 +9,7 @@
    Blank lines and lines starting with # are ignored.
 2. Run:  python3 scripts/sort_keys.py            (test only)
          python3 scripts/sort_keys.py --github   (also set ANTHROPIC/GEMINI/GROQ secrets
-                                                   from the first working key of each)
+                                                   to ALL working keys of each, one per line)
 Results show only the last 4 characters of each key. Working keys are written to
 ~/.ai-keys.working (permissions 600); ~/.ai-keys.txt is left unchanged.
 Checks call free "list models" endpoints; no tokens are spent.
@@ -58,9 +58,10 @@ def main() -> int:
 
     if "--github" in sys.argv:
         for provider, secret in SECRETS.items():
-            key = next((k for p, k in working if p == provider), None)
-            if key:
-                subprocess.run(["gh", "secret", "set", secret, "-R", REPO], input=key.encode(), check=True)
+            keys = [k for p, k in working if p == provider]
+            if keys:
+                subprocess.run(["gh", "secret", "set", secret, "-R", REPO], input="\n".join(keys).encode(), check=True)
+                print(f"{secret}: {len(keys)} working key(s) set")
             else:
                 print(f"{secret}: no working {provider} key, left unchanged")
     return 0

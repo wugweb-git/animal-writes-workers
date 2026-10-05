@@ -205,23 +205,40 @@ class GroqBackend:
         return (resp.json()["choices"][0]["message"]["content"] or "").strip()
 
 
+def _keys(value: str | None) -> list[str]:
+    """A secret may hold several keys, one per line (or comma-separated)."""
+    return [k.strip() for k in re.split(r"[\n,]", value or "") if k.strip()]
+
+
 def backends_from_env(env, ledger: dict | None = None) -> list:
-    """Providers in LLM_PROVIDERS order (default haiku,gemini,groq); ones without a key are skipped.
-    Haiku stops for the month once its estimated spend reaches HAIKU_MONTHLY_BUDGET_USD (default 4)."""
+    """Providers in LLM_PROVIDERS order (default haiku,gemini,groq), one backend per key.
+    Providers without a key are skipped. Haiku stops for the month once its estimated spend
+    reaches HAIKU_MONTHLY_BUDGET_USD (default 4), shared across all Haiku keys."""
     budget = float(env.get("HAIKU_MONTHLY_BUDGET_USD") or 4)
+    ledger = ledger if ledger is not None else {}
     makers = {
-        "haiku": lambda: env.get("ANTHROPIC_API_KEY")
-        and ClaudeBackend(env["ANTHROPIC_API_KEY"], budget_usd=budget, ledger=ledger),
-        "gemini": lambda: env.get("GEMINI_API_KEY")
-        and GeminiBackend(env["GEMINI_API_KEY"], env.get("GEMINI_MODEL") or "gemini-flash-latest"),
-        "groq": lambda: env.get("GROQ_API_KEY")
-        and GroqBackend(env["GROQ_API_KEY"], env.get("GROQ_MODEL") or "llama-3.3-70b-versatile"),
+        "haiku": lambda: [ClaudeBackend(k, budget_usd=budget, ledger=ledger) for k in _keys(env.get("ANTHROPIC_API_KEY"))],
+        "gemini": lambda: [GeminiBackend(k, env.get("GEMINI_MODEL") or "gemini-flash-latest")
+                           for k in _keys(env.get("GEMINI_API_KEY"))],
+        "groq": lambda: [GroqBackend(k, env.get("GROQ_MODEL") or "llama-3.3-70b-versatile")
+                         for k in _keys(env.get("GROQ_API_KEY"))],
     }
     order = [p.strip().lower() for p in (env.get("LLM_PROVIDERS") or "haiku,gemini,groq").split(",") if p.strip()]
     unknown = [p for p in order if p not in makers]
     if unknown:
         raise ValueError(f"unknown LLM_PROVIDERS entries: {', '.join(unknown)}")
-    return [b for b in (makers[p]() for p in order) if b]
+    return [b for p in order for b in makers[p]()]
+
+
+# Errors that mean "this key is unusable for the rest of the run" (not a bad summary).
+_DEAD_KEY_MARKERS = ("401", "403", "429", "credit balance", "budget", "quota")
+
+
+def _is_dead_key_error(exc: Exception) -> bool:
+    if isinstance(exc, SummaryError):
+        return False
+    text = f"{type(exc).__name__} {exc}".lower()
+    return isinstance(exc, BudgetExceeded) or any(m in text for m in _DEAD_KEY_MARKERS)
 
 
 class Summariser:
@@ -232,6 +249,7 @@ class Summariser:
             raise ValueError("no summary provider configured")
         self.backends = backends
         self.used: dict[str, int] = {}
+        self.dead: set[int] = set()  # indexes of keys that failed hard this run
 
     def _try(self, backend, prompt: str, item: Item) -> str:
         summary = backend.ask(prompt)
@@ -255,10 +273,14 @@ class Summariser:
             text=item.text[:4000] or "(no further details)",
         )
         reasons = []
-        for backend in self.backends:
+        for i, backend in enumerate(self.backends):
+            if i in self.dead:
+                continue
             try:
                 summary = self._try(backend, prompt, item)
-            except Exception as exc:  # API error or failed checks: fall through to the next provider
+            except Exception as exc:  # API error or failed checks: fall through to the next key/provider
+                if _is_dead_key_error(exc):
+                    self.dead.add(i)
                 reasons.append(f"{backend.name}: {str(exc)[:150]}")
                 continue
             self.used[backend.name] = self.used.get(backend.name, 0) + 1
