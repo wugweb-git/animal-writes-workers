@@ -18,6 +18,6 @@ jobs:
     steps:
       - name: Run wp-cron.php
         run: |
-          code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 90 "https://animalwrites.in/wp-cron.php?doing_wp_cron=$(date +%s)")
+          code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 90 "https://animalwrites.in/wp-cron.php?aw_tick=$(date +%s)")
           echo "wp-cron.php HTTP $code"
           test "$code" = "200"
