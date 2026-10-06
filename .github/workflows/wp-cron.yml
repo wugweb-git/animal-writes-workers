@@ -1,0 +1,23 @@
+name: WordPress cron
+
+# Real cron for animalwrites.in: runs WordPress's scheduled tasks every 15 minutes,
+# so they no longer depend on visitors (DISABLE_WP_CRON is set by animal-writes-core).
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: wp-cron
+  cancel-in-progress: false
+
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Run wp-cron.php
+        run: |
+          code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 90 "https://animalwrites.in/wp-cron.php?doing_wp_cron=$(date +%s)")
+          echo "wp-cron.php HTTP $code"
+          test "$code" = "200"
