@@ -9,7 +9,7 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from . import enrich, ingest, sources, summarise
+from . import enrich, ingest, policy as policy_mod, sources, summarise
 
 log = logging.getLogger("aw_workers")
 
@@ -22,6 +22,7 @@ class Stats:
     fetched: int = 0
     new: int = 0
     duplicate: int = 0
+    skipped: int = 0
     failed: int = 0
     errors: list[str] = field(default_factory=list)
 
@@ -55,6 +56,7 @@ def run(
     today=None,
     seen: set[str] | None = None,
     enricher=None,
+    policy=None,
 ) -> Stats:
     today = today or sources.utc_today()
     seen = seen if seen is not None else set()
@@ -84,6 +86,13 @@ def run(
                     seen.add(original)
                     stats.duplicate += 1
                     continue
+            if policy is not None:
+                why = policy.verdict(item.url, src.id, f"{item.title} {item.text}")
+                if why:
+                    seen.add(item.url)
+                    stats.skipped += 1
+                    log.info("%s: skipped (%s) %s", src.id, why, item.url)
+                    continue
             try:
                 summary = summariser.summarise(item)
                 payload = ingest.build_payload(item, summary)
@@ -104,6 +113,8 @@ def run(
                 seen.add(original)
             if result == "duplicate":
                 stats.duplicate += 1
+            elif result in ("blocked", "filtered"):
+                stats.skipped += 1
             else:
                 stats.new += 1
     return stats
@@ -148,9 +159,25 @@ def main() -> int:
 
     seen = load_seen(SEEN_FILE)
     log.info("mode: %s", "DRY_RUN" if dry_run else "LIVE")
+
+    # Sourcing policy from WP Admin. Live runs need it reachable; a dry run uses it when credentials exist.
+    policy = None
+    policy_client = client
+    if policy_client is None and all(os.environ.get(k) for k in ("WP_BASE_URL", "WP_INGEST_USER", "WP_INGEST_APP_PASSWORD")):
+        policy_client = ingest.Client(os.environ["WP_BASE_URL"], os.environ["WP_INGEST_USER"], os.environ["WP_INGEST_APP_PASSWORD"])
+    if policy_client is not None:
+        try:
+            policy = policy_mod.Policy.from_json(policy_client.policy())
+            log.info("policy: %d blocked publisher(s), relevance filter %s", len(policy.blocked), "on" if policy.relevance_on else "off")
+        except ingest.AuthError as exc:
+            log.error("AUTH FAILURE, stopping: %s", exc)
+            print(f"::error::Policy authentication failed: {exc}")
+            return 3
+        except Exception as exc:  # the site enforces the policy too, so carry on without the pre-filter
+            log.warning("policy unavailable, relying on the site to enforce it: %s", exc)
     try:
         stats = run(source_list, defaults, dry_run=dry_run, summariser=summariser, client=client, seen=seen,
-                    enricher=default_enricher)
+                    enricher=default_enricher, policy=policy)
     except ingest.AuthError as exc:
         log.error("AUTH FAILURE, stopping: %s", exc)
         print(f"::error::Ingest authentication failed: {exc}")
@@ -163,17 +190,17 @@ def main() -> int:
         month = max(ledger)
         print(f"haiku spend {month}: ${ledger[month]:.4f} (cap ${float(os.environ.get('HAIKU_MONTHLY_BUDGET_USD') or 4):.2f})")
 
-    print(f"fetched={stats.fetched} new={stats.new} duplicate={stats.duplicate} failed={stats.failed}")
+    print(f"fetched={stats.fetched} new={stats.new} duplicate={stats.duplicate} skipped={stats.skipped} failed={stats.failed}")
     if summariser.used:
         print("summaries by provider: " + ", ".join(f"{k}={v}" for k, v in sorted(summariser.used.items())))
     summary_file = os.environ.get("GITHUB_STEP_SUMMARY")
     if summary_file:
         with open(summary_file, "a") as fh:
             fh.write(
-                f"### {'DRY_RUN' if dry_run else 'LIVE'} run\n\n| fetched | new | duplicate | failed |\n|---|---|---|---|\n"
-                f"| {stats.fetched} | {stats.new} | {stats.duplicate} | {stats.failed} |\n"
+                f"### {'DRY_RUN' if dry_run else 'LIVE'} run\n\n| fetched | new | duplicate | skipped | failed |\n|---|---|---|---|---|\n"
+                f"| {stats.fetched} | {stats.new} | {stats.duplicate} | {stats.skipped} | {stats.failed} |\n"
             )
-    return 1 if stats.failed and not stats.new and not stats.duplicate else 0
+    return 1 if stats.failed and not stats.new and not stats.duplicate and not stats.skipped else 0
 
 
 if __name__ == "__main__":

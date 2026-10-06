@@ -55,6 +55,7 @@ def build_payload(item: Item, summary: str) -> dict:
         "source_name": item.publisher or item.source.name,
         "source_date": item.date.isoformat() if item.date else "",
         "topics": topics_for(item),
+        "feed": item.source.id,
     }
     source_type = court_type(item.title) if item.source.source_type == "auto-court" else item.source.source_type
     if source_type:
@@ -70,8 +71,16 @@ class Client:
         self.session = session or requests.Session()
         self.session.auth = (user, app_password)
 
+    def policy(self) -> dict:
+        """Sourcing policy from WP Admin (News → Sourcing)."""
+        resp = self.session.get(self.url.replace("/ingest", "/sourcing-policy"), timeout=TIMEOUT)
+        if resp.status_code in (401, 403):
+            raise AuthError(f"policy rejected credentials: HTTP {resp.status_code}")
+        resp.raise_for_status()
+        return resp.json()
+
     def post(self, payload: dict) -> str:
-        """Returns 'created' or 'duplicate'."""
+        """Returns 'created', 'duplicate', or 'blocked' / 'filtered' (refused by the site's sourcing policy)."""
         resp = self.session.post(self.url, json=payload, timeout=TIMEOUT)
         if resp.status_code in (401, 403):
             raise AuthError(f"ingest rejected credentials: HTTP {resp.status_code}")
@@ -79,6 +88,6 @@ class Client:
             data = resp.json()
         except ValueError:
             data = {}
-        if resp.status_code in (200, 201) and data.get("status") in ("created", "duplicate"):
+        if resp.status_code in (200, 201) and data.get("status") in ("created", "duplicate", "blocked", "filtered"):
             return data["status"]
         raise IngestError(f"HTTP {resp.status_code}: {str(data)[:200]}")
