@@ -84,3 +84,14 @@ Switches (both off by default):
 A **Test a headline** box shows whether a headline would be kept and why.
 
 Run summaries report `fetched / new / duplicate / skipped / failed`; `skipped` counts items refused by this policy.
+
+## Directory (one-off imports from public lists)
+
+Imported with `aw-wordpress/tools/directory/` (idempotent; unverified listings with the source and list date shown).
+
+| Source | Date of list | What came in | Imported |
+|---|---|---|---|
+| AWBI list of recognised animal welfare organisations | 31 May 2026 | name, AWBI code, district, state | 3,630 listings |
+| AWBI ABC project recognition list (`awbi.gov.in/view/index/Project-Recognition-for-ABC`) | 29 Jun 2026 | organisation, ABC centre, district, state, validity | 29 new listings; 35 existing organisations marked as ABC centres |
+| DAHD reply to Lok Sabha unstarred question 2854 (1962 Mobile Veterinary Units, Annexure I) | 18 Mar 2025 | units per state | 28 state listings, phone 1962 |
+| Tamil Nadu vet hospitals/dispensaries (data.gov.in, GODL-India) | 2018 | district, place | not imported: downloads need a registered data.gov.in API key |
