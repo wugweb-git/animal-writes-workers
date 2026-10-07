@@ -128,14 +128,8 @@ sources:
     url: "https://awbi.gov.in/Notifications"
     keywords: [invitation for, inviting, award, vacancy, vacancies, recruitment, internship, applications are invited, walk-in]
 
-  - id: opp-wildlife-sos
-    name: Wildlife SOS careers
-    org: Wildlife SOS
-    kind: sjm
-    type: opportunity
-    opportunity_type: job
-    url: "https://wildlifesos.org/about-us/careers/"
-    keywords: [wildlife, elephant, bear, conservation, veterinar, animal, rescue, field, community engagement, education]
+  # Wildlife SOS careers is fetched by the site itself (animal-writes-core/includes/opportunities-site.php):
+  # Cloudflare there refuses GitHub's servers but answers the website's host.
 
 topics:
   community-dogs: [stray dog, street dog, community dog, stray dogs, street dogs, community animals, कुत्त]

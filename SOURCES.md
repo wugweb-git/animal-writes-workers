@@ -104,6 +104,6 @@ Polled with the other sources every 6 hours. Items are **published directly** as
 |---|---|---|---|
 | WWF-India careers (`wwfindia.zohorecruit.com/jobs/careers`) | `zoho` (jobs JSON embedded in the page) | title, city, state, date opened | job title must name conservation work (fundraising, design, e-commerce roles are left out) |
 | AWBI Notifications (`awbi.gov.in/Notifications`) | `awbi` | award invitations, vacancies, internships (title from the PDF name) | invitation / award / vacancy / recruitment / internship wording; deadline read from the title |
-| Wildlife SOS careers (`wildlifesos.org/about-us/careers/`) | `sjm` (job accordion) | role, location | all roles (animal organisation) |
+| Wildlife SOS careers (`wildlifesos.org/about-us/careers/`) | fetched **by the site** once a day (`opportunities-site.php`), because Cloudflare refuses GitHub's servers | role, location | all roles (animal organisation) |
 
 Later, after their terms are read: NGOBox (grants, CSR, RFPs) and DevNetJobsIndia, behind an animal keyword filter. Not used: LinkedIn, Instagram (terms forbid), PETA India jobs and Animal Rahat (bot-blocked), FIAPO (blocks AI crawlers).

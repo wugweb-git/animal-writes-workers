@@ -26,8 +26,12 @@ def test_zoho_reads_embedded_jobs_and_keeps_conservation_titles_only():
     assert first.place == "Bhopal, Madhya Pradesh"
 
 
+WSOS = sources.Source("wsos", "Wildlife SOS careers", "sjm", "opportunity", "https://wildlifesos.org/about-us/careers/", org="Wildlife SOS", opportunity_type="job")
+
+
 def test_sjm_reads_roles_with_place_and_unique_urls():
-    items = _collect("opp-wildlife-sos", "wildlifesos_careers.html")
+    # Fetched by the site in production (Cloudflare blocks GitHub); the reader stays tested here.
+    items = sources.collect(WSOS, (FIX / "wildlifesos_careers.html").read_text(encoding="utf-8", errors="ignore"), TODAY, 14, 15)
     assert len(items) == 10
     vet = next(i for i in items if i.title == "Veterinary Officer")
     assert vet.place
@@ -47,10 +51,10 @@ def test_deadline_in_text():
 
 
 def test_opportunity_payload_and_factual_summary():
-    item = _collect("opp-wildlife-sos", "wildlifesos_careers.html")[0]
+    item = _collect("opp-wwf-india", "wwf_zoho_careers.html")[0]
     payload = ingest.build_payload(item, ingest.opportunity_summary(item))
     assert payload["type"] == "opportunity"
-    assert payload["org_name"] == "Wildlife SOS"
+    assert payload["org_name"] == "WWF-India"
     assert payload["opportunity_type"] == "job"
     assert payload["place"] == item.place
-    assert payload["summary"].startswith("Wildlife SOS: ")
+    assert payload["summary"].startswith("WWF-India: ")
