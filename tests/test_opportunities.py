@@ -32,7 +32,7 @@ WSOS = sources.Source("wsos", "Wildlife SOS careers", "sjm", "opportunity", "htt
 def test_sjm_reads_roles_with_place_and_unique_urls():
     # Fetched by the site in production (Cloudflare blocks GitHub); the reader stays tested here.
     items = sources.collect(WSOS, (FIX / "wildlifesos_careers.html").read_text(encoding="utf-8", errors="ignore"), TODAY, 14, 15)
-    assert len(items) == 10
+    assert len(items) == 11
     vet = next(i for i in items if i.title == "Veterinary Officer")
     assert vet.place
     assert vet.url.endswith("#veterinary-officer")
