@@ -58,3 +58,12 @@ def test_payload_carries_image_and_resolved_url(fixture_text):
     assert sent[0]["image_url"] == "https://img.example/x.jpg"
     assert sent[0]["source_url"].startswith("https://pub.example/")
     assert any(u.startswith("https://pib.gov.in/") for u in seen)  # original kept as seen too
+
+
+def test_resolve_google_news_keeps_query_string():
+    # PIB links carry "?PRID=..."; Google returns "=" and "&" escaped twice.
+    page = '<div data-n-a-sg="SIG" data-n-a-ts="123"></div>'
+    reply = ')]}\'\n[["wrb.fr","Fbv4je","[\\"garturlres\\",\\"https://www.pib.gov.in/PressReleaseDetail.aspx?PRID\\\\u003d2318504\\\\u0026lang\\\\u003d1\\",1]",null]]'
+    s = FakeSession([page], [reply])
+    assert enrich.resolve_google_news("https://news.google.com/rss/articles/ABC123?oc=5", s) == \
+        "https://www.pib.gov.in/PressReleaseDetail.aspx?PRID=2318504&lang=1"

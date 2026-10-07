@@ -31,8 +31,15 @@ def resolve_google_news(url: str, session=requests) -> str:
         body = urlencode({"f.req": json.dumps([[["Fbv4je", json.dumps(inner), None, "generic"]]])})
         r = session.post("https://news.google.com/_/DotsSplashUi/data/batchexecute", data=body, timeout=TIMEOUT,
                          headers={**UA, "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8"}).text
-        found = re.search(r'garturlres\\",\\"(https?://[^\\"]+)', r)
-        return found.group(1) if found else url
+        found = re.search(r'garturlres\\",\\"(https?://.*?)\\"', r)
+        if not found:
+            return url
+        link = found.group(1)
+        for _ in range(3):  # the URL is JSON inside JSON: "=" and "&" arrive as \\u003d, \\u0026
+            if "\\u" not in link:
+                break
+            link = link.encode().decode("unicode_escape")
+        return link
     except Exception:
         return url
 
