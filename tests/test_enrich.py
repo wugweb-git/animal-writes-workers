@@ -67,3 +67,19 @@ def test_resolve_google_news_keeps_query_string():
     s = FakeSession([page], [reply])
     assert enrich.resolve_google_news("https://news.google.com/rss/articles/ABC123?oc=5", s) == \
         "https://www.pib.gov.in/PressReleaseDetail.aspx?PRID=2318504&lang=1"
+
+
+def test_pick_topics_keywords_then_model():
+    from aw_workers import summarise, sources
+    sources.TOPICS.clear(); sources.TOPICS.update({"community-dogs": ["stray dog"], "adoption": ["adopt"], "policy-government": ["ministry"]})
+    src = sources.Source(id="x", name="X", kind="rss", type="news", url="u")
+    item = sources.Item(src, "Stray dog census begins", "https://e/1", None)
+    assert summarise.pick_topics(None, item, "", list(sources.TOPICS)) == ["community-dogs"]
+
+    class B:
+        name = "fake"
+        def ask(self, prompt):
+            return "policy-government, made-up-topic"
+    s = summarise.Summariser([B()])
+    item2 = sources.Item(src, "Businessman launches national initiative", "https://e/2", None)
+    assert summarise.pick_topics(s, item2, "A national programme was announced.", list(sources.TOPICS)) == ["policy-government"]

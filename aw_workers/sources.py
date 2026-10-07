@@ -51,9 +51,9 @@ class Item:
 TOPICS: dict[str, list[str]] = {}
 
 
-def topics_for(item: "Item") -> list[str]:
-    """Topic slugs whose keywords occur in the item's title or feed text (whole-word for short ASCII keys)."""
-    hay = f" {item.title} {item.text} ".lower()
+def topics_for(item: "Item", extra: str = "") -> list[str]:
+    """Topic slugs whose keywords occur in the item's title, feed text or `extra` (e.g. our summary)."""
+    hay = f" {item.title} {item.text} {extra} ".lower()
     found = []
     for slug, words in TOPICS.items():
         for w in words:

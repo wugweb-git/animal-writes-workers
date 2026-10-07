@@ -96,7 +96,9 @@ def run(
             try:
                 summary = (ingest.opportunity_summary(item) if item.source.type == "opportunity"
                            else summariser.summarise(item))
-                payload = ingest.build_payload(item, summary)
+                topics = (None if item.source.type == "opportunity"
+                          else summarise.pick_topics(summariser, item, summary, list(sources.TOPICS)))
+                payload = ingest.build_payload(item, summary, topics)
                 if dry_run:
                     log.info("DRY_RUN would POST: %s", json.dumps(payload, ensure_ascii=False))
                     stats.new += 1

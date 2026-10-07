@@ -289,6 +289,37 @@ class Summariser:
         raise SummaryError(" | ".join(reasons))
 
 
+TOPIC_PROMPT = """Choose the topics of an Indian animal-welfare news item.
+Pick 1 to 3 from this list and output only their slugs, comma-separated, nothing else:
+{slugs}
+
+Title: {title}
+Summary: {summary}"""
+
+
+def pick_topics(summariser, item: Item, summary: str, allowed: list[str]) -> list[str]:
+    """Every item gets a topic: keyword matches first; when none match, the summary model picks from the list."""
+    from .sources import topics_for
+
+    found = topics_for(item, summary)
+    if found or not allowed or not hasattr(summariser, "backends"):
+        return found
+    prompt = TOPIC_PROMPT.format(slugs=", ".join(allowed), title=item.title, summary=summary)
+    for i, backend in enumerate(summariser.backends):
+        if i in summariser.dead:
+            continue
+        try:
+            reply = backend.ask(prompt)
+        except Exception as exc:
+            if _is_dead_key_error(exc):
+                summariser.dead.add(i)
+            continue
+        picked = [s for s in re.findall(r"[a-z][a-z-]+", reply.lower()) if s in allowed]
+        if picked:
+            return list(dict.fromkeys(picked))[:3]
+    return []
+
+
 class DryRunSummariser:
     """Used in DRY_RUN when no provider key is available: no network, clearly marked output."""
 
