@@ -58,3 +58,12 @@ def test_opportunity_payload_and_factual_summary():
     assert payload["opportunity_type"] == "job"
     assert payload["place"] == item.place
     assert payload["summary"].startswith("WWF-India: ")
+
+
+def test_deadline_in_written_month():
+    from aw_workers.sources import deadline_in
+    from datetime import date
+    assert deadline_in("Last date for application - 5 September 2026 WWF-India is an equal") == date(2026, 9, 5)
+    assert deadline_in("Apply by 2nd Oct, 2026") == date(2026, 10, 2)
+    assert deadline_in("Last date to apply - 31.10.2026") == date(2026, 10, 31)
+    assert deadline_in("no date here") is None

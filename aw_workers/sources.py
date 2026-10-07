@@ -166,15 +166,22 @@ def parse_awbi(source: Source, body: str) -> list[Item]:
 _DEADLINE = re.compile(r"(?:last date|deadline|apply by|on or before)[^0-9]{0,20}(\d{1,2})[./-](\d{1,2})[./-](\d{4})", re.I)
 
 
+_MONTHS = {m: i for i, m in enumerate(["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"], 1)}
+_DEADLINE_WORDS = re.compile(r"(?:last date|deadline|apply by|on or before)[^0-9]{0,30}(\d{1,2})(?:st|nd|rd|th)?\s+([A-Za-z]{3,9})\.?,?\s+(\d{4})", re.I)
+
+
 def deadline_in(text: str) -> date | None:
-    """A last date written in the text, e.g. 'Last date to apply - 31.10.2026'."""
+    """A last date written in the text: 'Last date to apply - 31.10.2026' or 'Last date for application - 5 September 2026'."""
     m = _DEADLINE.search(text or "")
-    if not m:
-        return None
     try:
-        return date(int(m.group(3)), int(m.group(2)), int(m.group(1)))
+        if m:
+            return date(int(m.group(3)), int(m.group(2)), int(m.group(1)))
+        w = _DEADLINE_WORDS.search(text or "")
+        if w and w.group(2)[:3].lower() in _MONTHS:
+            return date(int(w.group(3)), _MONTHS[w.group(2)[:3].lower()], int(w.group(1)))
     except ValueError:
         return None
+    return None
 
 
 def parse_zoho(source: Source, body: str) -> list[Item]:
