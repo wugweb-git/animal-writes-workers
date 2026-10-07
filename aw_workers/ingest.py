@@ -62,7 +62,24 @@ def build_payload(item: Item, summary: str) -> dict:
         payload["source_type"] = source_type
     if item.image:
         payload["image_url"] = item.image
+    if item.source.type == "opportunity":
+        payload["org_name"] = item.source.org or item.source.name
+        payload["place"] = item.place
+        payload["deadline"] = item.deadline.isoformat() if item.deadline else ""
+        payload["opportunity_type"] = item.source.opportunity_type
     return payload
+
+
+def opportunity_summary(item: Item) -> str:
+    """Opportunities get a factual line built from the listing itself (no AI wording, nothing invented)."""
+    org = item.source.org or item.source.name
+    parts = [f"{org}: {item.title}."]
+    if item.place:
+        parts.append(f"Location: {item.place}.")
+    if item.deadline:
+        parts.append(f"Last date: {item.deadline.strftime('%-d %b %Y')}.")
+    parts.append("Details and how to apply are on the organisation's page.")
+    return " ".join(parts)
 
 
 class Client:

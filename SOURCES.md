@@ -95,3 +95,15 @@ Imported with `aw-wordpress/tools/directory/` (idempotent; unverified listings w
 | AWBI ABC project recognition list (`awbi.gov.in/view/index/Project-Recognition-for-ABC`) | 29 Jun 2026 | organisation, ABC centre, district, state, validity | 29 new listings; 35 existing organisations marked as ABC centres |
 | DAHD reply to Lok Sabha unstarred question 2854 (1962 Mobile Veterinary Units, Annexure I) | 18 Mar 2025 | units per state | 28 state listings, phone 1962 |
 | Tamil Nadu vet hospitals/dispensaries (data.gov.in, GODL-India) | 2018 | district, place | not imported: downloads need a registered data.gov.in API key |
+
+## Opportunities (approved 7 Oct 2026)
+
+Polled with the other sources every 6 hours. Items are **published directly** as factual listings (title, organisation, place, deadline when given, link to the organisation's page); the summary line is built from those fields, not written by AI. Closed calls (deadline passed) are skipped.
+
+| Source | Reader | What comes in | Filter |
+|---|---|---|---|
+| WWF-India careers (`wwfindia.zohorecruit.com/jobs/careers`) | `zoho` (jobs JSON embedded in the page) | title, city, state, date opened | job title must name conservation work (fundraising, design, e-commerce roles are left out) |
+| AWBI Notifications (`awbi.gov.in/Notifications`) | `awbi` | award invitations, vacancies, internships (title from the PDF name) | invitation / award / vacancy / recruitment / internship wording; deadline read from the title |
+| Wildlife SOS careers (`wildlifesos.org/about-us/careers/`) | `sjm` (job accordion) | role, location | all roles (animal organisation) |
+
+Later, after their terms are read: NGOBox (grants, CSR, RFPs) and DevNetJobsIndia, behind an animal keyword filter. Not used: LinkedIn, Instagram (terms forbid), PETA India jobs and Animal Rahat (bot-blocked), FIAPO (blocks AI crawlers).

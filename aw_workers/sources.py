@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import html
+import json
 import re
 from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
@@ -28,6 +29,10 @@ class Source:
     url: str
     keywords: list[str] = field(default_factory=list)
     source_type: str = ""
+    org: str = ""  # opportunities: organisation offering them
+    opportunity_type: str = ""  # opportunities: job | volunteer | internship | grant | event | ...
+    lookback_days: int | None = None  # overrides the default (job pages stay open for months)
+    match: str = "text"  # keywords looked for in "text" (title + feed text) or "title" only
 
 
 @dataclass
@@ -39,6 +44,8 @@ class Item:
     text: str = ""  # whatever context we have for the summary (feed description etc.)
     publisher: str = ""  # original publisher when the feed is an aggregator (Google News)
     image: str = ""  # preview image URL (linked, never downloaded)
+    place: str = ""  # opportunities: city/state as published
+    deadline: date | None = None  # opportunities: last date, when published
 
 
 TOPICS: dict[str, list[str]] = {}
@@ -63,8 +70,8 @@ def load_sources(path: str | Path = "sources.yaml") -> tuple[list[Source], dict]
     TOPICS.update({k: [str(w) for w in v] for k, v in (data.get("topics") or {}).items()})
     sources = []
     for s in data.get("sources", []):
-        if s["type"] not in ("news", "legal"):
-            raise ValueError(f"source {s['id']}: type must be news or legal")
+        if s["type"] not in ("news", "legal", "opportunity"):
+            raise ValueError(f"source {s['id']}: type must be news, legal or opportunity")
         if s["kind"] not in PARSERS:
             raise ValueError(f"source {s['id']}: unknown kind {s['kind']}")
         sources.append(
@@ -76,6 +83,10 @@ def load_sources(path: str | Path = "sources.yaml") -> tuple[list[Source], dict]
                 url=s["url"],
                 keywords=list(s.get("keywords") or []),
                 source_type=s.get("source_type", ""),
+                org=s.get("org", ""),
+                opportunity_type=s.get("opportunity_type", ""),
+                lookback_days=s.get("lookback_days"),
+                match=s.get("match", "text"),
             )
         )
     return sources, data.get("defaults", {})
@@ -152,18 +163,95 @@ def parse_awbi(source: Source, body: str) -> list[Item]:
     return items
 
 
-PARSERS = {"rss": parse_rss, "awbi": parse_awbi}
+_DEADLINE = re.compile(r"(?:last date|deadline|apply by|on or before)[^0-9]{0,20}(\d{1,2})[./-](\d{1,2})[./-](\d{4})", re.I)
+
+
+def deadline_in(text: str) -> date | None:
+    """A last date written in the text, e.g. 'Last date to apply - 31.10.2026'."""
+    m = _DEADLINE.search(text or "")
+    if not m:
+        return None
+    try:
+        return date(int(m.group(3)), int(m.group(2)), int(m.group(1)))
+    except ValueError:
+        return None
+
+
+def parse_zoho(source: Source, body: str) -> list[Item]:
+    """Zoho Recruit career site: the open jobs are embedded as JSON (HTML-escaped) in a hidden input."""
+    text = html.unescape(body)
+    start = text.find('[{"', max(0, text.find('"Posting_Title":"') - 200000))
+    items = []
+    while start != -1:
+        depth, end = 0, -1
+        for k in range(start, len(text)):
+            if text[k] == "[":
+                depth += 1
+            elif text[k] == "]":
+                depth -= 1
+                if depth == 0:
+                    end = k + 1
+                    break
+        try:
+            jobs = json.loads(text[start:end]) if end > 0 else []
+        except ValueError:
+            jobs = []
+        if jobs and isinstance(jobs[0], dict) and "Posting_Title" in jobs[0]:
+            base = source.url.split("/jobs/")[0] + "/jobs/Careers/"
+            for j in jobs:
+                if not j.get("Publish", True) or not j.get("Posting_Title"):
+                    continue
+                when = None
+                if j.get("Date_Opened"):
+                    try:
+                        when = date.fromisoformat(j["Date_Opened"][:10])
+                    except ValueError:
+                        when = None
+                place = ", ".join(x for x in (j.get("City"), j.get("State")) if x)
+                desc = _clean(j.get("Job_Description") or "")
+                items.append(Item(source, _clean(j["Posting_Title"]), base + str(j["id"]), when, desc[:1500],
+                                  place=place, deadline=deadline_in(desc)))
+            return items
+        start = text.find('[{"', start + 2)
+    return items
+
+
+def parse_sjm(source: Source, body: str) -> list[Item]:
+    """WordPress 'Simple Job Manager' accordion (e.g. Wildlife SOS careers): one .sjm-item per role."""
+    soup = BeautifulSoup(body, "html.parser")
+    items = []
+    for it in soup.select(".sjm-accordion .sjm-item"):
+        title_el = it.select_one(".sjm-title")
+        if not title_el:
+            continue
+        title = _clean(title_el.get_text(" "))
+        place_el = it.select_one(".sjm-location")
+        body_el = it.select_one(".sjm-content")
+        text = _clean(body_el.get_text(" ")) if body_el else ""
+        anchor = re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")
+        items.append(Item(source, title, f"{source.url.split('#')[0]}#{anchor}", None, text[:1500],
+                          place=_clean(place_el.get_text(" ")) if place_el else "", deadline=deadline_in(text)))
+    return items
+
+
+PARSERS = {"rss": parse_rss, "awbi": parse_awbi, "zoho": parse_zoho, "sjm": parse_sjm}
 
 
 def matches_keywords(item: Item, keywords: list[str]) -> bool:
     if not keywords:
         return True
-    hay = f"{item.title} {item.text}".lower()
+    hay = (item.title if item.source.match == "title" else f"{item.title} {item.text}").lower()
     return any(k.lower() in hay for k in keywords)
 
 
 def collect(source: Source, body: str, today: date, lookback_days: int, limit: int) -> list[Item]:
     items = [i for i in PARSERS[source.kind](source, body) if matches_keywords(i, source.keywords)]
+    if source.lookback_days is not None:
+        lookback_days = int(source.lookback_days)
+    if source.type == "opportunity":
+        for i in items:
+            i.deadline = i.deadline or deadline_in(i.title)
+        items = [i for i in items if not i.deadline or i.deadline >= today]  # closed calls are skipped
     fresh = []
     for i in items:
         if i.date is None:

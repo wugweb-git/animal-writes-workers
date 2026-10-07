@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="description" content="AWBI">
+<meta name="author" content="Animal Welfare Board of India">
+<meta name="keywords" content="Animal Welfare Board of India">
+<title>Animal Welfare Board of India</title>
+<link rel="shortcut icon" href="/Default/front/images/favicon.ico">
+ <!-- <link rel="stylesheet" href="/Default/assets/css/icons.css"/> -->
+<link rel="shortcut icon" href="images/favicon.ico">
+<link type="text/css" href="/Default/front/css/bootstrap.min.css" rel="stylesheet">
+<link type="text/css" href="/Default/front/css/style.css" rel="stylesheet">
+<link type="text/css" href="/Default/front/css/awbi-custom.css" rel="stylesheet">
+<link type="text/css" href="/Default/front/css/jquery.fancybox.css" rel="stylesheet">
+<link type="text/css" href="/Default/assets/general/css/common.css" rel="stylesheet">
+<link type="text/css" href="/Default/front/css/responsive.css" rel="stylesheet">
+<link type="text/css" href="/Default/assets/plugins/bootstrap-switch/bootstrap-switch.css" rel="stylesheet">
+<link type="text/css" href="/Default/assets/plugins/chosen/bootstrap-chosen.css" rel="stylesheet">
+<script type="text/javascript" src="/Default/front/js/modernizr.js"></script>
+<script type="text/javascript" src="/Default/front/js/jquery-min-3.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" integrity="sha256-eZrrJcwDc/3uDhsdt61sL2oOBY362qM3lon1gyExkL0=" crossorigin="anonymous">
+<script src="/Default/assets/plugins/jsencrypt.min.js"></script>
+
+<!-- 05022026 <script>
+$(document).ready(function() {
+
+    // Disable right-click globally
+    document.addEventListener('contextmenu', function(e) {
+        e.preventDefault();
+        return false;
+    });
+
+    // Disable Ctrl+C, Ctrl+V, Ctrl+X, Ctrl+S, Ctrl+U, Ctrl+Shift+I/J/C (DevTools)
+    document.addEventListener('keydown', function(e) {
+        if (
+            (e.ctrlKey && e.shiftKey && [73, 74, 67].includes(e.keyCode)) || // Ctrl+Shift+I/J/C
+            e.keyCode === 123 // F12
+        ) {
+            e.preventDefault();
+            return false;
+        }
+    });
+
+    // Disable drag and drop
+    document.addEventListener('dragstart', function(e) {
+        e.preventDefault();
+        return false;
+    });
+    document.addEventListener('drop', function(e) {
+        e.preventDefault();
+        return false;
+    });
+
+});
+</script> -->
+<!--[if lte IE 9]>
+  <script src="js/ie.js" type="text/javascript"></script>
+<![endif]-->
+</head>
+<body class="noJS">
+<noscript class="jsRequired">
+</noscript>
+<div id="loading">Loading...</div>
+<!--<div id="wrapper">-->
+<header class="">
+<div class="topHeader">    
+      <div class="topStrip">
+	  <div class="container">
+      <div class="row mb-0">
+      <div class="col-md-5">
+          <ul class="leftLink">
+            <li><a href="/view/index/sitemap">Sitemap</a></li>
+            <li><a href="/view/index/faqs">FAQ's</a></li>
+            <li><a href="/Feedback">Feedback</a></li>
+		    	<!-- <li><a href="/view/index/Archives">Archives</a></li> -->
+            <li><a href="/view/index/quick-links">Quick Links</a></li>
+          </ul>
+          </div>
+                    <div class="col-md-7">
+            <ul class="rightLinks">
+              <li><a tabindex="1" href="#content" class="skipContent">Skip to Main Content</a></li>
+              <li><a href="/view/index/screen-reader-access">Screen Reader Access</a></li>
+              <li class="fontResize">
+                <div id="accessControl" class="textResizeWrapper cf">
+                  <input type="button" name="normal" value="Standard View" id="normal" title="Standard View" class="contrastChanger normal">
+                  <input type="button" name="wob" value="High Contrast View" id="wob" title="High Contrast View" class="contrastChanger wob">
+                  <input type="button" name="font_normal" value="A-" id="font_smaller" title="Decrease Font Size" class="fontScaler normal font-normal" />
+                  <input type="button" name="font_normal" value="A" id="font_normal" title="Normal Font Size" class="fontScaler normal font-normal" />
+                  <input type="button" name="font_large" value="A+" id="font_large" title="Increase Font Size" class="fontScaler large font-large" />
+                </div>
+              </li>
+              <li>
+                <div class="language">
+                <form name="frmlang" id="frmlang" method="post" action="">
+                      <select class="customSelect" name="language" id="lang" onchange="this.form.submit();" title="Select Language">
+                        <option selected="selected" value="en">English</option>
+                        <option value="hi">हिन्दी</option>
+                      </select>
+                    </form>
+                </div>
+              </li>
+            </ul>
+          </div> 
+                </div> 
+       </div>		
+      </div>
+      </div>
+    <div class="headerRow">
+      <div class="container">
+        <div class="cf">
+          <div id="logo">
+		   		  <a href="/" title="Animal Welfare Board of India, Government of India"><img src="/Default/assets/frontand/images/logo-hindi.png" width="415" height="74" alt="Animal Welfare Board of India, Government of India"></a>
+					  </div>
+          <div class="headerRight">
+			<div class="registrationList">	
+            <ul>
+			                 <li><a href="/user/login" class="button">Sign In</a></li>
+                <li><a href="/registration" class="button green">Sign Up</a></li>
+              			  <li class="serBar">
+			     
+		        <div class="serachWrap">
+                  <div id="sb-search" class="sb-search">
+                    <form>
+                      <input class="sb-search-input" placeholder="Enter your search term..." type="text" value="" name="search" id="search" onkeyup="searchContent()">
+                      <input class="sb-search-submit" type="submit" value="">
+                      <span class="sb-icon-search"><i class="fa fa-search"></i></span>
+                      <ul class="list-group" id="resultBlock" style="display:none;">
+                        <div id="searchResult"></div>
+                      </ul>
+                    </form>
+                  </div>
+                </div>
+          			  </li>
+			 <li><a href="javascript:void(0);" class="navLink"><span class="fa fa-bars"></span></a></li>
+
+			<!--<li><img src="/Default/front/images/IndianFlag.gif" width="70" height="57" alt="Indian Flag" title="Indian Flag" class="navLink"></li>-->
+
+            </ul>
+		    </div>
+			<div class="rightLogo">
+			          
+              <img src="/Default/front/images/emblem.png" width="35" height="57" alt="सत्यमेव जयते" title="सत्यमेव जयते">
+              			</div>
+          </div>
+        </div>
+      </div>
+    </div>
+ 
+  <div id="mainNav" class="mainNavigation">
+	 <div class="container">
+     <div class="menuPart cf">
+              <ul id="nav">
+                                        <li>
+                                            <a href="/view/index/#">
+                                        Home                        </a>
+                </li>
+                                                        <li><a href="#">About Us</a>
+                  <ul>
+                                        <li>
+                                                        <a href="/view/index/introduction">
+                                                    Introduction                              </a>
+                      </li>
+                                          <li>
+                                                        <a href="/view/index/Mandate-and-Functions">
+                                                    Mandate and Functions                              </a>
+                      </li>
+                                          <li>
+                                                        <a href="/BoardMembers">
+                                                    Board Members                              </a>
+                      </li>
+                                          <li>
+                                                        <a href="/view/index/constitution">
+                                                    Constitution                              </a>
+                      </li>
+                                          <li>
+                                                        <a href="/view/index/committees-of-the-board">
+                                                    Committees of the Board                              </a>
+                      </li>
+                                          <li>
+                                                        <a href="/view/index/whos-who">
+                                                    Who's Who                              </a>
+                      </li>
+                                          <li>
+                                                        <a href="/view/index/organizational-structure">
+                                                    Organizational Structure                              </a>
+                      </li>
+                                      </ul>
+                </li>
+                                                        <li><a href="#">Act & Rules</a>
+                  <ul>
+                                        <li>
+                                                        <a href="/Document/acts">
+                                                    Acts                              </a>
+                      </li>
+                                          <li>
+                                                        <a href="/Document/rules">
+                                                    Rules                              </a>
+                      </li>
+                                          <li>
+                                                        <a href="/Document/general guidelines">
+                                                    Guidelines                              </a>
+                      </li>
+                                          <li>
+                                                        <a href="/view/index/../../circulars">
+                                                    Advisories / Circulars                               </a>
+                      </li>
+                                      </ul>
+                </li>
+                                                        <li><a href="#">Meetings</a>
+                  <ul>
+                                        <li>
+                                                        <a href="/Document/annual-general-meetings">
+                                                    Annual General Meetings                              </a>
+                      </li>
+                                          <li>
+                                                        <a href="/Document/general-meetings">
+                                                    General Meetings                              </a>
+                      </li>
+                                          <li>
+                                                        <a href="/Document/executive-committee-meetings">
+                                                    Executive Committee Meetings                              </a>
+                      </li>
+                                          <li>
+                                                        <a href="/view/index/Status-of-Application-of-PSP-and-NOC">
+                                                    Performing Animal Committee Meetings                              </a>
+                      </li>
+                                      </ul>
+                </li>
+                                                        <li><a href="#">Publication & Media</a>
+                  <ul>
+                                        <li>
+                                                        <a href="/photos">
+                                                    Photo Gallery                              </a>
+                      </li>
+                                          <li>
+                                                        <a href="/videos">
+                                                    Video Gallery                              </a>
+                      </li>
+                                          <li>
+                                                        <a href="/Document/annual-reports">
+                                                    Annual Reports                              </a>
+                      </li>
+                                          <li>
+                                                        <a href="/Document/magazines">
+                                                    Magazines                              </a>
+                      </li>
+                                          <li>
+                                                        <a href="/Document/newsletters">
+                                                    Newsletters                              </a>
+                      </li>
+                                          <li>
+                                                        <a href="/view/index/../../pressrelease">
+                                                    Press Release and News                              </a>
+                      </li>
+                                      </ul>
+                </li>
+                                                        <li><a href="#">Online Services</a>
+                  <ul>
+                                        <li>
+                                                        <a href="/view/index/../../recognition">
+                                                    Recognition                              </a>
+                      </li>
+                                          <li>
+                                                        <a href="/view/index/Project-Recognition-for-ABC">
+                                                    Project Recognition for ABC                              </a>
+                      </li>
+                                          <li>
+                                                        <a href="/view/index/financial-assistance">
+                                                    Financial Assistance                              </a>
+                      </li>
+                                          <li>
+                                                        <a href="/view/index/../../PerformingAnimal">
+                                                    Performing Animals                              </a>
+                      </li>
+                                          <li>
+                                                        <a href="/view/index/../../honorary-animal-welfare-representative">
+                                                    Honorary Animal Welfare Representative                              </a>
+                      </li>
+                                          <li>
+                                                        <a href="/view/index/../../colony-animal-care-taker">
+                                                    Colony Animal Care Taker                              </a>
+                      </li>
+                                          <li>
+                                                        <a href="/view/index/../../cruelty-complaint">
+                                                    Grievance                              </a>
+                      </li>
+                                          <li>
+                                                        <a href="/view/index/../../Cruelty">
+                                                    Cruelty                              </a>
+                      </li>
+                                      </ul>
+                </li>
+                                                        <li>
+                                            <a href="/view/index/contact-us">
+                                        Contact Us                        </a>
+                </li>
+                                </ul>
+      	  </div>
+     </div>
+    </div>
+  </header>
+ <script>
+ window.onload=function(){
+	if(document.getElementById("popuptexdt")){
+		document.getElementById("popuptexdt").click();
+		var hiddenval = $('input#dashboardpoup').val();
+		if(hiddenval == 'dashboardpoup') {
+		  document.getElementById("userlogindropdown").click();
+		}
+	}
+};
+
+notificationCount();
+setInterval(function(){
+  notificationCount();
+}, 1000000);
+
+  function notificationCount(){
+        // loginUserId = 30;
+        // formfields = 'login_user_id='+loginUserId;
+        theurl = '/admin/ajax/notificationCount';
+        $.ajax({
+            type: "POST",
+            url: theurl,
+            //data: formfields,
+            beforeSend: function( xhr ) {
+            }
+        }).done(function(data) {
+             $('#notificationDiv').html(data);
+        });
+  }
+
+  function notification(){
+        // loginUserId = 30;
+        // formfields = 'login_user_id='+loginUserId;
+
+        theurl = '/admin/ajax/loadNotification';
+        $.ajax({
+            type: "POST",
+            url: theurl,
+           // data: formfields,
+            beforeSend: function( xhr ) {
+            }
+        }).done(function(data) {
+            $('#notificationList').html(data);
+            // $('#historyModal').modal('show');
+        });
+    }
+
+$(document).ready(function(){
+	$( ".navLink" ).click(function() {  
+    if($('#collapseExample:visible').length)
+        $('#collapseExample').hide();
+		
+    else
+        $('#collapseExample').show();  
+		
+	});
+	$(".navLink").click(function() { 
+		$('.dashR').toggleClass("col-lg-10");
+	});
+});
+
+
+</script><main id="main">
+   <section class="innerBanner">
+      <img src="/Default/front/images/loginBack.jpg">
+      <div class="container">
+         <div class="innerCaption">
+            <h1>Notifications</h1>
+         </div>
+      </div>
+   </section>
+   <div class="breadcrubArea">
+      <div class="container">
+         <ul class="breadcrumb">
+            <li><a href="/">Home</a></li>
+            <li>Notifications</li>
+         </ul>
+      </div>
+   </div>
+  <section id="content" class="innerContent">
+      <div class="container">
+       <div class="row">
+          <div class="col-md-12">
+            <ul class="notisList">
+				                  <li>
+                                             <img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">Renewal of Recognition granted by the Animal Welfare Board of India – Final Opportunity<a class="downBtn" href="/uploads/notifications/179060228766Final Letter -Renewal of Recognition.pdf" title="Renewal of Recognition granted by the Animal Welfare Board of India – Final Opportunity" target="_blank" class="downBtn">Download</a> 
+					                           
+                  </li>
+			                     <li>
+                                             <img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">Public Notice Regarding Misuse of the Name and Authority of the Animal Welfare Board of India<a class="downBtn" href="/uploads/notifications/179036313507public notice regarding fraudulent letters.pdf" title="Public Notice Regarding Misuse of the Name and Authority of the Animal Welfare Board of India" target="_blank" class="downBtn">Download</a> 
+					                           
+                  </li>
+			                     <li>
+                                             <img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">Disclaimer for Payment of Application Fess to AWBI<a class="downBtn" href="/uploads/notifications/176336108576Disclaimer.pdf" title="Disclaimer for Payment of Application Fess to AWBI" target="_blank" class="downBtn">Download</a> 
+					                           
+                  </li>
+			                     <li>
+                                             <img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">Public Notice regarding the renewal of recognition of the organizations recognized with the AWBI<a class="downBtn" href="/uploads/notifications/174015140829Public Notice - Renewal of Recognition.pdf" title="Public Notice regarding the renewal of recognition of the organizations recognized with the AWBI" target="_blank" class="downBtn">Download</a> 
+					                           
+                  </li>
+			                     <li>
+                                             <img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">Invitation for AWBI National Awards for Animal Welfare and Protection – 2025. Last date to apply - 30.06.2026<a class="downBtn" href="/uploads/notifications/177384065115AWBI Awards 2025 Notificationn .pdf" title="Invitation for AWBI National Awards for Animal Welfare and Protection – 2025. Last date to apply - 30.06.2026" target="_blank" class="downBtn">Download</a> 
+					                           
+                  </li>
+			                     <li>
+                                             <img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">Public Notice regarding ban on dangerous dog breeds<a class="downBtn" href="/uploads/notifications/171085636528Public Notice regarding Ban on Dog Breeds.pdf" title="Public Notice regarding ban on dangerous dog breeds" target="_blank" class="downBtn">Download</a> 
+					                           
+                  </li>
+			                     <li>
+                                             <img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">Public Notice regarding the cancellation of nomination as HAWO/HDAWO/HSAWO/HLAWO<a class="downBtn" href="/uploads/notifications/170981707523Public Notice regarding HAWR.pdf" title="Public Notice regarding the cancellation of nomination as HAWO/HDAWO/HSAWO/HLAWO" target="_blank" class="downBtn">Download</a> 
+					                           
+                  </li>
+			                     <li>
+                                             <img src="/Default/front/images/pdf-download-icon.png" class="pdfImg" width="27" height="30">Increase in the amount of application fees for Recognition, Financial Assistance under various schemes implemented by the Board and application under Performing Animals (Registration) Rules, 2001<a class="downBtn" href="/uploads/notifications/163307778792revised fee order (1).pdf" title="Increase in the amount of application fees for Recognition, Financial Assistance under various schemes implemented by the Board and application under Performing Animals (Registration) Rules, 2001" target="_blank" class="downBtn">Download</a> 
+					                           
+                  </li>
+			               </ul>
+         </div>
+     </div>
+   </div>
+   </section>
+     <footer id="footer">
+    <!-- Render Footer Upper Section -->
+    <div class="contactFooter">
+    <div class="container">
+      <div class="row">
+          <div class="col-md-4">
+<div class="emblemFooter"><img src="/Default/front/images/emblemFooter.png" /></div>
+
+<div class="campusRight">
+<h3>Animal Welfare Board of India,</h3>
+
+<p>Ministry of Fisheries, Animal Husbandry and Dairying (Department of Animal Husbandry and Dairying)</p>
+
+<p>42 Milestone, Delhi-Agra Highway, NH-2, Village-Seekri, Ballabhgarh, Faridabad, Haryana-121 004 India</p>
+</div>
+</div>
+
+<div class="col-md-4">
+<div class="contHrs">
+<h3>Opening Hours</h3>
+
+<p class="openHrs">Monday-Friday: 9:00 AM to 5:30 PM<br />
+Saturday, Sunday & Govt. holidays: Off</p>
+
+<h3>Contact Info</h3>
+
+<p>0129-2555700</p>
+
+<p>support[at]awbi[dot]gov[dot]in / support-awbi[at]awbi[dot]gov[dot]in</p>
+</div>
+</div>
+          <div class="col-md-4">
+        <div class="contactSocial">
+          <h3>Connect with us</h3>
+          <ul class="footerSocial">
+                          <li>
+                <a href="https://twitter.com/AwbiBallabhgarh">
+                  <i class="fa fa-twitter" aria-hidden="true"></i>
+                </a>
+              </li>
+                          <li>
+                <a href="https://www.facebook.com/Animal-Welfare-Board-Of-India-104742494310960">
+                  <i class="fa fa-facebook	" aria-hidden="true"></i>
+                </a>
+              </li>
+                          <li>
+                <a href="#">
+                  <i class="fa fa-instagram" aria-hidden="true"></i>
+                </a>
+              </li>
+                          <li>
+                <a href="https://www.youtube.com/channel/UC9iSjvUnRwRbQz-nSlcE9Vw">
+                  <i class="fa fa-youtube" aria-hidden="true"></i>
+                </a>
+              </li>
+                      </ul>
+        </div>
+          </div>
+      </div>
+  </div>
+</div>
+<!-- Render Footer Lower Section -->
+<div class="siteCopyright">
+  <div class="container">
+    <div class="row">
+      <div class="col-md-12">
+        <div class="footerMenuLeft">
+          <ul class="footerMenu">
+                          <li>
+                                  <a href="/view/index/terms-of-use">
+                                      <!-- </a> -->
+                    Terms of Use</a>
+              </li>
+                          <li>
+                                  <a href="/view/index/privacy-policy">
+                                      <!-- </a> -->
+                    Privacy Policy</a>
+              </li>
+                          <li>
+                                  <a href="/view/index/copyright-policy">
+                                      <!-- </a> -->
+                    Copyright Policy</a>
+              </li>
+                          <li>
+                                  <a href="/view/index/disclaimer">
+                                      <!-- </a> -->
+                    Disclaimer</a>
+              </li>
+                          <li>
+                                  <a href="/view/index/hyperlinking-policy">
+                                      <!-- </a> -->
+                    Hyperlinking Policy</a>
+              </li>
+                          <li>
+                                  <a href="/view/index/help">
+                                      <!-- </a> -->
+                    Help</a>
+              </li>
+                          <li>
+                                  <a href="/view/index/accessibility-statement">
+                                      <!-- </a> -->
+                    Accessibility Statement</a>
+              </li>
+                      </ul>
+          <p class="copyrightText">© Copyright 2022, Animal Welfare Board of India. All Rights Reserved.</p>
+</div>
+        <div class="visiterRight">
+            <p>Last Updated:25-09-2026</p>
+            <p>Visitors : 12470431            </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</footer>
+<a href="#top" id="backtotop" title="Back to Top"><span class="edgtf-icon-stack">
+<span class="angle-up"></span></span><span class="textIndent">Back to Top</span></a>
+<script type="text/javascript" src="/Default/front/js/bootstrap.min.js"></script>
+<script type="text/javascript" src="/Default/front/js/functions.js"></script>
+<script type="text/javascript" src="/Default/front/js/general.js"></script>
+<script type="text/javascript" src="/Default/front/js/mixitup.min.js"></script>
+<script type="text/javascript" src="/Default/front/js/jquery.fancybox.min.js"></script>
+<script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAXgGP3EeP3UaXCE772XOCL_iiR3UOu-hA&libraries=places,geometry"></script>
+<script type="text/javascript">
+  $(function() {
+    $('#loading').hide();
+    // bind change event to select
+    $('#dynamic_select').on('change', function() {
+      var url = $(this).val(); // get selected value
+      if (url) { // require a URL
+        window.location = url; // redirect
+      }
+      return false;
+    });
+  });
+
+  $(document).ready(function() {
+    $("#document_act_reg_date").datepicker({
+      todayHighlight: true,
+      format: 'dd-mm-yyyy',
+      autoclose: true,
+      endDate: '-3y'
+    });
+  });
+</script>
+</div>
+</body>
+</html>   
+</main>

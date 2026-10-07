@@ -105,6 +105,38 @@ sources:
 
 # Topic tagging: an item gets every topic whose keywords appear in its title or summary
 # (case-insensitive). Keys are topic slugs on the site; unknown slugs are ignored by the site.
+
+  # --- Opportunities (approved 7 Oct 2026). Drafts for review; only metadata + a factual line. ---
+  - id: opp-wwf-india
+    name: WWF-India careers
+    org: WWF-India
+    kind: zoho
+    type: opportunity
+    opportunity_type: job
+    lookback_days: 120
+    url: "https://wwfindia.zohorecruit.com/jobs/careers"
+    match: title  # WWF also hires for fundraising, design and e-commerce; keep conservation roles
+    keywords: [conservation, wildlife, biodiversity, species, raptor, tiger, elephant, rhino, bird, aquatic, wetland, river, marine, forest, habitat, veterinar, animal, brahmaputra]
+
+  - id: opp-awbi-notifications
+    name: Animal Welfare Board of India – Notifications
+    org: Animal Welfare Board of India
+    kind: awbi
+    type: opportunity
+    opportunity_type: event
+    lookback_days: 120
+    url: "https://awbi.gov.in/Notifications"
+    keywords: [invitation for, inviting, award, vacancy, vacancies, recruitment, internship, applications are invited, walk-in]
+
+  - id: opp-wildlife-sos
+    name: Wildlife SOS careers
+    org: Wildlife SOS
+    kind: sjm
+    type: opportunity
+    opportunity_type: job
+    url: "https://wildlifesos.org/about-us/careers/"
+    keywords: [wildlife, elephant, bear, conservation, veterinar, animal, rescue, field, community engagement, education]
+
 topics:
   community-dogs: [stray dog, street dog, community dog, stray dogs, street dogs, community animals, कुत्त]
   animal-birth-control: [animal birth control, abc rules, abc programme, abc program, sterilis, steriliz, neuter]

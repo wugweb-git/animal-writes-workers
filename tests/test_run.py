@@ -54,7 +54,7 @@ def test_broken_source_is_counted_not_fatal(fixture_text):
         return fake_fetch(fixture_text)(url)
 
     stats = run.run(src, defaults, dry_run=True, summariser=DryRunSummariser(), client=None, fetch=fetch, today=TODAY)
-    assert stats.failed == 2 and stats.fetched > 0
+    assert stats.failed == sum("awbi" in s.url for s in src) and stats.fetched > 0
 
 
 class FakeResp:

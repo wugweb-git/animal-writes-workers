@@ -94,7 +94,8 @@ def run(
                     log.info("%s: skipped (%s) %s", src.id, why, item.url)
                     continue
             try:
-                summary = summariser.summarise(item)
+                summary = (ingest.opportunity_summary(item) if item.source.type == "opportunity"
+                           else summariser.summarise(item))
                 payload = ingest.build_payload(item, summary)
                 if dry_run:
                     log.info("DRY_RUN would POST: %s", json.dumps(payload, ensure_ascii=False))
