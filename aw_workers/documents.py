@@ -225,9 +225,23 @@ def gazette_items(source: Source, rows: list[dict], ministries: list[str]) -> li
     return items
 
 
+def _ca_bundle() -> str:
+    """The usual CA bundle plus Let's Encrypt's YR2 intermediate: egazette.gov.in sends its certificate without it."""
+    import certifi
+    import tempfile
+
+    path = Path(tempfile.gettempdir()) / "aw-ca-bundle.pem"
+    if not path.exists():
+        extra = (Path(__file__).parent / "certs" / "lets-encrypt-yr2.pem").read_text()
+        path.write_text(Path(certifi.where()).read_text() + "\n" + extra)
+    return str(path)
+
+
 def parse_egazette(source: Source, body: str = "", session: requests.Session | None = None, pages: int = 5) -> list[Item]:
     s = session or requests.Session()
     s.headers["User-Agent"] = USER_AGENT
+    if session is None:
+        s.verify = _ca_bundle()
     home = s.get("https://egazette.gov.in/", timeout=TIMEOUT * 2)
     home.raise_for_status()
     base = home.url.rsplit("/", 1)[0]
