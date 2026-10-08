@@ -1,0 +1,47 @@
+# Off-server copy of the site's daily backup (owner's choice: GitHub). Once a day, after the site's 03:30 IST backup,
+# the latest database and code backups are downloaded and kept here as a private release; releases older than 14 days
+# are removed. This repository is private.
+name: Site backup copy
+
+on:
+  schedule:
+    - cron: '30 23 * * *'   # 05:00 IST
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  copy:
+    runs-on: ubuntu-latest
+    env:
+      WP_BASE_URL: ${{ secrets.WP_BASE_URL }}
+      WP_INGEST_USER: ${{ secrets.WP_INGEST_USER }}
+      WP_INGEST_APP_PASSWORD: ${{ secrets.WP_INGEST_APP_PASSWORD }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Download the latest backups
+        run: |
+          set -euo pipefail
+          for kind in db code; do
+            curl -fsS -u "$WP_INGEST_USER:$WP_INGEST_APP_PASSWORD" -D "h-$kind.txt" -o "aw-$kind.gz" "${WP_BASE_URL%/}/wp-json/aw/v1/backup/$kind"
+            name=$(grep -i '^content-disposition' "h-$kind.txt" | sed -E 's/.*filename="([^"]+)".*/\1/' | tr -d '\r')
+            mv "aw-$kind.gz" "$name"
+            gzip -t "$name"
+            echo "$name $(stat -c %s "$name") bytes"
+          done
+          ls -la auto-*
+      - name: Keep as a private release
+        run: |
+          set -euo pipefail
+          day=$(ls auto-db-*.sql.gz | sed -E 's/auto-db-(.*)\.sql\.gz/\1/')
+          tag="site-backup-$day"
+          gh release delete "$tag" --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag 2>/dev/null || true
+          gh release create "$tag" auto-* --repo "$GITHUB_REPOSITORY" --title "Site backup $day" --notes "Database and code backup of animalwrites.in, $day. Kept 14 days."
+      - name: Remove copies older than 14 days
+        run: |
+          cutoff=$(date -u -d '14 days ago' +%Y-%m-%d)
+          gh release list --repo "$GITHUB_REPOSITORY" --limit 100 --json tagName -q '.[].tagName' | grep '^site-backup-' | while read t; do
+            d=${t#site-backup-}
+            if [[ "$d" < "$cutoff" ]]; then gh release delete "$t" --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag; fi
+          done
