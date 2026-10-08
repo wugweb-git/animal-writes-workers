@@ -9,7 +9,9 @@ TODAY = date(2026, 10, 5)
 
 
 def all_sources():
-    return sources.load_sources("sources.yaml")
+    """Feed sources from sources.yaml (document sources fetch their own data and have their own tests)."""
+    loaded, defaults = sources.load_sources("sources.yaml")
+    return [s for s in loaded if s.kind not in sources.SELF_FETCH], defaults
 
 
 def fake_fetch(fixture_text):

@@ -13,7 +13,7 @@ def src(kind, type_="news", keywords=None, url="https://example.com/"):
 def test_sources_yaml_loads():
     loaded, defaults = sources.load_sources("sources.yaml")
     assert {s.type for s in loaded} == {"news", "legal", "opportunity"}
-    assert {s.kind for s in loaded} <= set(sources.PARSERS)
+    assert {s.kind for s in loaded} <= set(sources.PARSERS) | set(sources.SELF_FETCH)
     assert defaults["lookback_days"] > 0
 
 

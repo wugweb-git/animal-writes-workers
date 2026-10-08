@@ -9,7 +9,7 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from . import enrich, ingest, policy as policy_mod, sources, summarise
+from . import documents, enrich, ingest, policy as policy_mod, sources, summarise
 
 log = logging.getLogger("aw_workers")
 
@@ -66,7 +66,8 @@ def run(
 
     for src in source_list:
         try:
-            items = sources.collect(src, fetch(src.url), today, lookback, limit)
+            body = "" if src.kind in sources.SELF_FETCH else fetch(src.url)
+            items = sources.collect(src, body, today, lookback, limit)
         except Exception as exc:  # one broken source must not stop the others
             stats.failed += 1
             stats.errors.append(f"{src.id}: fetch/parse failed: {exc}")
@@ -79,8 +80,8 @@ def run(
             if item.url in seen:
                 stats.duplicate += 1
                 continue
-            if enricher:
-                original = item.url
+            original = item.url
+            if enricher and not item.doc_kind:  # documents are PDFs: nothing to resolve or preview
                 item.url, item.image = enricher(item.url)
                 if item.url != original and item.url in seen:
                     seen.add(original)
@@ -187,6 +188,7 @@ def main() -> int:
         return 3
     if not dry_run:
         save_seen(SEEN_FILE, seen)
+        documents.save_state()  # High Court file versions: only remembered when items were really sent
     if ledger:
         SPEND_FILE.parent.mkdir(parents=True, exist_ok=True)
         SPEND_FILE.write_text(json.dumps(ledger))

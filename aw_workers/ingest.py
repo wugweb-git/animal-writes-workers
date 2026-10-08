@@ -62,6 +62,12 @@ def build_payload(item: Item, summary: str, topics: list[str] | None = None) -> 
         payload["source_type"] = source_type
     if item.image:
         payload["image_url"] = item.image
+    if item.doc_kind:  # Library documents: what it is, the court, and the PDF the site may keep a copy of
+        payload["kind"] = item.doc_kind
+        payload["document_url"] = item.document_url
+        if item.court:
+            payload["court"] = item.court
+            payload.setdefault("source_type", item.court)
     if item.source.type == "opportunity":
         payload["org_name"] = item.source.org or item.source.name
         payload["place"] = item.place

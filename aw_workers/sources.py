@@ -33,6 +33,7 @@ class Source:
     opportunity_type: str = ""  # opportunities: job | volunteer | internship | grant | event | ...
     lookback_days: int | None = None  # overrides the default (job pages stay open for months)
     match: str = "text"  # keywords looked for in "text" (title + feed text) or "title" only
+    ministries: list[str] = field(default_factory=list)  # egazette: ministries we follow
 
 
 @dataclass
@@ -46,6 +47,9 @@ class Item:
     image: str = ""  # preview image URL (linked, never downloaded)
     place: str = ""  # opportunities: city/state as published
     deadline: date | None = None  # opportunities: last date, when published
+    doc_kind: str = ""  # Library documents: judgment | order | notification | rule | act
+    court: str = ""  # judgments: supreme-court | high-court
+    document_url: str = ""  # the PDF, when there is one
 
 
 TOPICS: dict[str, list[str]] = {}
@@ -72,7 +76,7 @@ def load_sources(path: str | Path = "sources.yaml") -> tuple[list[Source], dict]
     for s in data.get("sources", []):
         if s["type"] not in ("news", "legal", "opportunity"):
             raise ValueError(f"source {s['id']}: type must be news, legal or opportunity")
-        if s["kind"] not in PARSERS:
+        if s["kind"] not in PARSERS and s["kind"] not in SELF_FETCH:
             raise ValueError(f"source {s['id']}: unknown kind {s['kind']}")
         sources.append(
             Source(
@@ -87,6 +91,7 @@ def load_sources(path: str | Path = "sources.yaml") -> tuple[list[Source], dict]
                 opportunity_type=s.get("opportunity_type", ""),
                 lookback_days=s.get("lookback_days"),
                 match=s.get("match", "text"),
+                ministries=list(s.get("ministries") or []),
             )
         )
     return sources, data.get("defaults", {})
@@ -252,7 +257,8 @@ def matches_keywords(item: Item, keywords: list[str]) -> bool:
 
 
 def collect(source: Source, body: str, today: date, lookback_days: int, limit: int) -> list[Item]:
-    items = [i for i in PARSERS[source.kind](source, body) if matches_keywords(i, source.keywords)]
+    parser = SELF_FETCH.get(source.kind) or PARSERS[source.kind]
+    items = [i for i in parser(source, body) if matches_keywords(i, source.keywords)]
     if source.lookback_days is not None:
         lookback_days = int(source.lookback_days)
     if source.type == "opportunity":
@@ -270,3 +276,13 @@ def collect(source: Source, body: str, today: date, lookback_days: int, limit: i
 
 def utc_today() -> date:
     return datetime.now(timezone.utc).date()
+
+
+# Sources that fetch their own data (several requests, binary files); run.py does not fetch their url first.
+from . import documents as _documents  # noqa: E402  (needs Item and Source above)
+
+SELF_FETCH = {  # looked up when called, so either module can be imported first
+    "egazette": lambda source, body: _documents.parse_egazette(source, body),
+    "judgments-sc": lambda source, body: _documents.parse_judgments_sc(source, body),
+    "judgments-hc": lambda source, body: _documents.parse_judgments_hc(source, body),
+}

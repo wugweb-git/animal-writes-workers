@@ -103,6 +103,32 @@ sources:
     url: "https://news.google.com/rss/search?q=site:pib.gov.in+(animal+OR+rabies+OR+veterinary+OR+livestock+OR+wildlife)&hl=en-IN&gl=IN&ceid=IN:en"
     keywords: *animal_keywords
 
+  # --- Library documents (8 Oct 2026): the documents themselves, kept as copies on the site (s.52(1)(q)). ---
+  - id: gazette-of-india
+    name: Gazette of India
+    kind: egazette
+    type: legal
+    source_type: gazette
+    url: "https://egazette.gov.in/"
+    lookback_days: 30
+    ministries:
+      - Ministry of Fisheries, Animal Husbandry and Dairying
+      - Ministry of Environment, Forest and Climate Change
+
+  - id: judgments-supreme-court
+    name: Supreme Court judgments (open dataset, CC BY 4.0)
+    kind: judgments-sc
+    type: legal
+    url: "https://indian-supreme-court-judgments.s3.ap-south-1.amazonaws.com/"
+    lookback_days: 120  # the dataset adds reported judgments some weeks after the decision
+
+  - id: judgments-high-courts
+    name: High Court judgments (open dataset, CC BY 4.0)
+    kind: judgments-hc
+    type: legal
+    url: "https://indian-high-court-judgments.s3.ap-south-1.amazonaws.com/"
+    lookback_days: 60
+
 # Topic tagging: an item gets every topic whose keywords appear in its title or summary
 # (case-insensitive). Keys are topic slugs on the site; unknown slugs are ignored by the site.
 
