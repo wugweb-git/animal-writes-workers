@@ -34,14 +34,14 @@ ANIMAL_TERMS = re.compile(
     r"\b(prevention of cruelty to animals|cruelty to animals|animal welfare|animal birth control|awbi|"
     r"wild ?life \(protection\)|wildlife protection|stray (?:dog|dogs|animals|cattle)|street dogs?|community dogs?|"
     r"dog bites?|rabies|gau ?shala|go ?shala|gaushalas|cow slaughter|cattle slaughter|bovine|slaughter of (?:cows?|cattle|animals)|"
-    r"transport(?:ation)? of (?:cattle|animals)|people for animals|jallikattu|kambala|bullock[- ]cart race|"
-    r"elephants?|leopards?|tigers?|poaching|pet shops?|dog breeding|performing animals|zoos?|laboratory animals|"
-    r"animals?)\b",
+    r"transport(?:ation)? of (?:cattle|animals)|people for animals|jallikattu|kambala (?:race|festival)|bullock[- ]cart race|"
+    r"poaching|tiger reserve|elephant corridor|wild animals?|pet shops?|dog breeding|performing animals|zoo|zoological park|"
+    r"laboratory animals|animal (?:cruelty|rights|activists?|rescue|shelters?|feeders?|lovers?))\b",
     re.I,
 )
 # "Animal Husbandry" alone is a department name (service and staff matters), not an animal-welfare subject.
-DEPARTMENT_ONLY = re.compile(r"\banimal husbandry\b", re.I)
-SKIP_MATTERS = re.compile(r"\bbail\b|anticipatory|\binterim\b|\b(?:ABA|CRMBA|CRLMBA|BA)\b", re.I)
+DEPARTMENT_ONLY = re.compile(r"\banimal\s+hus\w*\.?", re.I)  # husbandry, husbandary, hus., husb.
+SKIP_MATTERS = re.compile(r"\bbail\b|anticipatory|\binterim\b|\b(?:ABA|CRMBA|CRLMBA|BA)\b|\bB\.\s?A\.", re.I)
 
 SC_BUCKET = "https://indian-supreme-court-judgments.s3.ap-south-1.amazonaws.com"
 HC_BUCKET = "https://indian-high-court-judgments.s3.ap-south-1.amazonaws.com"
@@ -69,11 +69,7 @@ def save_state() -> None:
 # ---------- helpers ----------
 
 def about_animals(text: str) -> bool:
-    found = {m.group(0).lower() for m in ANIMAL_TERMS.finditer(text or "")}
-    if not found:
-        return False
-    stripped = DEPARTMENT_ONLY.sub("", text)
-    return bool(ANIMAL_TERMS.search(stripped))
+    return bool(ANIMAL_TERMS.search(DEPARTMENT_ONLY.sub(" ", text or "")))
 
 
 def _date(value) -> date | None:
@@ -163,8 +159,8 @@ def hc_items(source: Source, rows: list[dict], key: str, year: int) -> list[Item
         title = _clean(str(r.get("title") or ""))
         if str(r.get("is_final", "True")) == "False" or SKIP_MATTERS.search(_text(title, r.get("order_type"), r.get("case_type"), r.get("purpose_name"))):
             continue
-        raw = re.sub(r"<[^>]+>", " ", str(r.get("raw_html") or ""))  # plain match is enough; millions of rows a year
-        if not about_animals(_text(title, r.get("description"), raw)):
+        # Case title and the judgment's opening text only: the page markup around each row repeats unrelated words.
+        if not about_animals(_text(title, r.get("description"))):
             continue
         when = _date(r.get("decision_date"))
         link = os.path.basename(str(r.get("pdf_link") or ""))
@@ -192,7 +188,7 @@ def parse_judgments_hc(source: Source, body: str = "", get=_get, today: date | N
         if not key.endswith(".parquet") or etags.get(key) == obj["etag"]:
             continue
         rows = read_parquet(get(f"{HC_BUCKET}/{key}").content,
-                            ["title", "description", "decision_date", "pdf_link", "court", "raw_html", "is_final", "order_type", "case_type", "purpose_name"])
+                            ["title", "description", "decision_date", "pdf_link", "court", "is_final", "order_type", "case_type", "purpose_name"])
         items += hc_items(source, rows, key, today.year)
         etags[key] = obj["etag"]
     st["hc_checked"] = now.isoformat()

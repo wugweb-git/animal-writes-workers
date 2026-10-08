@@ -13,6 +13,9 @@ def test_about_animals():
     assert documents.about_animals("W.P.(C) 12/2026 People for Animals vs State")
     assert not documents.about_animals("Service matter: Department of Animal Husbandry and Dairying vs A. Kumar")
     assert not documents.about_animals("Anti Dumping Clavulanic Acid and its Amine Salt China PR")
+    assert not documents.about_animals("WP/199/2018 of G Vs STATE OF MAHA. THR. DY. SEC. DEPT. OF AGRI. AND ANIMAL HUSBANDARY")
+    assert not documents.about_animals("CRL.P/12334/2026 of MOHAMMADH SAIF @ TIGER SAIF Vs STATE OF KARNATAKA")
+    assert documents.about_animals("Cont.Cas(C)/481/2026 of SHREE GEETA GAUSHALA PARAMARTH SANSTHA Vs K")
 
 
 def test_supreme_court_rows():

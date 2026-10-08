@@ -122,12 +122,13 @@ sources:
     url: "https://indian-supreme-court-judgments.s3.ap-south-1.amazonaws.com/"
     lookback_days: 120  # the dataset adds reported judgments some weeks after the decision
 
-  - id: judgments-high-courts
-    name: High Court judgments (open dataset, CC BY 4.0)
-    kind: judgments-hc
-    type: legal
-    url: "https://indian-high-court-judgments.s3.ap-south-1.amazonaws.com/"
-    lookback_days: 60
+  # High Court judgments (kind judgments-hc) are off: case titles there rarely say what a case is about.
+  # - id: judgments-high-courts
+  #   name: High Court judgments (open dataset, CC BY 4.0)
+  #   kind: judgments-hc
+  #   type: legal
+  #   url: "https://indian-high-court-judgments.s3.ap-south-1.amazonaws.com/"
+  #   lookback_days: 60
 
 # Topic tagging: an item gets every topic whose keywords appear in its title or summary
 # (case-insensitive). Keys are topic slugs on the site; unknown slugs are ignored by the site.
