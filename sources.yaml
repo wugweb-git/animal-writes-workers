@@ -177,3 +177,20 @@ topics:
   disaster-rescue: [flood, cyclone, earthquake, disaster, rescue operation]
   veterinary-care: [veterinary, vet, hospital, clinic]
   campaigns-civic-action: [campaign, petition, protest, letter, signature, awareness]
+
+# Press discovery (Media & PR): coverage of Animal Writes, found with Google Programmable Search and sent to the site
+# as "Press: to review" drafts (never published automatically). Off until GOOGLE_CSE_KEY and GOOGLE_CSE_CX are set.
+press:
+  enabled: true
+  date_floor: "2025-11-01"
+  daily_requests: 90   # free quota is 100 a day; queries rotate across days
+  queries:
+    - "Animal Writes"
+    - "AnimalWrites"
+    - "#animalwrites"
+    - "animalwrites.in"
+    - "letter petition Supreme Court dogs"
+    - "handwritten letters Supreme Court stray dogs"
+    - "29 November post office letters Supreme Court"
+    - "Ambika Shukla animal"
+  sites: [instagram.com, facebook.com, fb.watch, x.com, twitter.com, youtube.com, threads.net, linkedin.com, reddit.com]

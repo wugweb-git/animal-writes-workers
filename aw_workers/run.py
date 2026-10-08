@@ -9,7 +9,7 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from . import documents, enrich, ingest, policy as policy_mod, sources, summarise
+from . import documents, enrich, ingest, policy as policy_mod, press, sources, summarise
 
 log = logging.getLogger("aw_workers")
 
@@ -186,6 +186,15 @@ def main() -> int:
         log.error("AUTH FAILURE, stopping: %s", exc)
         print(f"::error::Ingest authentication failed: {exc}")
         return 3
+    # Press discovery (Media & PR), once a day; off until the Google search key exists.
+    try:
+        import yaml
+        press_cfg = (yaml.safe_load(Path(os.environ.get("AW_SOURCES", "sources.yaml")).read_text(encoding="utf-8")) or {}).get("press") or {}
+        press.run(press_cfg, client, dry_run=dry_run)
+    except ingest.AuthError:
+        raise
+    except Exception as exc:
+        log.error("press discovery failed: %s", exc)
     if not dry_run:
         save_seen(SEEN_FILE, seen)
         documents.save_state()  # High Court file versions: only remembered when items were really sent
