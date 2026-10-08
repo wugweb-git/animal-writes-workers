@@ -137,7 +137,8 @@ def sc_items(source: Source, rows: list[dict], year: int) -> list[Item]:
 def parse_judgments_sc(source: Source, body: str = "", get=_get, today: date | None = None) -> list[Item]:
     today = today or datetime.now(timezone.utc).date()
     items = []
-    for year in sorted({today.year, (today - timedelta(days=45)).year}):
+    years = {int(y) for y in os.environ.get("AW_SC_YEARS", "").split(",") if y.strip().isdigit()}  # backfill: several years
+    for year in sorted(years or {today.year, (today - timedelta(days=45)).year}):
         try:
             content = get(f"{SC_BUCKET}/metadata/parquet/year={year}/metadata.parquet").content
         except requests.HTTPError:

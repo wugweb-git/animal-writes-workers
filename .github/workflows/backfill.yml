@@ -1,0 +1,62 @@
+name: Backfill (News + Library from 1 Nov 2025)
+
+# One-off, run by hand. Items arrive on the site as drafts for review ("held: backfill"); nothing is published or merged.
+# Opportunities are not fetched. No spending cap (owner, 9 Oct 2026). Report: job summary + backfill-report.json artifact.
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run (fetch and report only; nothing sent, no summaries written)"
+        type: boolean
+        default: true
+      floor:
+        description: "Oldest date to include"
+        type: string
+        default: "2025-11-01"
+
+concurrency:
+  group: sourcing
+  cancel-in-progress: false
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    env:
+      DRY_RUN: ${{ inputs.dry_run && 'true' || 'false' }}
+      AW_BACKFILL_FLOOR: ${{ inputs.floor }}
+      WP_BASE_URL: ${{ secrets.WP_BASE_URL }}
+      WP_INGEST_USER: ${{ secrets.WP_INGEST_USER }}
+      WP_INGEST_APP_PASSWORD: ${{ secrets.WP_INGEST_APP_PASSWORD }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      LLM_PROVIDERS: ${{ vars.LLM_PROVIDERS || 'haiku,gemini,groq' }}
+      HAIKU_MONTHLY_BUDGET_USD: "100000"
+      GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+      GROQ_MODEL: ${{ vars.GROQ_MODEL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Restore seen-items state
+        uses: actions/cache/restore@v4
+        with:
+          path: .state
+          key: seen-${{ github.run_id }}
+          restore-keys: seen-
+      - run: python -m aw_workers.backfill
+      - name: Save seen-items state
+        if: always() && inputs.dry_run == false && hashFiles('.state/**') != ''
+        uses: actions/cache/save@v4
+        with:
+          path: .state
+          key: seen-${{ github.run_id }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: backfill-report
+          path: backfill-report.json
