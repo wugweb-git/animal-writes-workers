@@ -134,7 +134,8 @@ def main() -> int:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     dry_run = truthy(os.environ.get("DRY_RUN"), default=True)
 
-    source_list, defaults = sources.load_sources(os.environ.get("AW_SOURCES", "sources.yaml"))
+    import yaml
+    lists = yaml.safe_load(Path(os.environ.get("AW_SOURCES", "sources.yaml")).read_text(encoding="utf-8")) or {}
 
     try:
         ledger = json.loads(SPEND_FILE.read_text())
@@ -171,14 +172,23 @@ def main() -> int:
         policy_client = ingest.Client(os.environ["WP_BASE_URL"], os.environ["WP_INGEST_USER"], os.environ["WP_INGEST_APP_PASSWORD"])
     if policy_client is not None:
         try:
-            policy = policy_mod.Policy.from_json(policy_client.policy())
+            raw = policy_client.policy()
+            policy = policy_mod.Policy.from_json(raw)
             log.info("policy: %d blocked publisher(s), relevance filter %s", len(policy.blocked), "on" if policy.relevance_on else "off")
+            # The lists (feeds, Library and opportunity sources, topics, press queries) come from Settings → Sourcing
+            # once "Workers use these lists" is on there; otherwise, or if the site is unreachable, from sources.yaml.
+            if isinstance(raw.get("config"), dict) and raw["config"].get("sources"):
+                lists = raw["config"]
+                log.info("lists: from the site (%d sources)", len(lists["sources"]))
+            else:
+                log.info("lists: from sources.yaml")
         except ingest.AuthError as exc:
             log.error("AUTH FAILURE, stopping: %s", exc)
             print(f"::error::Policy authentication failed: {exc}")
             return 3
         except Exception as exc:  # the site enforces the policy too, so carry on without the pre-filter
             log.warning("policy unavailable, relying on the site to enforce it: %s", exc)
+    source_list, defaults = sources.load_sources_data(lists)
     try:
         stats = run(source_list, defaults, dry_run=dry_run, summariser=summariser, client=client, seen=seen,
                     enricher=default_enricher, policy=policy)
@@ -186,11 +196,9 @@ def main() -> int:
         log.error("AUTH FAILURE, stopping: %s", exc)
         print(f"::error::Ingest authentication failed: {exc}")
         return 3
-    # Press discovery (Media & PR), once a day; off until the Google search key exists.
+    # Press discovery (Media & PR), weekly; off until BRAVE_SEARCH_KEY exists.
     try:
-        import yaml
-        press_cfg = (yaml.safe_load(Path(os.environ.get("AW_SOURCES", "sources.yaml")).read_text(encoding="utf-8")) or {}).get("press") or {}
-        press.run(press_cfg, client, dry_run=dry_run)
+        press.run(lists.get("press") or {}, client, dry_run=dry_run)
     except ingest.AuthError:
         raise
     except Exception as exc:

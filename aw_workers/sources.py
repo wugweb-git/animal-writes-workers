@@ -69,7 +69,11 @@ def topics_for(item: "Item", extra: str = "") -> list[str]:
 
 
 def load_sources(path: str | Path = "sources.yaml") -> tuple[list[Source], dict]:
-    data = yaml.safe_load(Path(path).read_text(encoding="utf-8"))
+    return load_sources_data(yaml.safe_load(Path(path).read_text(encoding="utf-8")))
+
+
+def load_sources_data(data: dict) -> tuple[list[Source], dict]:
+    """Sources from the lists' dict: sources.yaml, or the site's copy (Settings → Sourcing), which has the same shape."""
     TOPICS.clear()
     TOPICS.update({k: [str(w) for w in v] for k, v in (data.get("topics") or {}).items()})
     sources = []

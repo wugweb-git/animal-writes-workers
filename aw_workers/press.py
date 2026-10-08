@@ -2,12 +2,15 @@
 
 One source only (owner's decision, 8 Oct 2026: Brave instead of Google): web search, each query once per site filter
 (instagram.com, facebook.com, fb.watch, x.com, twitter.com, youtube.com, threads.net, linkedin.com, reddit.com) plus
-the open web. Queries rotate across days to stay inside the free plan (2,000 requests a month, 1 a second). Every candidate that mentions
+the open web. Weekly; at most 900 requests a month (owner's budget, S4.2) and a one-time backfill of up to 300;
+queries rotate across runs; usage is logged. Every candidate that mentions
 Animal Writes or the 29 November letter campaign is sent to the site as a "Press: to review" draft; nothing is
 published automatically, duplicates are refused by URL (rejected items too), and no caption text is copied.
 
-Thumbnails: YouTube and X oEmbed (no key); news sites give og tags (the site reads them); Instagram/Facebook show the
-platform icon unless META_ACCESS_TOKEN is set (not used yet).
+Per candidate: platform, format (Article, Video, TV, Podcast, Instagram post, Instagram reel, Facebook post, Facebook
+video, X post, YouTube video, Reddit thread) and account handle. Metadata: YouTube and X oEmbed (no key), Reddit's own
+.json, Instagram/Facebook via Meta oEmbed only when META_ACCESS_TOKEN is set (else the platform icon); news sites give
+og and JSON-LD tags, which the site reads. The site hosts thumbnails and refuses duplicates of Press and News items.
 
 Off until BRAVE_SEARCH_KEY exists: the job logs "disabled: no credentials" and the run carries on.
 """
@@ -74,9 +77,57 @@ def platform_of(url: str) -> str:
 
 
 def format_of(url: str, platform: str) -> str:
-    if platform == "youtube" or "/reel" in url or "/videos/" in url or "fb.watch" in url:
-        return "video"
-    return "article"
+    """Format label (S4.3)."""
+    path = urlparse(url).path.lower()
+    if platform == "instagram":
+        return "Instagram reel" if "/reel" in path else "Instagram post"
+    if platform == "facebook":
+        return "Facebook video" if ("/videos/" in path or "/watch" in path or "fb.watch" in url or "/reel" in path) else "Facebook post"
+    if platform == "x":
+        return "X post"
+    if platform == "youtube":
+        return "YouTube video"
+    if platform == "reddit":
+        return "Reddit thread"
+    if re.search(r"/(podcasts?|episode)s?/", path):
+        return "Podcast"
+    if re.search(r"/(live-tv|tv|programmes?|shows?)/", path):
+        return "TV"
+    if re.search(r"/videos?/", path):
+        return "Video"
+    return "Article"
+
+
+def handle_of(url: str, platform: str) -> str:
+    """Account handle from the URL where the platform puts it there (@name, r/sub)."""
+    parts = [p for p in urlparse(url).path.split("/") if p]
+    if not parts:
+        return ""
+    if platform in ("instagram", "threads") and parts[0] not in ("p", "reel", "reels", "tv", "stories"):
+        return "@" + parts[0].lstrip("@")
+    if platform == "x" and parts[0] not in ("i", "search", "hashtag"):
+        return "@" + parts[0]
+    if platform == "facebook" and parts[0] not in ("watch", "share", "story.php", "permalink.php", "groups", "reel"):
+        return parts[0]
+    if platform == "youtube" and parts[0].startswith("@"):
+        return parts[0]
+    if platform == "reddit" and parts[0] == "r" and len(parts) > 1:
+        return "r/" + parts[1]
+    if platform == "linkedin" and parts[0] in ("in", "company") and len(parts) > 1:
+        return parts[1]
+    return ""
+
+
+def reddit_meta(url: str, get=requests.get) -> dict:
+    """Title, date and thumbnail of a Reddit thread from its own .json (no key)."""
+    try:
+        r = get(url.rstrip("/") + ".json", headers={"User-Agent": UA}, timeout=TIMEOUT)
+        post = r.json()[0]["data"]["children"][0]["data"]
+        thumb = str(post.get("thumbnail") or "")
+        return {"title": post.get("title", ""), "date": datetime.fromtimestamp(float(post.get("created_utc", 0)), timezone.utc).date().isoformat() if post.get("created_utc") else "",
+                "image": thumb if thumb.startswith("https://") else "", "handle": "u/" + post["author"] if post.get("author") else ""}
+    except Exception:
+        return {}
 
 
 def result_date(item: dict) -> str:
@@ -98,6 +149,11 @@ def thumbnail(url: str, platform: str, item: dict, get=requests.get) -> str:
     try:
         if platform == "youtube":
             r = get("https://www.youtube.com/oembed", params={"url": url, "format": "json"}, timeout=TIMEOUT)
+            if r.ok:
+                return r.json().get("thumbnail_url", "")
+        if platform in ("instagram", "facebook") and os.environ.get("META_ACCESS_TOKEN"):
+            endpoint = "instagram_oembed" if platform == "instagram" else "oembed_post"
+            r = get(f"https://graph.facebook.com/v19.0/{endpoint}", params={"url": url, "access_token": os.environ["META_ACCESS_TOKEN"], "fields": "thumbnail_url"}, timeout=TIMEOUT)
             if r.ok:
                 return r.json().get("thumbnail_url", "")
         if platform == "x":
@@ -144,6 +200,8 @@ def candidates(cfg: dict, key: str, state: dict, get=requests.get, pause: float 
                 continue
             seen.add(url)
             platform = platform_of(url)
+            extra = reddit_meta(url, get=get) if platform == "reddit" else {}
+            when = when or extra.get("date", "")
             out.append({
                 "type": "press",
                 "title": re.sub(r"<[^>]+>", "", item.get("title", ""))[:200],
@@ -152,7 +210,8 @@ def candidates(cfg: dict, key: str, state: dict, get=requests.get, pause: float 
                 "source_date": when,
                 "platform": platform,
                 "format": format_of(url, platform),
-                "image_url": thumbnail(url, platform, item, get=get),
+                "account_handle": handle_of(url, platform) or extra.get("handle", ""),
+                "image_url": extra.get("image") or thumbnail(url, platform, item, get=get),
                 "query": query,
                 "feed": "press-discovery",
             })
@@ -171,8 +230,18 @@ def run(cfg: dict, client, *, dry_run: bool, env=os.environ, get=requests.get, t
         return {"status": "disabled: no credentials"}
     state = load_state()
     today = today or datetime.now(timezone.utc).date()
-    if state.get("last_run") == today.isoformat():
-        return {"status": "already ran today"}
+    if state.get("last_run") and (today - date.fromisoformat(state["last_run"])).days < int(cfg.get("every_days", 7)):
+        return {"status": "ran this week"}
+    month = today.strftime("%Y-%m")
+    if state.get("month") != month:
+        state["month"], state["used_month"] = month, 0
+    left = int(cfg.get("monthly_requests", 900)) - int(state.get("used_month", 0))
+    budget = int(cfg.get("backfill_requests", 300)) if not state.get("backfilled") else int(cfg.get("weekly_requests", 200))
+    budget = max(0, min(budget, left))
+    if budget == 0:
+        print(f"press discovery: monthly budget used ({state.get('used_month', 0)} requests in {month})")
+        return {"status": "budget used"}
+    cfg = dict(cfg, daily_requests=budget)
     counts = {"new": 0, "duplicate": 0, "failed": 0}
     try:
         found = candidates(cfg, key, state, get=get, pause=float(cfg.get("pause_seconds", 1.1)))
@@ -197,7 +266,9 @@ def run(cfg: dict, client, *, dry_run: bool, env=os.environ, get=requests.get, t
             counts["failed"] += 1
             log.error("press: failed %s: %s", payload["source_url"], exc)
     state["last_run"] = today.isoformat()
+    state["used_month"] = int(state.get("used_month", 0)) + int(state.get("requests_today", 0))
+    state["backfilled"] = True
     if not dry_run:
         save_state(state)
-    print(f"press discovery: requests={state.get('requests_today', 0)} new={counts['new']} duplicate={counts['duplicate']} failed={counts['failed']}")
+    print(f"press discovery: requests={state.get('requests_today', 0)} (this month {state['used_month']} of {cfg.get('monthly_requests', 900)}) new={counts['new']} duplicate={counts['duplicate']} failed={counts['failed']}")
     return {"status": "ran", **counts}
