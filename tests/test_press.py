@@ -29,12 +29,11 @@ def test_disabled_without_credentials(tmp_path, monkeypatch):
 
 def test_candidates_relevance_floor_and_rotation(tmp_path, monkeypatch):
     monkeypatch.setattr(press, "STATE_FILE", tmp_path / "p.json")
-    items = {"items": [
-        {"link": "https://www.instagram.com/p/abc/?igshid=1", "title": "Animal Writes letters", "snippet": "", "displayLink": "www.instagram.com",
-         "pagemap": {"metatags": [{"article:published_time": "2025-11-29T10:00:00Z"}]}},
-        {"link": "https://example.com/old", "title": "Animal Writes", "snippet": "", "pagemap": {"metatags": [{"article:published_time": "2025-01-01"}]}},
-        {"link": "https://example.com/other", "title": "Cricket scores", "snippet": ""},
-    ]}
+    items = {"web": {"results": [
+        {"url": "https://www.instagram.com/p/abc/?igshid=1", "title": "<strong>Animal Writes</strong> letters", "description": "", "page_age": "2025-11-29T10:00:00"},
+        {"url": "https://example.com/old", "title": "Animal Writes", "description": "", "page_age": "2025-01-01T00:00:00"},
+        {"url": "https://example.com/other", "title": "Cricket scores", "description": ""},
+    ]}}
     calls = []
 
     def get(url, params=None, **kw):
@@ -43,8 +42,9 @@ def test_candidates_relevance_floor_and_rotation(tmp_path, monkeypatch):
 
     cfg = {"queries": ["Animal Writes"], "sites": ["instagram.com"], "daily_requests": 1}
     state = {}
-    out = press.candidates(cfg, "k", "c", state, get=get)
+    out = press.candidates(cfg, "k", state, get=get, pause=0)
     assert [o["source_url"] for o in out] == ["https://www.instagram.com/p/abc"]
     assert out[0]["platform"] == "instagram" and out[0]["source_date"] == "2025-11-29" and out[0]["type"] == "press"
     assert len(calls) == 1 and calls[0]["q"] == "Animal Writes site:instagram.com" and state["next"] == 1
-    assert press.run(cfg, None, dry_run=True, env={"GOOGLE_CSE_KEY": "k", "GOOGLE_CSE_CX": "c"}, get=get, today=date(2026, 10, 8))["new"] == 1
+    cfg["pause_seconds"] = 0
+    assert press.run(cfg, None, dry_run=True, env={"BRAVE_SEARCH_KEY": "k"}, get=get, today=date(2026, 10, 8))["new"] == 1

@@ -178,12 +178,12 @@ topics:
   veterinary-care: [veterinary, vet, hospital, clinic]
   campaigns-civic-action: [campaign, petition, protest, letter, signature, awareness]
 
-# Press discovery (Media & PR): coverage of Animal Writes, found with Google Programmable Search and sent to the site
-# as "Press: to review" drafts (never published automatically). Off until GOOGLE_CSE_KEY and GOOGLE_CSE_CX are set.
+# Press discovery (Media & PR): coverage of Animal Writes, found with the Brave Search API and sent to the site
+# as "Press: to review" drafts (never published automatically). Off until BRAVE_SEARCH_KEY is set.
 press:
   enabled: true
   date_floor: "2025-11-01"
-  daily_requests: 90   # free quota is 100 a day; queries rotate across days
+  daily_requests: 60   # Brave free plan: 2,000 a month, 1 a second; queries rotate across days
   queries:
     - "Animal Writes"
     - "AnimalWrites"

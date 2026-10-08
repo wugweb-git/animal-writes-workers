@@ -1,15 +1,15 @@
-"""Press discovery: coverage of Animal Writes on the web and social platforms, found with Google Programmable Search.
+"""Press discovery: coverage of Animal Writes on the web and social platforms, found with the Brave Search API.
 
-One source only (owner's decision, 8 Oct 2026): the Custom Search JSON API, each query once per site filter
+One source only (owner's decision, 8 Oct 2026: Brave instead of Google): web search, each query once per site filter
 (instagram.com, facebook.com, fb.watch, x.com, twitter.com, youtube.com, threads.net, linkedin.com, reddit.com) plus
-the open web. Queries rotate across days to stay inside the free 100 requests a day. Every candidate that mentions
+the open web. Queries rotate across days to stay inside the free plan (2,000 requests a month, 1 a second). Every candidate that mentions
 Animal Writes or the 29 November letter campaign is sent to the site as a "Press: to review" draft; nothing is
 published automatically, duplicates are refused by URL (rejected items too), and no caption text is copied.
 
 Thumbnails: YouTube and X oEmbed (no key); news sites give og tags (the site reads them); Instagram/Facebook show the
 platform icon unless META_ACCESS_TOKEN is set (not used yet).
 
-Off until GOOGLE_CSE_KEY and GOOGLE_CSE_CX exist: the job logs "disabled: no credentials" and the run carries on.
+Off until BRAVE_SEARCH_KEY exists: the job logs "disabled: no credentials" and the run carries on.
 """
 
 from __future__ import annotations
@@ -18,6 +18,7 @@ import json
 import logging
 import os
 import re
+import time
 from datetime import date, datetime, timezone
 from pathlib import Path
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
@@ -26,7 +27,7 @@ import requests
 
 log = logging.getLogger("aw_workers.press")
 
-API = "https://www.googleapis.com/customsearch/v1"
+API = "https://api.search.brave.com/res/v1/web/search"
 STATE_FILE = Path(os.environ.get("AW_PRESS_STATE", ".state/press.json"))
 TIMEOUT = 30
 UA = "AnimalWritesWorkers/1.0 (+https://animalwrites.in)"
@@ -79,19 +80,17 @@ def format_of(url: str, platform: str) -> str:
 
 
 def result_date(item: dict) -> str:
-    """The page's own date from Google's pagemap metatags, if any (YYYY-MM-DD)."""
-    for tags in (item.get("pagemap") or {}).get("metatags") or []:
-        for k in ("article:published_time", "og:updated_time", "date", "datepublished", "uploaddate"):
-            v = str(tags.get(k) or "")
-            m = re.match(r"(\d{4}-\d{2}-\d{2})", v)
-            if m:
-                return m.group(1)
-    m = re.match(r"([A-Z][a-z]{2} \d{1,2}, \d{4})", item.get("snippet", ""))
+    """The page's own date from Brave (page_age, ISO), else a date written in the age text (YYYY-MM-DD)."""
+    m = re.match(r"(\d{4}-\d{2}-\d{2})", str(item.get("page_age") or ""))
     if m:
-        try:
-            return datetime.strptime(m.group(1), "%b %d, %Y").date().isoformat()
-        except ValueError:
-            pass
+        return m.group(1)
+    m = re.match(r"([A-Z][a-z]+ \d{1,2}, \d{4})", str(item.get("age") or ""))
+    if m:
+        for fmt in ("%B %d, %Y", "%b %d, %Y"):
+            try:
+                return datetime.strptime(m.group(1), fmt).date().isoformat()
+            except ValueError:
+                continue
     return ""
 
 
@@ -105,10 +104,8 @@ def thumbnail(url: str, platform: str, item: dict, get=requests.get) -> str:
             return ""  # X oEmbed gives HTML only, no image; the card shows the platform icon
     except requests.RequestException:
         return ""
-    for img in (item.get("pagemap") or {}).get("cse_image") or []:
-        if str(img.get("src", "")).startswith("https://"):
-            return img["src"]
-    return ""
+    src = str(((item.get("thumbnail") or {}).get("original")) or ((item.get("thumbnail") or {}).get("src")) or "")
+    return src if src.startswith("https://") else ""
 
 
 def plan(queries: list[str], sites: list[str], state: dict, budget: int) -> list[tuple[str, str]]:
@@ -120,22 +117,27 @@ def plan(queries: list[str], sites: list[str], state: dict, budget: int) -> list
     return today
 
 
-def candidates(cfg: dict, key: str, cx: str, state: dict, get=requests.get) -> list[dict]:
+def candidates(cfg: dict, key: str, state: dict, get=requests.get, pause: float = 1.1) -> list[dict]:
     floor = str(cfg.get("date_floor", "2025-11-01"))
     out, seen = [], set()
     used = 0
-    for query, site in plan(list(cfg.get("queries") or []), list(cfg.get("sites") or []), state, int(cfg.get("daily_requests", 90))):
+    for query, site in plan(list(cfg.get("queries") or []), list(cfg.get("sites") or []), state, int(cfg.get("daily_requests", 60))):
         q = f"{query} site:{site}" if site else query
-        resp = get(API, params={"key": key, "cx": cx, "q": q, "num": 10, "sort": "date"}, timeout=TIMEOUT, headers={"User-Agent": UA})
+        if used and pause:
+            time.sleep(pause)  # the free plan allows one request a second
+        resp = get(API, params={"q": q, "count": 20, "safesearch": "off"}, timeout=TIMEOUT,
+                   headers={"User-Agent": UA, "Accept": "application/json", "X-Subscription-Token": key})
         used += 1
         if resp.status_code == 429:
-            log.warning("press: Google quota reached after %d requests", used)
+            log.warning("press: Brave quota reached after %d requests", used)
             break
         resp.raise_for_status()
-        for item in resp.json().get("items") or []:
-            url = normalise(item.get("link", ""))
-            text = f"{item.get('title', '')} {item.get('snippet', '')}"
-            if url in seen or not RELEVANT.search(text):
+        data = resp.json()
+        results = list((data.get("web") or {}).get("results") or []) + list((data.get("videos") or {}).get("results") or [])
+        for item in results:
+            url = normalise(item.get("url", ""))
+            text = f"{item.get('title', '')} {item.get('description', '')}"
+            if url in seen or not RELEVANT.search(re.sub(r"<[^>]+>", "", text)):
                 continue
             when = result_date(item)
             if when and when < floor:
@@ -144,9 +146,9 @@ def candidates(cfg: dict, key: str, cx: str, state: dict, get=requests.get) -> l
             platform = platform_of(url)
             out.append({
                 "type": "press",
-                "title": item.get("title", "")[:200],
+                "title": re.sub(r"<[^>]+>", "", item.get("title", ""))[:200],
                 "source_url": url,
-                "source_name": item.get("displayLink", "").removeprefix("www."),
+                "source_name": ((item.get("profile") or {}).get("name") or urlparse(url).netloc.removeprefix("www.")),
                 "source_date": when,
                 "platform": platform,
                 "format": format_of(url, platform),
@@ -161,11 +163,11 @@ def candidates(cfg: dict, key: str, cx: str, state: dict, get=requests.get) -> l
 
 def run(cfg: dict, client, *, dry_run: bool, env=os.environ, get=requests.get, today: date | None = None) -> dict:
     """Once a day. Returns counts for the log."""
-    key, cx = env.get("GOOGLE_CSE_KEY", ""), env.get("GOOGLE_CSE_CX", "")
+    key = env.get("BRAVE_SEARCH_KEY", "")
     if not cfg or not cfg.get("enabled", True):
         return {"status": "off"}
-    if not key or not cx:
-        log.info("press: disabled: no credentials (GOOGLE_CSE_KEY, GOOGLE_CSE_CX)")
+    if not key:
+        log.info("press: disabled: no credentials (BRAVE_SEARCH_KEY)")
         return {"status": "disabled: no credentials"}
     state = load_state()
     today = today or datetime.now(timezone.utc).date()
@@ -173,7 +175,7 @@ def run(cfg: dict, client, *, dry_run: bool, env=os.environ, get=requests.get, t
         return {"status": "already ran today"}
     counts = {"new": 0, "duplicate": 0, "failed": 0}
     try:
-        found = candidates(cfg, key, cx, state, get=get)
+        found = candidates(cfg, key, state, get=get, pause=float(cfg.get("pause_seconds", 1.1)))
         state["errors_in_a_row"] = 0
     except Exception as exc:  # one failing source must not stop the run
         state["errors_in_a_row"] = int(state.get("errors_in_a_row", 0)) + 1
