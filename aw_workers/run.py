@@ -189,6 +189,9 @@ def main() -> int:
         except Exception as exc:  # the site enforces the policy too, so carry on without the pre-filter
             log.warning("policy unavailable, relying on the site to enforce it: %s", exc)
     source_list, defaults = sources.load_sources_data(lists)
+    # Opportunities are not fetched (owner, 9 Oct 2026). AW_FETCH_OPPORTUNITIES=1 would turn them back on.
+    if not truthy(os.environ.get("AW_FETCH_OPPORTUNITIES"), default=False):
+        source_list = [s for s in source_list if s.type != "opportunity"]
     try:
         stats = run(source_list, defaults, dry_run=dry_run, summariser=summariser, client=client, seen=seen,
                     enricher=default_enricher, policy=policy)
