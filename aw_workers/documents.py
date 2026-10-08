@@ -226,7 +226,7 @@ def gazette_items(source: Source, rows: list[dict], ministries: list[str]) -> li
 
 
 def _ca_bundle() -> str:
-    """The usual CA bundle plus Let's Encrypt's YR2 intermediate: egazette.gov.in sends its certificate without it."""
+    """The usual CA bundle plus Let's Encrypt's YR2 intermediate and Root YR (cross-signed by ISRG Root X1): egazette.gov.in sends neither."""
     import certifi
     import tempfile
 
