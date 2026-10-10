@@ -65,9 +65,9 @@ def has_term(hay: str, term: str) -> bool:
     t = term.strip().lower()
     if not t:
         return False
-    if re.fullmatch(r"[a-z0-9 \-]{1,5}", t):
-        return re.search(r"\b" + re.escape(t) + r"\b", hay) is not None
-    return t in hay
+    if re.fullmatch(r"[a-z0-9 \-'’]+", t):  # Latin terms: whole words only, plural allowed ("hen" no longer matches "when")
+        return re.search(r"(?<![a-z0-9])" + re.escape(t) + r"(?:s|es)?(?![a-z0-9])", hay) is not None
+    return t in hay  # other scripts (Hindi etc.) have no word boundaries
 
 
 @dataclass
