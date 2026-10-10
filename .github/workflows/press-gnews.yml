@@ -1,4 +1,4 @@
-name: Press search (one-off: Google News + Google Search)
+name: "Press search (one-off, Google News and Google Search)"
 
 # Owner, 10 Oct 2026: coverage of Animal Writes from 1 Nov 2025, found through Google News (no Brave key).
 # Every hit arrives on the site as a "Press: to review" draft. Report: job summary + press-gnews-report.json.
