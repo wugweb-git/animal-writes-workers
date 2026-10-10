@@ -165,7 +165,10 @@ def test_backends_from_env_order_and_skips_missing_keys():
     env["LLM_PROVIDERS"] = "groq, haiku"
     assert [b.name for b in summarise.backends_from_env(env)] == ["groq", "haiku"]
     with pytest.raises(ValueError):
-        summarise.backends_from_env({"LLM_PROVIDERS": "deepseek"})
+        summarise.backends_from_env({"LLM_PROVIDERS": "nosuchprovider"})
+    env = {"DEEPSEEK_API_KEY": "d", "OPENAI_API_KEY": "o1\no2", "GEMINI_API_KEY": "g", "GEMINI_API_KEY_2": "g2",
+           "LLM_PROVIDERS": "deepseek,openai,gemini"}
+    assert [b.name for b in summarise.backends_from_env(env)] == ["deepseek", "openai", "openai", "gemini", "gemini"]
 
 
 def test_haiku_budget_tracks_spend_and_stops():

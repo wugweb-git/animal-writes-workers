@@ -206,9 +206,31 @@ class GroqBackend:
         return (resp.json()["choices"][0]["message"]["content"] or "").strip()
 
 
-def _keys(value: str | None) -> list[str]:
-    """A secret may hold several keys, one per line (or comma-separated)."""
-    return [k.strip() for k in re.split(r"[\n,]", value or "") if k.strip()]
+class OpenAICompatBackend(GroqBackend):
+    """Any OpenAI-compatible chat API (OpenAI, DeepSeek, Moonshot, MiniMax)."""
+
+    def __init__(self, name: str, url: str, api_key: str, model: str, **kw):
+        self.name, self.URL = name, url
+        super().__init__(api_key, model, min_interval=kw.pop("min_interval", 0.5), **kw)
+
+
+# name: (URL, key env var, model env var, default model)
+OPENAI_COMPAT = {
+    "deepseek": ("https://api.deepseek.com/chat/completions", "DEEPSEEK_API_KEY", "DEEPSEEK_MODEL", "deepseek-chat"),
+    "openai": ("https://api.openai.com/v1/chat/completions", "OPENAI_API_KEY", "OPENAI_MODEL", "gpt-4o-mini"),
+    "moonshot": ("https://api.moonshot.ai/v1/chat/completions", "MOONSHOT_API_KEY", "MOONSHOT_MODEL", "moonshot-v1-8k"),
+    "minimax": ("https://api.minimax.io/v1/chat/completions", "MINIMAX_API_KEY", "MINIMAX_MODEL", "MiniMax-M2"),
+    "xai": ("https://api.x.ai/v1/chat/completions", "XAI_API_KEY", "XAI_MODEL", "grok-3-mini"),
+    "openrouter": ("https://openrouter.ai/api/v1/chat/completions", "OPENROUTER_API_KEY", "OPENROUTER_MODEL", "openai/gpt-4o-mini"),
+}
+
+
+def _keys(*values: str | None) -> list[str]:
+    """A secret may hold several keys, one per line (or comma-separated); FOO and FOO_2 are read together."""
+    out = []
+    for value in values:
+        out += [k.strip() for k in re.split(r"[\n,]", value or "") if k.strip() and k.strip() not in out]
+    return out
 
 
 def backends_from_env(env, ledger: dict | None = None) -> list:
@@ -218,12 +240,15 @@ def backends_from_env(env, ledger: dict | None = None) -> list:
     budget = float(env.get("HAIKU_MONTHLY_BUDGET_USD") or 4)
     ledger = ledger if ledger is not None else {}
     makers = {
-        "haiku": lambda: [ClaudeBackend(k, budget_usd=budget, ledger=ledger) for k in _keys(env.get("ANTHROPIC_API_KEY"))],
+        "haiku": lambda: [ClaudeBackend(k, budget_usd=budget, ledger=ledger) for k in _keys(env.get("ANTHROPIC_API_KEY"), env.get("ANTHROPIC_API_KEY_2"))],
         "gemini": lambda: [GeminiBackend(k, env.get("GEMINI_MODEL") or "gemini-flash-latest")
-                           for k in _keys(env.get("GEMINI_API_KEY"))],
+                           for k in _keys(env.get("GEMINI_API_KEY"), env.get("GEMINI_API_KEY_2"))],
         "groq": lambda: [GroqBackend(k, env.get("GROQ_MODEL") or "openai/gpt-oss-120b")
-                         for k in _keys(env.get("GROQ_API_KEY"))],
+                         for k in _keys(env.get("GROQ_API_KEY"), env.get("GROQ_API_KEY_2"))],
     }
+    for name, (url, key_var, model_var, model) in OPENAI_COMPAT.items():
+        makers[name] = (lambda n=name, u=url, kv=key_var, mv=model_var, m=model:
+                        [OpenAICompatBackend(n, u, k, env.get(mv) or m) for k in _keys(env.get(kv), env.get(kv + "_2"))])
     order = [p.strip().lower() for p in (env.get("LLM_PROVIDERS") or "haiku,gemini,groq").split(",") if p.strip()]
     unknown = [p for p in order if p not in makers]
     if unknown:
