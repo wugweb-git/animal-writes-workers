@@ -23,7 +23,7 @@ from pathlib import Path
 import requests
 import yaml
 
-from . import enrich, ingest, press
+from . import enrich, ingest, press, relevance
 from .run import truthy
 from .summarise import _keys
 
@@ -98,7 +98,7 @@ def page_facts(url: str) -> dict:
             "relevant": bool(press.RELEVANT.search(text))}
 
 
-def collect(client, dry_run: bool, floor: str, periods: list[str], keys: list[str]) -> tuple[dict, list]:
+def collect(client, dry_run: bool, floor: str, periods: list[str], keys: list[str], gate=None) -> tuple[dict, list]:
     """Ask Google for each kind of coverage in each period; send every hit that passes the checks as a Press draft."""
     found: dict[str, str] = {}
     for what, site in WHERE:
@@ -142,6 +142,8 @@ def collect(client, dry_run: bool, floor: str, periods: list[str], keys: list[st
             "account_handle": press.handle_of(url, platform), "image_url": enrich.og_image(url) if platform == "web" else "",
             "query": "google-search", "feed": "press-google-search",
         }
+        if not press.gated(gate, payload, counts):
+            continue
         if dry_run:
             log.info("DRY_RUN would POST press: %s", json.dumps(payload, ensure_ascii=False))
             counts["new"] += 1
@@ -163,7 +165,9 @@ def main() -> int:
     cfg = (yaml.safe_load(Path("sources.yaml").read_text(encoding="utf-8")) or {}).get("press") or {}
     floor = str(cfg.get("date_floor", "2025-11-01"))
     client = None if dry_run else ingest.Client(os.environ["WP_BASE_URL"], os.environ["WP_INGEST_USER"], os.environ["WP_INGEST_APP_PASSWORD"])
-    counts, rows = collect(client, dry_run, floor, PERIODS, keys)
+    gate = relevance.gate_from_env(client, dry_run=dry_run)
+    counts, rows = collect(client, dry_run, floor, PERIODS, keys, gate=gate)
+    gate.save()
     Path("press-gemini-report.json").write_text(json.dumps({"counts": counts, "items": rows}, ensure_ascii=False, indent=1))
     summary = os.environ.get("GITHUB_STEP_SUMMARY")
     if summary:

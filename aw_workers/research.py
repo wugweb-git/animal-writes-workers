@@ -23,7 +23,7 @@ from pathlib import Path
 
 import requests
 
-from . import ingest, sources, summarise
+from . import ingest, relevance, sources, summarise
 from .run import truthy
 from .sources import Item, Source
 
@@ -170,17 +170,25 @@ def main() -> int:
             log.warning("policy unavailable: %s", exc)
     backends = summarise.backends_from_env(os.environ, ledger={})
     summariser = summarise.Summariser(backends) if backends and not dry_run else summarise.DryRunSummariser()
+    gate = relevance.Gate.from_site(None if dry_run else summariser, client, dry_run=dry_run)
     papers = collect(floor, today)
     log.info("research: %d India papers since %s", len(papers), floor)
     src = Source(id="research", name="Research", kind="api", type="research", url="")
-    counts, rows = {"sent": 0, "duplicate": 0, "failed": 0}, []
+    counts, rows = {"sent": 0, "duplicate": 0, "failed": 0, "rejected": 0, "classifier unavailable": 0}, []
     for p in papers:
         item = Item(source=src, title=p["title"], url=p["url"], date=date.fromisoformat(p["date"]),
                     text=p["abstract"] or p["title"], publisher=p["journal"])
+        outcome, verdict = gate.admit(relevance.Candidate(kind="research", title=item.title, url=item.url, text=item.text,
+                                                          source=item.publisher, issuer=item.publisher, feed="research"))
+        if outcome != "pass":
+            counts["rejected" if outcome == "reject" else "classifier unavailable"] += 1
+            continue
         try:
             summary = summariser.summarise(item)
             topics = summarise.pick_topics(summariser, item, summary, list(sources.TOPICS))
             payload = dict(ingest.build_payload(item, summary, topics), backfill=True)
+            if verdict is not None:
+                payload["relevance"] = verdict.to_json()
             result = client.post(payload) if client else "dry-run"
         except ingest.AuthError:
             raise
@@ -190,6 +198,8 @@ def main() -> int:
             continue
         counts["duplicate" if result == "duplicate" else "sent"] += 1
         rows.append({"date": p["date"], "journal": p["journal"], "title": p["title"], "url": p["url"], "result": result})
+    if not dry_run:
+        gate.save()
     Path("research-report.json").write_text(json.dumps({"floor": floor.isoformat(), "counts": counts, "items": rows}, ensure_ascii=False, indent=1))
     summary_file = os.environ.get("GITHUB_STEP_SUMMARY")
     if summary_file:

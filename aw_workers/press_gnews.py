@@ -22,7 +22,7 @@ import feedparser
 import requests
 import yaml
 
-from . import enrich, ingest, press
+from . import enrich, ingest, press, relevance
 from .backfill import month_windows
 from .run import truthy
 from .sources import utc_today
@@ -46,7 +46,7 @@ def search(query: str, after: date, before: date, get=requests.get) -> list[dict
     return out
 
 
-def collect(client, dry_run: bool, cfg: dict, floor: date, windows) -> tuple[dict, list]:
+def collect(client, dry_run: bool, cfg: dict, floor: date, windows, gate=None) -> tuple[dict, list]:
     """Search each query in each (after, before) window; send every relevant hit as a Press draft."""
     seen, counts, rows = set(), {"new": 0, "duplicate": 0, "failed": 0, "not relevant": 0}, []
     for after, before in windows:
@@ -75,6 +75,8 @@ def collect(client, dry_run: bool, cfg: dict, floor: date, windows) -> tuple[dic
                     "format": press.format_of(real, press.platform_of(real)), "account_handle": "",
                     "image_url": enrich.og_image(real), "query": query, "feed": "press-google-news",
                 }
+                if not press.gated(gate, payload, counts):
+                    continue
                 if dry_run:
                     log.info("DRY_RUN would POST press: %s", json.dumps(payload, ensure_ascii=False))
                     counts["new"] += 1
@@ -97,7 +99,9 @@ def main() -> int:
     client = None
     if not dry_run:
         client = ingest.Client(os.environ["WP_BASE_URL"], os.environ["WP_INGEST_USER"], os.environ["WP_INGEST_APP_PASSWORD"])
-    counts, rows = collect(client, dry_run, cfg, floor, month_windows(floor, utc_today()))
+    gate = relevance.gate_from_env(client, dry_run=dry_run)
+    counts, rows = collect(client, dry_run, cfg, floor, month_windows(floor, utc_today()), gate=gate)
+    gate.save()
     Path("press-gnews-report.json").write_text(json.dumps({"counts": counts, "items": rows}, ensure_ascii=False, indent=1))
     summary = os.environ.get("GITHUB_STEP_SUMMARY")
     if summary:

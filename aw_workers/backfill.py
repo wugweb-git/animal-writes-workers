@@ -27,7 +27,7 @@ from pathlib import Path
 
 import requests
 
-from . import ingest, sources, summarise
+from . import ingest, relevance, sources, summarise
 from . import policy as policy_mod
 from .run import SEEN_FILE, default_enricher, load_seen, run, save_seen, truthy
 
@@ -128,7 +128,8 @@ def report(rows: list[dict], stats, floor: date) -> dict:
         "sent": len(posted),
         "duplicates_exact": [r["url"] for r in rows if r["result"] == "duplicate"],
         "duplicates_same_story": same_story_pairs(sorted(posted, key=lambda r: r["date"], reverse=True)),
-        "rejected_by_rule": {"worker_policy": stats.skipped, "site": sum(1 for r in rows if r["result"] in ("filtered", "blocked"))},
+        "rejected_by_rule": {"worker_policy": stats.skipped, "relevance_gate": stats.rejected, "classifier_unavailable": stats.unavailable,
+                             "site": sum(1 for r in rows if r["result"] in ("filtered", "blocked"))},
         "dead_links": [r["url"] for r in rows if r["dead"]],
         "failed": stats.errors[:50],
     }
@@ -181,14 +182,17 @@ def main() -> int:
     original = sources.collect
     sources.collect = lambda src, body, t, lb, limit: sorted(original(src, body, t, lb, 10_000), key=lambda i: i.date or t, reverse=True)[:limit]
     client = BackfillClient(None if dry_run else inner, floor)
+    gate = relevance.Gate.from_site(None if dry_run else summariser, inner, dry_run=dry_run)
     seen = load_seen(SEEN_FILE)
     try:
         stats = run(plan_list, defaults, dry_run=False, summariser=summariser, client=client, seen=seen,
-                    enricher=default_enricher, policy=policy, today=today)
+                    enricher=default_enricher, policy=policy, today=today, gate=gate)
     finally:
         sources.collect = original
     if not dry_run:
         save_seen(SEEN_FILE, seen)
+        gate.save()
+    log.info("relevance gate: %s (rejected %d, classifier unavailable %d)", gate.counts, stats.rejected, stats.unavailable)
     out = report(client.rows, stats, floor)
     print(json.dumps({k: (v if not isinstance(v, list) else len(v)) for k, v in out.items()}, ensure_ascii=False))
     return 0

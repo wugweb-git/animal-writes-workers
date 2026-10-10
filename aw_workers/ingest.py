@@ -102,6 +102,29 @@ class Client:
         resp.raise_for_status()
         return resp.json()
 
+    def _call(self, method: str, path: str, **kw):
+        resp = self.session.request(method, self.url.replace("/ingest", path), timeout=kw.pop("timeout", TIMEOUT), **kw)
+        if resp.status_code in (401, 403):
+            raise AuthError(f"{path} rejected credentials: HTTP {resp.status_code}")
+        resp.raise_for_status()
+        return resp.json()
+
+    def relevance_config(self) -> dict:
+        """Categories (aw_topic slug => name) and Directory organisation names, for the relevance gate."""
+        return self._call("GET", "/relevance-config", timeout=90)
+
+    def reject(self, entry: dict) -> dict:
+        """Add an item the relevance gate refused to the site's Rejected log (Inbox → To review)."""
+        return self._call("POST", "/relevance-rejected", json=entry)
+
+    def relevance_items(self, page: int, per_page: int = 100, missing_only: bool = False) -> dict:
+        """Existing News, Library, Resources, Opportunities and Press items (any status but trash), one page."""
+        return self._call("GET", "/relevance-items", params={"page": page, "per_page": per_page, "missing": int(missing_only)}, timeout=90)
+
+    def relevance_verdicts(self, verdicts: list[dict]) -> dict:
+        """Store verdicts on existing items (meta aw_relevance). Never changes an item's status."""
+        return self._call("POST", "/relevance-verdicts", json={"verdicts": verdicts}, timeout=90)
+
     def post(self, payload: dict) -> str:
         """Returns 'created', 'duplicate', or 'blocked' / 'filtered' (refused by the site's sourcing policy)."""
         resp = self.session.post(self.url, json=payload, timeout=TIMEOUT)

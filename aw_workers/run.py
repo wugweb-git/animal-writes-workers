@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 from datetime import date, timedelta
 from pathlib import Path
 
-from . import documents, enrich, ingest, policy as policy_mod, press, sources, summarise
+from . import documents, enrich, ingest, policy as policy_mod, press, relevance, sources, summarise
 
 log = logging.getLogger("aw_workers")
 
@@ -27,6 +27,8 @@ class Stats:
     duplicate: int = 0
     skipped: int = 0
     failed: int = 0
+    rejected: int = 0  # refused by the relevance gate (logged on the site)
+    unavailable: int = 0  # relevance gate could not run: not created, not marked seen, tried again next run
     errors: list[str] = field(default_factory=list)
 
 
@@ -95,6 +97,7 @@ def run(
     enricher=None,
     policy=None,
     titles: dict[str, list[str]] | None = None,
+    gate=None,
 ) -> Stats:
     today = today or sources.utc_today()
     seen = seen if seen is not None else set()
@@ -143,12 +146,27 @@ def run(
                 stats.duplicate += 1
                 log.info("%s: duplicate title (same day ±%d) %s", src.id, TITLE_DAYS, item.url)
                 continue
+            if gate is not None:
+                outcome, verdict = gate.admit(relevance.candidate_for(item))
+                if outcome == "unavailable":  # not seen: the next run tries again
+                    stats.unavailable += 1
+                    continue
+                if outcome == "reject":
+                    seen.add(item.url)
+                    if enricher and original != item.url:
+                        seen.add(original)
+                    stats.rejected += 1
+                    continue
+            else:
+                verdict = None
             try:
                 summary = (ingest.opportunity_summary(item) if item.source.type == "opportunity"
                            else summariser.summarise(item))
                 topics = (None if item.source.type == "opportunity"
                           else summarise.pick_topics(summariser, item, summary, list(sources.TOPICS)))
                 payload = ingest.build_payload(item, summary, topics)
+                if verdict is not None:
+                    payload["relevance"] = verdict.to_json()
                 if dry_run:
                     log.info("DRY_RUN would POST: %s", json.dumps(payload, ensure_ascii=False))
                     remember_title(titles, item.title, item.date)
@@ -245,16 +263,17 @@ def main() -> int:
     # Opportunities are not fetched (owner, 9 Oct 2026). AW_FETCH_OPPORTUNITIES=1 would turn them back on.
     if not truthy(os.environ.get("AW_FETCH_OPPORTUNITIES"), default=False):
         source_list = [s for s in source_list if s.type != "opportunity"]
+    gate = relevance.Gate.from_site(summariser, client or policy_client, dry_run=dry_run)
     try:
         stats = run(source_list, defaults, dry_run=dry_run, summariser=summariser, client=client, seen=seen,
-                    enricher=default_enricher, policy=policy, titles=titles)
+                    enricher=default_enricher, policy=policy, titles=titles, gate=gate)
     except ingest.AuthError as exc:
         log.error("AUTH FAILURE, stopping: %s", exc)
         print(f"::error::Ingest authentication failed: {exc}")
         return 3
     # Press discovery (Media & PR), weekly, through Google News and Google Search.
     try:
-        press.run(lists.get("press") or {}, client, dry_run=dry_run)
+        press.run(lists.get("press") or {}, client, dry_run=dry_run, gate=gate)
     except ingest.AuthError:
         raise
     except Exception as exc:
@@ -263,23 +282,26 @@ def main() -> int:
         save_seen(SEEN_FILE, seen)
         save_titles(TITLES_FILE, titles, sources.utc_today())
         documents.save_state()  # High Court file versions: only remembered when items were really sent
+        gate.save()
     if ledger:
         SPEND_FILE.parent.mkdir(parents=True, exist_ok=True)
         SPEND_FILE.write_text(json.dumps(ledger))
         month = max(ledger)
         print(f"haiku spend {month}: ${ledger[month]:.4f} (cap ${float(os.environ.get('HAIKU_MONTHLY_BUDGET_USD') or 4):.2f})")
 
-    print(f"fetched={stats.fetched} new={stats.new} duplicate={stats.duplicate} skipped={stats.skipped} failed={stats.failed}")
+    print(f"fetched={stats.fetched} new={stats.new} duplicate={stats.duplicate} skipped={stats.skipped} failed={stats.failed} "
+          f"rejected={stats.rejected} classifier_unavailable={stats.unavailable}")
+    print(f"relevance gate: {gate.counts}")
     if summariser.used:
         print("summaries by provider: " + ", ".join(f"{k}={v}" for k, v in sorted(summariser.used.items())))
     summary_file = os.environ.get("GITHUB_STEP_SUMMARY")
     if summary_file:
         with open(summary_file, "a") as fh:
             fh.write(
-                f"### {'DRY_RUN' if dry_run else 'LIVE'} run\n\n| fetched | new | duplicate | skipped | failed |\n|---|---|---|---|---|\n"
-                f"| {stats.fetched} | {stats.new} | {stats.duplicate} | {stats.skipped} | {stats.failed} |\n"
+                f"### {'DRY_RUN' if dry_run else 'LIVE'} run\n\n| fetched | new | duplicate | skipped | rejected | classifier unavailable | failed |\n|---|---|---|---|---|---|---|\n"
+                f"| {stats.fetched} | {stats.new} | {stats.duplicate} | {stats.skipped} | {stats.rejected} | {stats.unavailable} | {stats.failed} |\n"
             )
-    return 1 if stats.failed and not stats.new and not stats.duplicate and not stats.skipped else 0
+    return 1 if stats.failed and not stats.new and not stats.duplicate and not stats.skipped and not stats.rejected else 0
 
 
 if __name__ == "__main__":

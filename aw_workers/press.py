@@ -35,6 +35,24 @@ import requests
 
 log = logging.getLogger("aw_workers.press")
 
+
+def gated(gate, payload: dict, counts: dict) -> bool:
+    """True when the press candidate may be sent. Rejected and unchecked ones are counted, never sent."""
+    if gate is None:
+        return True
+    from .relevance import Candidate
+
+    outcome, verdict = gate.admit(Candidate(kind="press", title=payload.get("title", ""), url=payload.get("source_url", ""),
+                                            text=payload.get("text", ""), source=payload.get("source_name", ""),
+                                            feed=payload.get("feed", "")))
+    if outcome == "pass":
+        if verdict is not None:
+            payload["relevance"] = verdict.to_json()
+        return True
+    key = "rejected" if outcome == "reject" else "classifier unavailable"
+    counts[key] = counts.get(key, 0) + 1
+    return False
+
 API = "https://api.search.brave.com/res/v1/web/search"
 STATE_FILE = Path(os.environ.get("AW_PRESS_STATE", ".state/press.json"))
 TIMEOUT = 30
@@ -170,7 +188,7 @@ def thumbnail(url: str, platform: str, item: dict, get=requests.get) -> str:
 
 
 def run(cfg: dict, client, *, dry_run: bool, env=os.environ, today: date | None = None,
-        news_search=None, web_search=None) -> dict:
+        news_search=None, web_search=None, gate=None) -> dict:
     """Weekly: the last two weeks of coverage, from Google News and from Google Search (via Gemini's search tool).
     Every hit goes to the site as a "Press: to review" draft. Returns counts for the log."""
     from datetime import timedelta
@@ -187,10 +205,11 @@ def run(cfg: dict, client, *, dry_run: bool, env=os.environ, today: date | None 
     news_search = news_search or press_gnews.collect
     web_search = web_search or press_gemini.collect
     counts: dict = {}
+    kw = {"gate": gate} if gate is not None else {}  # the relevance gate (relevance.py)
     for part in (
-        lambda: news_search(client, dry_run, cfg, since, [(since, today + timedelta(days=1))]),
+        lambda: news_search(client, dry_run, cfg, since, [(since, today + timedelta(days=1))], **kw),
         lambda: web_search(client, dry_run, since.isoformat(), ["in the last two weeks"],
-                           press_gemini.web_keys(env)),
+                           press_gemini.web_keys(env), **kw),
     ):
         try:
             got, _rows = part()
