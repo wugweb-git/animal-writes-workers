@@ -199,7 +199,7 @@ def main() -> int:
         log.error("AUTH FAILURE, stopping: %s", exc)
         print(f"::error::Ingest authentication failed: {exc}")
         return 3
-    # Press discovery (Media & PR), weekly; off until BRAVE_SEARCH_KEY exists.
+    # Press discovery (Media & PR), weekly, through Google News and Google Search.
     try:
         press.run(lists.get("press") or {}, client, dry_run=dry_run)
     except ingest.AuthError:

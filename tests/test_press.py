@@ -22,32 +22,24 @@ def test_normalise_and_platform():
     assert press.platform_of("https://www.thehindu.com/x") == "web"
 
 
-def test_disabled_without_credentials(tmp_path, monkeypatch):
+def test_weekly_google_search(tmp_path, monkeypatch):
     monkeypatch.setattr(press, "STATE_FILE", tmp_path / "p.json")
-    assert press.run({"queries": ["Animal Writes"]}, None, dry_run=True, env={})["status"] == "disabled: no credentials"
+    seen = {}
 
+    def news(client, dry_run, cfg, since, windows):
+        seen["news"] = (since, windows)
+        return {"new": 1, "duplicate": 1}, []
 
-def test_candidates_relevance_floor_and_rotation(tmp_path, monkeypatch):
-    monkeypatch.setattr(press, "STATE_FILE", tmp_path / "p.json")
-    items = {"web": {"results": [
-        {"url": "https://www.instagram.com/p/abc/?igshid=1", "title": "<strong>Animal Writes</strong> letters", "description": "", "page_age": "2025-11-29T10:00:00"},
-        {"url": "https://example.com/old", "title": "Animal Writes", "description": "", "page_age": "2025-01-01T00:00:00"},
-        {"url": "https://example.com/other", "title": "Cricket scores", "description": ""},
-    ]}}
-    calls = []
+    def web(client, dry_run, floor, periods, keys):
+        seen["web"] = (floor, keys)
+        return {"new": 2}, []
 
-    def get(url, params=None, **kw):
-        calls.append(params)
-        return Resp(items)
-
-    cfg = {"queries": ["Animal Writes"], "sites": ["instagram.com"], "daily_requests": 1}
-    state = {}
-    out = press.candidates(cfg, "k", state, get=get, pause=0)
-    assert [o["source_url"] for o in out] == ["https://www.instagram.com/p/abc"]
-    assert out[0]["platform"] == "instagram" and out[0]["source_date"] == "2025-11-29" and out[0]["type"] == "press"
-    assert len(calls) == 1 and calls[0]["q"] == "Animal Writes site:instagram.com" and state["next"] == 1
-    cfg["pause_seconds"] = 0
-    assert press.run(cfg, None, dry_run=True, env={"BRAVE_SEARCH_KEY": "k"}, get=get, today=date(2026, 10, 8))["new"] == 1
+    out = press.run({"queries": ["Animal Writes"]}, None, dry_run=False, env={"GEMINI_API_KEY": "g"},
+                    today=date(2026, 10, 20), news_search=news, web_search=web)
+    assert out == {"status": "ran", "new": 3, "duplicate": 1}
+    assert seen["news"][0] == date(2026, 10, 6) and seen["web"] == ("2026-10-06", ["g"])
+    assert press.run({"queries": ["a"]}, None, dry_run=True, env={}, today=date(2026, 10, 22),
+                     news_search=news, web_search=web)["status"] == "ran this week"
 
 
 def test_formats_and_handles():
@@ -60,12 +52,3 @@ def test_formats_and_handles():
     assert press.handle_of("https://x.com/AnimalWrites/status/5", "x") == "@AnimalWrites"
     assert press.handle_of("https://www.reddit.com/r/india/comments/1/x", "reddit") == "r/india"
     assert press.handle_of("https://www.instagram.com/p/abc/", "instagram") == ""
-
-
-def test_weekly_and_budget(tmp_path, monkeypatch):
-    monkeypatch.setattr(press, "STATE_FILE", tmp_path / "p.json")
-    press.save_state({"last_run": "2026-10-05", "month": "2026-10", "used_month": 10, "backfilled": True})
-    env = {"BRAVE_SEARCH_KEY": "k"}
-    assert press.run({"queries": ["a"]}, None, dry_run=True, env=env, today=date(2026, 10, 8))["status"] == "ran this week"
-    press.save_state({"last_run": "2026-09-01", "month": "2026-10", "used_month": 900, "backfilled": True})
-    assert press.run({"queries": ["a"]}, None, dry_run=True, env=env, today=date(2026, 10, 8))["status"] == "budget used"

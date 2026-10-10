@@ -80,16 +80,11 @@ def page_facts(url: str) -> dict:
             "relevant": bool(press.RELEVANT.search(text))}
 
 
-def main() -> int:
-    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
-    dry_run = truthy(os.environ.get("DRY_RUN"), default=True)
-    keys = _keys(os.environ.get("GEMINI_API_KEY_2"), os.environ.get("GEMINI_API_KEY"))
-    cfg = (yaml.safe_load(Path("sources.yaml").read_text(encoding="utf-8")) or {}).get("press") or {}
-    floor = str(cfg.get("date_floor", "2025-11-01"))
-    client = None if dry_run else ingest.Client(os.environ["WP_BASE_URL"], os.environ["WP_INGEST_USER"], os.environ["WP_INGEST_APP_PASSWORD"])
+def collect(client, dry_run: bool, floor: str, periods: list[str], keys: list[str]) -> tuple[dict, list]:
+    """Ask Google for each kind of coverage in each period; send every hit that passes the checks as a Press draft."""
     found: dict[str, str] = {}
     for what, site in WHERE:
-        for period in PERIODS:
+        for period in periods:
             prompt = f"Search Google for {what} published {period} about {TOPIC}." + (f" Search site:{site} only." if site else "") + \
                      " List every URL you find."
             for key in list(keys):
@@ -139,6 +134,17 @@ def main() -> int:
                 counts["failed"] += 1
                 log.error("failed %s: %s", url, exc)
         rows.append({"date": payload["source_date"], "platform": platform, "source": payload["source_name"], "title": payload["title"], "url": url})
+    return counts, rows
+
+
+def main() -> int:
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
+    dry_run = truthy(os.environ.get("DRY_RUN"), default=True)
+    keys = _keys(os.environ.get("GEMINI_API_KEY_2"), os.environ.get("GEMINI_API_KEY"))
+    cfg = (yaml.safe_load(Path("sources.yaml").read_text(encoding="utf-8")) or {}).get("press") or {}
+    floor = str(cfg.get("date_floor", "2025-11-01"))
+    client = None if dry_run else ingest.Client(os.environ["WP_BASE_URL"], os.environ["WP_INGEST_USER"], os.environ["WP_INGEST_APP_PASSWORD"])
+    counts, rows = collect(client, dry_run, floor, PERIODS, keys)
     Path("press-gemini-report.json").write_text(json.dumps({"counts": counts, "items": rows}, ensure_ascii=False, indent=1))
     summary = os.environ.get("GITHUB_STEP_SUMMARY")
     if summary:

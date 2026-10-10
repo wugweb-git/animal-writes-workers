@@ -1,4 +1,9 @@
-"""Press discovery: coverage of Animal Writes on the web and social platforms, found with the Brave Search API.
+"""Press discovery: coverage of Animal Writes on the web and social platforms.
+
+Weekly, through Google: Google News (press_gnews) and Google Search via Gemini's search tool (press_gemini), the last
+two weeks each time (owner, 10 Oct 2026: Brave has no free plan, so no Brave key). The notes below describe the
+original Brave design; the platform, format and handle helpers are still used.
+
 
 One source only (owner's decision, 8 Oct 2026: Brave instead of Google): web search, each query once per site filter
 (instagram.com, facebook.com, fb.watch, x.com, twitter.com, youtube.com, threads.net, linkedin.com, reddit.com) plus
@@ -164,111 +169,39 @@ def thumbnail(url: str, platform: str, item: dict, get=requests.get) -> str:
     return src if src.startswith("https://") else ""
 
 
-def plan(queries: list[str], sites: list[str], state: dict, budget: int) -> list[tuple[str, str]]:
-    """Today's (query, site) pairs: continue where yesterday stopped, at most `budget` requests."""
-    pairs = [(q, s) for q in queries for s in sites + [""]]
-    start = int(state.get("next", 0)) % max(len(pairs), 1)
-    today = (pairs[start:] + pairs[:start])[:budget]
-    state["next"] = (start + len(today)) % max(len(pairs), 1)
-    return today
+def run(cfg: dict, client, *, dry_run: bool, env=os.environ, today: date | None = None,
+        news_search=None, web_search=None) -> dict:
+    """Weekly: the last two weeks of coverage, from Google News and from Google Search (via Gemini's search tool).
+    Every hit goes to the site as a "Press: to review" draft. Returns counts for the log."""
+    from datetime import timedelta
 
+    from . import press_gemini, press_gnews
+    from .summarise import _keys
 
-def candidates(cfg: dict, key: str, state: dict, get=requests.get, pause: float = 1.1) -> list[dict]:
-    floor = str(cfg.get("date_floor", "2025-11-01"))
-    out, seen = [], set()
-    used = 0
-    for query, site in plan(list(cfg.get("queries") or []), list(cfg.get("sites") or []), state, int(cfg.get("daily_requests", 60))):
-        q = f"{query} site:{site}" if site else query
-        if used and pause:
-            time.sleep(pause)  # the free plan allows one request a second
-        resp = get(API, params={"q": q, "count": 20, "safesearch": "off"}, timeout=TIMEOUT,
-                   headers={"User-Agent": UA, "Accept": "application/json", "X-Subscription-Token": key})
-        used += 1
-        if resp.status_code == 429:
-            log.warning("press: Brave quota reached after %d requests", used)
-            break
-        resp.raise_for_status()
-        data = resp.json()
-        results = list((data.get("web") or {}).get("results") or []) + list((data.get("videos") or {}).get("results") or [])
-        for item in results:
-            url = normalise(item.get("url", ""))
-            text = f"{item.get('title', '')} {item.get('description', '')}"
-            if url in seen or not RELEVANT.search(re.sub(r"<[^>]+>", "", text)):
-                continue
-            when = result_date(item)
-            if when and when < floor:
-                continue
-            seen.add(url)
-            platform = platform_of(url)
-            extra = reddit_meta(url, get=get) if platform == "reddit" else {}
-            when = when or extra.get("date", "")
-            out.append({
-                "type": "press",
-                "title": re.sub(r"<[^>]+>", "", item.get("title", ""))[:200],
-                "source_url": url,
-                "source_name": ((item.get("profile") or {}).get("name") or urlparse(url).netloc.removeprefix("www.")),
-                "source_date": when,
-                "platform": platform,
-                "format": format_of(url, platform),
-                "account_handle": handle_of(url, platform) or extra.get("handle", ""),
-                "image_url": extra.get("image") or thumbnail(url, platform, item, get=get),
-                "query": query,
-                "feed": "press-discovery",
-            })
-    state["requests_today"] = used
-    log.info("press: %d request(s), %d candidate(s)", used, len(out))
-    return out
-
-
-def run(cfg: dict, client, *, dry_run: bool, env=os.environ, get=requests.get, today: date | None = None) -> dict:
-    """Once a day. Returns counts for the log."""
-    key = env.get("BRAVE_SEARCH_KEY", "")
     if not cfg or not cfg.get("enabled", True):
         return {"status": "off"}
-    if not key:
-        log.info("press: disabled: no credentials (BRAVE_SEARCH_KEY)")
-        return {"status": "disabled: no credentials"}
     state = load_state()
     today = today or datetime.now(timezone.utc).date()
     if state.get("last_run") and (today - date.fromisoformat(state["last_run"])).days < int(cfg.get("every_days", 7)):
         return {"status": "ran this week"}
-    month = today.strftime("%Y-%m")
-    if state.get("month") != month:
-        state["month"], state["used_month"] = month, 0
-    left = int(cfg.get("monthly_requests", 900)) - int(state.get("used_month", 0))
-    budget = int(cfg.get("backfill_requests", 300)) if not state.get("backfilled") else int(cfg.get("weekly_requests", 200))
-    budget = max(0, min(budget, left))
-    if budget == 0:
-        print(f"press discovery: monthly budget used ({state.get('used_month', 0)} requests in {month})")
-        return {"status": "budget used"}
-    cfg = dict(cfg, daily_requests=budget)
-    counts = {"new": 0, "duplicate": 0, "failed": 0}
-    try:
-        found = candidates(cfg, key, state, get=get, pause=float(cfg.get("pause_seconds", 1.1)))
-        state["errors_in_a_row"] = 0
-    except Exception as exc:  # one failing source must not stop the run
-        state["errors_in_a_row"] = int(state.get("errors_in_a_row", 0)) + 1
-        log.error("press: search failed: %s", exc)
-        if state["errors_in_a_row"] >= 3:
-            print(f"::warning::Press discovery has failed {state['errors_in_a_row']} runs in a row: {exc}")
-        if not dry_run:
-            save_state(state)
-        return {"status": "error"}
-    for payload in found:
-        if dry_run:
-            log.info("DRY_RUN would POST press: %s", json.dumps(payload, ensure_ascii=False))
-            counts["new"] += 1
-            continue
+    since = max(today - timedelta(days=14), date.fromisoformat(str(cfg.get("date_floor", "2025-11-01"))))
+    news_search = news_search or press_gnews.collect
+    web_search = web_search or press_gemini.collect
+    counts: dict = {}
+    for part in (
+        lambda: news_search(client, dry_run, cfg, since, [(since, today + timedelta(days=1))]),
+        lambda: web_search(client, dry_run, since.isoformat(), ["in the last two weeks"],
+                           _keys(env.get("GEMINI_API_KEY_2"), env.get("GEMINI_API_KEY"))),
+    ):
         try:
-            result = client.post(payload)
-            counts["duplicate" if result == "duplicate" else "new"] += 1
-        except Exception as exc:
-            counts["failed"] += 1
-            log.error("press: failed %s: %s", payload["source_url"], exc)
+            got, _rows = part()
+        except Exception as exc:  # one failing search must not stop the other
+            log.error("press: search failed: %s", exc)
+            continue
+        for k, v in got.items():
+            counts[k] = counts.get(k, 0) + v
     state["last_run"] = today.isoformat()
-    state["used_month"] = int(state.get("used_month", 0)) + int(state.get("requests_today", 0))
-    state["backfilled"] = True
     if not dry_run:
         save_state(state)
-    print(f"press discovery: requests={state.get('requests_today', 0)} (this month {state['used_month']} of {cfg.get('monthly_requests', 900)}) new={counts['new']} duplicate={counts['duplicate']} failed={counts['failed']}")
+    print(f"press discovery (Google News + Google Search, since {since}): {counts}")
     return {"status": "ran", **counts}
