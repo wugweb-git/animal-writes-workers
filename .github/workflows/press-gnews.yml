@@ -1,4 +1,4 @@
-name: Press via Google News (one-off)
+name: Press search (one-off: Google News + Google Search)
 
 # Owner, 10 Oct 2026: coverage of Animal Writes from 1 Nov 2025, found through Google News (no Brave key).
 # Every hit arrives on the site as a "Press: to review" draft. Report: job summary + press-gnews-report.json.
@@ -19,6 +19,8 @@ jobs:
       WP_BASE_URL: ${{ secrets.WP_BASE_URL }}
       WP_INGEST_USER: ${{ secrets.WP_INGEST_USER }}
       WP_INGEST_APP_PASSWORD: ${{ secrets.WP_INGEST_APP_PASSWORD }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      GEMINI_API_KEY_2: ${{ secrets.GEMINI_API_KEY_2 }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -27,8 +29,11 @@ jobs:
           cache: pip
       - run: pip install -r requirements.txt
       - run: python -m aw_workers.press_gnews
+      - run: python -m aw_workers.press_gemini
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: press-gnews-report
-          path: press-gnews-report.json
+          path: |
+            press-gnews-report.json
+            press-gemini-report.json
