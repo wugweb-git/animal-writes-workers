@@ -53,9 +53,10 @@ def main() -> int:
     if not backends:
         log.error("no provider key set")
         return 2
-    for b in backends:  # one job, many threads: the providers' own rate limits apply (429s back off)
-        if getattr(b, "min_interval", 0) and b.name != "gemini":
-            b.min_interval = 0.0
+    if threads > 1:  # paid providers take parallel calls; free tiers keep their gap (AW_THREADS=1 for those)
+        for b in backends:
+            if b.name not in ("gemini", "groq", "moonshot"):
+                b.min_interval = 0.0
     gate = relevance.Gate.from_site(summarise.Summariser(backends), client)
     gate.cache = {}  # fresh verdicts for existing items
     gate.client = None  # existing items are not added to the Rejected log; their verdict is stored on the item

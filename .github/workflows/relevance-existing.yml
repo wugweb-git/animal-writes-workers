@@ -9,12 +9,17 @@ on:
         description: "Only items without a verdict yet"
         type: boolean
         default: false
+      threads:
+        description: "Parallel calls (1 for free-tier providers)"
+        type: string
+        default: "6"
 
 jobs:
   check:
     runs-on: ubuntu-latest
     timeout-minutes: 120
     env:
+      AW_THREADS: ${{ inputs.threads }}
       AW_ONLY_MISSING: ${{ inputs.only_missing && 'true' || 'false' }}
       WP_BASE_URL: ${{ secrets.WP_BASE_URL }}
       WP_INGEST_USER: ${{ secrets.WP_INGEST_USER }}
