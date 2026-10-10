@@ -257,7 +257,7 @@ def backends_from_env(env, ledger: dict | None = None) -> list:
 
 
 # Errors that mean "this key is unusable for the rest of the run" (not a bad summary).
-_DEAD_KEY_MARKERS = ("401", "403", "429", "credit balance", "budget", "quota")
+_DEAD_KEY_MARKERS = ("401", "402", "403", "429", "credit balance", "budget", "quota", "insufficient", "no credits", "suspended")
 
 
 def _is_dead_key_error(exc: Exception) -> bool:
