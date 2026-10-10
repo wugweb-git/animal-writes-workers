@@ -176,7 +176,6 @@ def run(cfg: dict, client, *, dry_run: bool, env=os.environ, today: date | None 
     from datetime import timedelta
 
     from . import press_gemini, press_gnews
-    from .summarise import _keys
 
     if not cfg or not cfg.get("enabled", True):
         return {"status": "off"}
@@ -191,7 +190,7 @@ def run(cfg: dict, client, *, dry_run: bool, env=os.environ, today: date | None 
     for part in (
         lambda: news_search(client, dry_run, cfg, since, [(since, today + timedelta(days=1))]),
         lambda: web_search(client, dry_run, since.isoformat(), ["in the last two weeks"],
-                           _keys(env.get("GEMINI_API_KEY_2"), env.get("GEMINI_API_KEY"))),
+                           press_gemini.web_keys(env)),
     ):
         try:
             got, _rows = part()

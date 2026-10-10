@@ -45,6 +45,11 @@ PERIODS = ["in November 2025", "in December 2025", "between January and March 20
            "between July and October 2026"]
 
 
+def web_keys(env) -> list[str]:
+    """OpenRouter web search first (marked "or:"), then Gemini's Google search."""
+    return ["or:" + k for k in _keys(env.get("OPENROUTER_API_KEY"))] + _keys(env.get("GEMINI_API_KEY_2"), env.get("GEMINI_API_KEY"))
+
+
 def ask(key: str, prompt: str) -> list[tuple[str, str]]:
     r = requests.post(URL.format(model=MODEL), headers={"x-goog-api-key": key}, timeout=120,
                       json={"contents": [{"parts": [{"text": prompt}]}], "tools": [{"google_search": {}}]})
@@ -52,6 +57,19 @@ def ask(key: str, prompt: str) -> list[tuple[str, str]]:
         raise RuntimeError(f"{r.status_code}: {r.json().get('error', {}).get('message', '')[:120]}")
     meta = (r.json().get("candidates") or [{}])[0].get("groundingMetadata", {}) or {}
     return [(c["web"].get("uri", ""), c["web"].get("title", "")) for c in meta.get("groundingChunks", []) if c.get("web")]
+
+
+def ask_openrouter(key: str, prompt: str) -> list[tuple[str, str]]:
+    """OpenRouter's web search (":online" models): the cited URLs, never the model's text."""
+    r = requests.post("https://openrouter.ai/api/v1/chat/completions", headers={"Authorization": f"Bearer {key}"}, timeout=180,
+                      json={"model": os.environ.get("AW_PRESS_OPENROUTER_MODEL", "openai/gpt-4o-mini:online"),
+                            "messages": [{"role": "user", "content": prompt}]})
+    if r.status_code != 200:
+        raise RuntimeError(f"{r.status_code}: {r.text[:120]}")
+    msg = (r.json().get("choices") or [{}])[0].get("message", {}) or {}
+    out = [((a.get("url_citation") or {}).get("url", ""), (a.get("url_citation") or {}).get("title", "")) for a in msg.get("annotations") or []]
+    out += [(u, "") for u in re.findall(r"https?://[^\s)\]>\"']+", msg.get("content") or "")]
+    return [(u.rstrip(".,"), t) for u, t in out if u]
 
 
 def resolve(uri: str) -> str:
@@ -89,7 +107,8 @@ def collect(client, dry_run: bool, floor: str, periods: list[str], keys: list[st
                      " List every URL you find."
             for key in list(keys):
                 try:
-                    for uri, title in ask(key, prompt):
+                    hits = ask_openrouter(key[3:], prompt) if key.startswith("or:") else ask(key, prompt)
+                    for uri, title in hits:
                         found.setdefault(resolve(uri), title)
                     break
                 except requests.RequestException as exc:  # a slow or dropped search: skip it, keep the key
@@ -97,7 +116,7 @@ def collect(client, dry_run: bool, floor: str, periods: list[str], keys: list[st
                     break
                 except RuntimeError as exc:
                     log.warning("%s / %s: %s", what, period, exc)
-                    if "429" in str(exc) or "403" in str(exc):
+                    if any(c in str(exc) for c in ("402", "403", "404", "429")):
                         keys.remove(key)  # this key's quota is used up for today
             time.sleep(3)
             if not keys:
@@ -140,7 +159,7 @@ def collect(client, dry_run: bool, floor: str, periods: list[str], keys: list[st
 def main() -> int:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     dry_run = truthy(os.environ.get("DRY_RUN"), default=True)
-    keys = _keys(os.environ.get("GEMINI_API_KEY_2"), os.environ.get("GEMINI_API_KEY"))
+    keys = web_keys(os.environ)
     cfg = (yaml.safe_load(Path("sources.yaml").read_text(encoding="utf-8")) or {}).get("press") or {}
     floor = str(cfg.get("date_floor", "2025-11-01"))
     client = None if dry_run else ingest.Client(os.environ["WP_BASE_URL"], os.environ["WP_INGEST_USER"], os.environ["WP_INGEST_APP_PASSWORD"])
