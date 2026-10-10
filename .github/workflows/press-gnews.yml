@@ -1,0 +1,34 @@
+name: Press via Google News (one-off)
+
+# Owner, 10 Oct 2026: coverage of Animal Writes from 1 Nov 2025, found through Google News (no Brave key).
+# Every hit arrives on the site as a "Press: to review" draft. Report: job summary + press-gnews-report.json.
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run (search and report only; nothing sent)"
+        type: boolean
+        default: true
+
+jobs:
+  press:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      DRY_RUN: ${{ inputs.dry_run && 'true' || 'false' }}
+      WP_BASE_URL: ${{ secrets.WP_BASE_URL }}
+      WP_INGEST_USER: ${{ secrets.WP_INGEST_USER }}
+      WP_INGEST_APP_PASSWORD: ${{ secrets.WP_INGEST_APP_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - run: python -m aw_workers.press_gnews
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: press-gnews-report
+          path: press-gnews-report.json
