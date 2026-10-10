@@ -97,6 +97,9 @@ def main() -> int:
                     for uri, title in ask(key, prompt):
                         found.setdefault(resolve(uri), title)
                     break
+                except requests.RequestException as exc:  # a slow or dropped search: skip it, keep the key
+                    log.warning("%s / %s: %s", what, period, exc)
+                    break
                 except RuntimeError as exc:
                     log.warning("%s / %s: %s", what, period, exc)
                     if "429" in str(exc) or "403" in str(exc):
