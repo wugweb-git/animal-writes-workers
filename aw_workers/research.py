@@ -46,14 +46,47 @@ INDIA = re.compile(
     r"kolkata|chennai|bengaluru|bangalore|hyderabad", re.I)
 
 
+# Human medicine that shares the word "sterilisation" (SEO audit 10 Oct 2026): family planning, dental, eye and
+# instrument sterilisation papers are not about animals.
+HUMAN_MED = re.compile(
+    r"\b(female|male|surgical|tubal|women'?s?) sterili[sz]ation|tubectomy|vasectomy|family planning|contracepti\w*|"
+    r"dental|teeth|tooth|root canal|endodont\w*|pulpotomy|ophthalm\w*|endophthalmitis|cataract|\beye\b|autoclav\w*|"
+    r"steam sterili[sz]\w*|surgical instruments?|instrument packing|patient files|central sterile|forced sterili[sz]ation|"
+    r"reproductive (?:health|chronicity)|nfhs",
+    re.I,
+)
+ANIMAL = re.compile(r"\b(animals?|dogs?|canine|cats?|feline|stray|street|free[- ]roaming|pets?|cattle|wildlife|veterinar\w*|livestock|"
+                    r"macaques?|monkeys?|leopards?|elephants?|rabies)\b", re.I)
+# A paper set in another country (Bali, Morocco, Sumatra...) that only mentions India in passing is not India research.
+ELSEWHERE = re.compile(
+    r"\b(bali|indonesia\w*|sumatra\w*|java|morocc\w*|nepal\w*|bangladesh\w*|pakistan\w*|sri lanka\w*|bhutan\w*|"
+    r"myanmar|china|chinese|africa\w*|kenya\w*|tanzania\w*|ethiopia\w*|nigeria\w*|brazil\w*|philippines|vietnam\w*|"
+    r"thailand|malaysia\w*|cambodia\w*|europe\w*|america\w*|usa|mexic\w*|peru|chile)\b",
+    re.I,
+)
+
+
 def clean(text: str) -> str:
     return re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", " ", text or ""))).strip()
 
 
 def relevant(title: str, abstract: str, affiliation: str = "") -> bool:
-    about_india = bool(INDIA.search(f"{title} {abstract}")) or bool(INDIA.search(affiliation) and INDIA.search(title + " " + abstract[:600]))
-    on_topic = any(w in title.lower() for words in TOPICS.values() for w in words)  # the topic in the title itself
-    return about_india and on_topic
+    """India research about animals. An author affiliation never counts: India must be named in the title, or in
+    the abstract when the title names no other country. Human-medicine sterilisation papers are out, and a paper
+    that matched only through "sterilisation" must name an animal in its title."""
+    if INDIA.search(title):
+        about_india = True
+    else:
+        about_india = bool(INDIA.search(abstract)) and not ELSEWHERE.search(title)
+    low = title.lower()
+    hits = [w for words in TOPICS.values() for w in words if w in low]  # the topic in the title itself
+    if not about_india or not hits:
+        return False
+    if HUMAN_MED.search(title) or HUMAN_MED.search(abstract[:600]) and not ANIMAL.search(title):
+        return False
+    if all(w in ("sterilisation", "sterilization", "neuter") for w in hits) and not ANIMAL.search(title):
+        return False
+    return True
 
 
 def europepmc(term: str, floor: date, today: date, get=requests.get) -> list[dict]:

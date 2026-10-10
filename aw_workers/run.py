@@ -7,6 +7,7 @@ import logging
 import os
 import sys
 from dataclasses import dataclass, field
+from datetime import date, timedelta
 from pathlib import Path
 
 from . import documents, enrich, ingest, policy as policy_mod, press, sources, summarise
@@ -15,6 +16,8 @@ log = logging.getLogger("aw_workers")
 
 SEEN_FILE = Path(os.environ.get("AW_SEEN_FILE", ".state/seen.json"))
 SPEND_FILE = Path(os.environ.get("AW_SPEND_FILE", ".state/haiku_spend.json"))
+TITLES_FILE = Path(os.environ.get("AW_TITLES_FILE", ".state/titles.json"))
+TITLE_DAYS = 1  # the same normalised title within a day either side is the same story
 
 
 @dataclass
@@ -45,6 +48,40 @@ def save_seen(path: Path, seen: set[str]) -> None:
     path.write_text(json.dumps(sorted(seen)))
 
 
+def load_titles(path: Path) -> dict[str, list[str]]:
+    try:
+        data = json.loads(path.read_text())
+        return {k: list(v) for k, v in data.items()} if isinstance(data, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def save_titles(path: Path, titles: dict[str, list[str]], today) -> None:
+    """Keep two weeks of titles: enough for the ±1 day check on late feeds."""
+    floor = (today - timedelta(days=14)).isoformat()
+    keep = {k: [d for d in v if d >= floor] for k, v in titles.items()}
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({k: v for k, v in keep.items() if v}, ensure_ascii=False))
+
+
+def title_seen(titles: dict[str, list[str]], title: str, when) -> bool:
+    key = policy_mod.norm_title(title)
+    if not key or when is None:
+        return False
+    return any(abs((date.fromisoformat(d) - when).days) <= TITLE_DAYS for d in titles.get(key, []))
+
+
+def remember_title(titles: dict[str, list[str]], title: str, when) -> None:
+    key = policy_mod.norm_title(title)
+    if key and when is not None and when.isoformat() not in titles.setdefault(key, []):
+        titles[key].append(when.isoformat())
+
+
+def needs_animal_word(item) -> bool:
+    """News and Library items found in feeds; documents (own animal filter), AWBI pages and opportunities are exempt."""
+    return item.source.type in ("news", "legal") and not item.doc_kind and item.source.kind != "awbi"
+
+
 def run(
     source_list,
     defaults: dict,
@@ -57,9 +94,11 @@ def run(
     seen: set[str] | None = None,
     enricher=None,
     policy=None,
+    titles: dict[str, list[str]] | None = None,
 ) -> Stats:
     today = today or sources.utc_today()
     seen = seen if seen is not None else set()
+    titles = titles if titles is not None else {}
     lookback = int(defaults.get("lookback_days", 14))
     limit = int(defaults.get("max_items_per_source", 15))
     stats = Stats()
@@ -94,6 +133,16 @@ def run(
                     stats.skipped += 1
                     log.info("%s: skipped (%s) %s", src.id, why, item.url)
                     continue
+            if needs_animal_word(item) and not policy_mod.about_animals(f"{item.title} {item.text}", policy):
+                seen.add(item.url)
+                stats.skipped += 1
+                log.info("%s: skipped (no animal word) %s", src.id, item.url)
+                continue
+            if item.source.type in ("news", "legal") and title_seen(titles, item.title, item.date):
+                seen.add(item.url)
+                stats.duplicate += 1
+                log.info("%s: duplicate title (same day ±%d) %s", src.id, TITLE_DAYS, item.url)
+                continue
             try:
                 summary = (ingest.opportunity_summary(item) if item.source.type == "opportunity"
                            else summariser.summarise(item))
@@ -102,6 +151,7 @@ def run(
                 payload = ingest.build_payload(item, summary, topics)
                 if dry_run:
                     log.info("DRY_RUN would POST: %s", json.dumps(payload, ensure_ascii=False))
+                    remember_title(titles, item.title, item.date)
                     stats.new += 1
                     continue
                 result = client.post(payload)
@@ -115,6 +165,8 @@ def run(
             seen.add(item.url)
             if enricher and original != item.url:
                 seen.add(original)
+            if result not in ("blocked", "filtered"):
+                remember_title(titles, item.title, item.date)
             if result == "duplicate":
                 stats.duplicate += 1
             elif result in ("blocked", "filtered"):
@@ -163,6 +215,7 @@ def main() -> int:
         )
 
     seen = load_seen(SEEN_FILE)
+    titles = load_titles(TITLES_FILE)
     log.info("mode: %s", "DRY_RUN" if dry_run else "LIVE")
 
     # Sourcing policy from WP Admin. Live runs need it reachable; a dry run uses it when credentials exist.
@@ -194,7 +247,7 @@ def main() -> int:
         source_list = [s for s in source_list if s.type != "opportunity"]
     try:
         stats = run(source_list, defaults, dry_run=dry_run, summariser=summariser, client=client, seen=seen,
-                    enricher=default_enricher, policy=policy)
+                    enricher=default_enricher, policy=policy, titles=titles)
     except ingest.AuthError as exc:
         log.error("AUTH FAILURE, stopping: %s", exc)
         print(f"::error::Ingest authentication failed: {exc}")
@@ -208,6 +261,7 @@ def main() -> int:
         log.error("press discovery failed: %s", exc)
     if not dry_run:
         save_seen(SEEN_FILE, seen)
+        save_titles(TITLES_FILE, titles, sources.utc_today())
         documents.save_state()  # High Court file versions: only remembered when items were really sent
     if ledger:
         SPEND_FILE.parent.mkdir(parents=True, exist_ok=True)

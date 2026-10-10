@@ -59,3 +59,21 @@ def test_run_skips_blocked_before_summarising(fixture_text):
     stats = run_mod.run(srcs, defaults, dry_run=True, summariser=Never(), client=None,
                         fetch=fake_fetch(fixture_text), policy=block_all)
     assert stats.skipped > 0 and stats.skipped + stats.duplicate == stats.fetched and stats.failed == 0 and stats.new == 0
+
+
+def test_animal_guard():
+    from aw_workers.policy import about_animals
+    assert about_animals("Two-month-old puppy killed at Vikhroli tower")
+    assert about_animals("गाय की मौत")
+    assert not about_animals("Taurus Horoscope Today, August 31, 2026")
+    assert not about_animals("NEET PG 2025 | Supreme Court Dismisses Plea Seeking Special Stray Vacancy Counselling Round")
+    p = Policy.from_json({**POLICY, "relevance": {**POLICY["relevance"], "strong": ["abc programme"]}})
+    assert about_animals("Municipal ABC programme review", p)
+
+
+def test_norm_title():
+    from aw_workers.policy import norm_title
+    a = norm_title("India News | ED Arrests Suspended KPSC Chairman, Member BV Geetha")
+    b = norm_title("ED arrests suspended KPSC chairman member BV Geetha!")
+    assert a == b
+    assert norm_title("Dog rescued – India Today") == "dog rescued"

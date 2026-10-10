@@ -41,7 +41,9 @@ def test_dry_run_end_to_end(fixture_text, caplog):
         src, {**defaults, "lookback_days": 3650}, dry_run=True, summariser=DryRunSummariser(),
         client=Boom(), fetch=fake_fetch(fixture_text), today=TODAY,
     )
-    assert stats.fetched > 0 and stats.new == stats.fetched and stats.failed == 0
+    # the same fixture feeds several sources: repeats are caught by the title check, not posted twice
+    assert stats.fetched > 0 and stats.new > 0 and stats.failed == 0
+    assert stats.new + stats.duplicate + stats.skipped == stats.fetched
     assert "DRY_RUN would POST" in caplog.text
     assert '"type": "legal"' in caplog.text and '"type": "news"' in caplog.text
     assert '"topics": [' in caplog.text
@@ -122,3 +124,36 @@ def test_court_type_prefers_deciding_court():
     assert ingest.court_type(t) == "high-court"
     assert ingest.court_type("Cattle Transport Can't Be Presumed To Be For Slaughter: Supreme Court") == "supreme-court"
     assert ingest.court_type("Supreme Court upholds High Court order on feeding") == "supreme-court"
+
+
+def _item(title, text, when, src_type="news", url=None):
+    src = sources.Source(id="s", name="S", kind="rss", type=src_type, url="")
+    return sources.Item(source=src, title=title, url=url or f"https://example.com/{abs(hash(title + str(when)))}", date=when, text=text)
+
+
+def test_off_topic_and_repeat_titles_are_not_posted(monkeypatch):
+    from datetime import timedelta
+    items = [
+        _item("Dog rescued from drain in Pune", "A dog was rescued.", TODAY),
+        _item("Dog Rescued From Drain in Pune!", "Another outlet, same story.", TODAY - timedelta(days=1)),
+        _item("Dog rescued from drain in Pune", "A different story a week later.", TODAY - timedelta(days=7)),
+        _item("Taurus horoscope today", "Personality will be impressive.", TODAY),
+        _item("Open position", "Job", TODAY, src_type="opportunity"),
+    ]
+    monkeypatch.setattr(sources, "collect", lambda src, body, today, lookback, limit: list(items))
+    src = sources.Source(id="s", name="S", kind="rss", type="news", url="https://example.com/feed")
+    titles = {}
+    stats = run.run([src], {}, dry_run=True, summariser=DryRunSummariser(), client=None, fetch=lambda u: "",
+                    today=TODAY, titles=titles)
+    assert (stats.new, stats.duplicate, stats.skipped) == (3, 1, 1)
+    assert run.title_seen(titles, "dog rescued from drain in pune", TODAY + timedelta(days=1))
+
+
+def test_titles_state_roundtrip(tmp_path):
+    from datetime import timedelta
+    t = {}
+    run.remember_title(t, "Old story", TODAY - timedelta(days=30))
+    run.remember_title(t, "New story", TODAY)
+    f = tmp_path / "titles.json"
+    run.save_titles(f, t, TODAY)
+    assert list(run.load_titles(f)) == ["new story"]
