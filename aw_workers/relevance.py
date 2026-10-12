@@ -101,14 +101,21 @@ Rules:
   resource (a guide or document), opportunity (a job, volunteering or grant at an organisation), press (coverage of
   Animal Writes or its 29 November 2025 letter campaign about community dogs: relevant when it is about that campaign).
 
-Item type: {kind}
+{recent}Item type: {kind}
 Source: {source}
 URL: {url}
 Title: {title}
 Text: {text}
 
 Answer with JSON only:
-{{"relevant": "yes|no", "category": "<slug>", "india": "yes|no", "issuer": "<body or empty>", "reason": "<one sentence>"}}"""
+{{"relevant": "yes|no", "category": "<slug>", "india": "yes|no", "issuer": "<body or empty>", "reason": "<one sentence>", "same_as": <number or 0>}}"""
+
+RECENT_BLOCK = """Stories already on the site:
+{titles}
+same_as: the number of the story above that reports the SAME event (same incident, order or announcement, even with a
+different headline or publisher); 0 when none does. A follow-up with new facts is not the same event.
+
+"""
 
 
 @dataclass
@@ -131,9 +138,26 @@ class Verdict:
     reason: str
     model: str
     at: str
+    same_as: str = ""  # title of a story already on the site that reports the same event
 
     def to_json(self) -> dict:
         return asdict(self)
+
+
+_STOP = set("a an the of in on at to for by and or with from as is are was were be after over into its his her their "
+             "india indian news says said say amid".split())
+
+
+def _words(title: str) -> set[str]:
+    return {w for w in re.findall(r"[a-z0-9]+", (title or "").lower()) if len(w) > 2 and w not in _STOP}
+
+
+def _pick(near: list[str], n) -> str:
+    try:
+        i = int(str(n).strip())
+    except (TypeError, ValueError):
+        return ""
+    return near[i - 1] if 1 <= i <= len(near) else ""
 
 
 def _yes(v) -> bool:
@@ -166,12 +190,13 @@ class Gate:
     dead-key list); None or a dry-run summariser means "not checked" (dry runs spend nothing)."""
 
     def __init__(self, summariser=None, *, client=None, categories: dict | None = None, directory: list[str] | None = None,
-                 cache: dict | None = None, dry_run: bool = False):
+                 cache: dict | None = None, dry_run: bool = False, recent: list[str] | None = None):
         self.summariser = summariser
         self.backends = list(getattr(summariser, "backends", []) or [])
         self.dead = getattr(summariser, "dead", set())
         self.cool = summariser.__dict__.setdefault("cool", {}) if summariser is not None and hasattr(summariser, "__dict__") else {}  # resting keys, shared
         self.client = client
+        self.recent = list(recent or [])  # News titles from the last days; passed items are added during the run
         self.categories = dict(categories or CATEGORIES)
         self.directory = {norm_name(n) for n in (directory or []) if norm_name(n)}
         self.cache = cache if cache is not None else {}
@@ -181,15 +206,16 @@ class Gate:
     @classmethod
     def from_site(cls, summariser, client, *, dry_run: bool = False, cache_file: Path = CACHE_FILE) -> "Gate":
         """Categories and Directory names from the site when reachable; the built-in list otherwise."""
-        cats, directory = None, None
+        cats, directory, recent = None, None, []
         if client is not None and hasattr(client, "relevance_config"):
             try:
                 cfg = client.relevance_config()
                 cats = cfg.get("categories") or None
                 directory = cfg.get("directory") or None
+                recent = [t for t in cfg.get("recent") or [] if isinstance(t, str)]
             except Exception as exc:
                 log.warning("relevance config unavailable, using the built-in categories: %s", exc)
-        return cls(summariser, client=client, categories=cats, directory=directory, cache=load_cache(cache_file), dry_run=dry_run)
+        return cls(summariser, client=client, categories=cats, directory=directory, cache=load_cache(cache_file), dry_run=dry_run, recent=recent)
 
     # ---- the model ----
 
@@ -201,6 +227,7 @@ class Gate:
             categories="\n".join(f"{k}: {v}" for k, v in self.categories.items()),
             kind=c.kind, source=c.source or "unknown", url=c.url, title=c.title,
             text=re.sub(r"\s+", " ", c.text or "")[:1500] or "(no further text)",
+            recent=self._recent_block(c, near := self.near_titles(c)),
         )
         for _ in range(2):  # a second pass once a rate-limited key has rested
             for i, backend in enumerate(self.backends):
@@ -220,6 +247,7 @@ class Gate:
                     india=_yes(data.get("india")), issuer=str(data.get("issuer") or "").strip()[:200],
                     reason=str(data.get("reason") or "").strip()[:300], model=backend_label(backend),
                     at=datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    same_as=_pick(near, data.get("same_as")),
                 )
                 if c.url:
                     self.cache[c.url] = v.to_json()
@@ -227,6 +255,18 @@ class Gate:
             if not wait_for_cooldown(self):
                 break
         return None
+
+    def near_titles(self, c: Candidate, limit: int = 12) -> list[str]:
+        """Recent News titles sharing at least two meaningful words with this item (keeps the prompt short)."""
+        if c.kind != "news" or not self.recent:
+            return []
+        mine = _words(c.title)
+        scored = sorted(((len(mine & _words(t)), t) for t in self.recent), key=lambda x: -x[0])
+        return [t for n, t in scored if n >= 2][:limit]
+
+    @staticmethod
+    def _recent_block(c: Candidate, near: list[str]) -> str:
+        return RECENT_BLOCK.format(titles="\n".join(f"{i}. {t}" for i, t in enumerate(near, 1))) if near else ""
 
     # ---- the rules ----
 
@@ -261,6 +301,8 @@ class Gate:
         topics itself, and opportunities/press have none (false rejections, 12 Oct 2026)."""
         if not v.relevant:
             return False, v.reason or "not about animal welfare"
+        if v.same_as:
+            return False, f"same story as: {v.same_as[:200]}"
         doc = c.kind in ("legal", "resource")
         issuer_ok = self.known_issuer(c.issuer, v.issuer, c.title, c.text[:600]) if doc else True
         if doc and not issuer_ok:
@@ -288,6 +330,8 @@ class Gate:
             return "unavailable", None
         ok, why = self.decide(c, v)
         if ok:
+            if c.kind == "news" and c.title:
+                self.recent.append(c.title)  # later items this run are checked against it too
             self.counts["pass"] += 1
             return "pass", v
         self.counts["reject"] += 1

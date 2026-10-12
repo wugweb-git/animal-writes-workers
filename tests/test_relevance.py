@@ -120,3 +120,15 @@ def test_existing_kinds():
     assert kind_of({"type": "post", "categories": ["guide"]}) == "guide"
     assert kind_of({"type": "post", "categories": []}) == "resource"
     assert kind_of({"type": "aw_legal"}) == "legal"
+
+
+def test_same_story_with_a_different_headline_is_rejected():
+    log = Log()
+    b = Backend([reply(same_as=1), reply(same_as=0)])
+    g = Gate(Summ(b), client=log, recent=["Security guard arrested for shooting dog in Lucknow"])
+    out, v = g.admit(Candidate("news", "Lucknow security guard held for shooting street dog dead", "https://a/1"))
+    assert out == "reject" and v.same_as.startswith("Security guard arrested")
+    assert "Stories already on the site" in b.prompts[0] and log.rejected[0]["reason"].startswith("same story as")
+    # unrelated story: no recent block, passes, and is then known for later items in the run
+    assert g.admit(Candidate("news", "Blackbuck herd rescued in Shajapur", "https://a/2"))[0] == "pass"
+    assert "Stories already on the site" not in b.prompts[1] and g.recent[-1] == "Blackbuck herd rescued in Shajapur"
