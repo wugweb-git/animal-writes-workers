@@ -68,6 +68,8 @@ def main() -> int:
         if page >= int(data.get("pages") or 1):
             break
         page += 1
+    # Our own content (guides, FAQ, letter templates) has no source address: it is never judged (12 Oct 2026).
+    rows = [r for r in rows if (r.get("source_url") or "").strip()]
     log.info("%d item(s) to check", len(rows))
     started = time.time()
     chars_in = Counter()

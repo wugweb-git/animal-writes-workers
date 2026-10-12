@@ -18,6 +18,7 @@ import json
 import logging
 import os
 import re
+from urllib.parse import urlparse
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -62,7 +63,19 @@ KNOWN_ISSUER = re.compile(
     r"wildlife department|chief wildlife warden|supreme court|high court|national green tribunal|\bngt\b|gazette|"
     r"press information bureau|\bpib\b|government of india|central government|state government|government of [a-z ]+|"
     r"\bministry\b|parliament|lok sabha|rajya sabha|municipal|nagar nigam|corporation of|central zoo authority|"
-    r"wildlife crime control bureau|national tiger conservation|law commission|district magistrate|collector",
+    r"wildlife crime control bureau|national tiger conservation|law commission|district magistrate|collector|"
+    r"\bcourt\b|tribunal|consumer (?:commission|forum)|\bcommission\b|magistrate|\bbench\b",
+    re.I,
+)
+
+INDIAN_PUBLISHER = re.compile(
+    r"times of india|timesofindia|hindustan times|hindustantimes|the hindu|thehindu|indian express|indianexpress|ndtv|"
+    r"india today|indiatoday|news18|deccan|the print|theprint|scroll\.in|the wire|thewire|livemint|mint|firstpost|"
+    r"tribune|telegraph india|telegraphindia|the quint|thequint|dna india|dnaindia|zee news|zeenews|abp|aaj tak|"
+    r"economic times|economictimes|business standard|business-standard|outlook|india tv|indiatv|dt next|dtnext|"
+    r"mathrubhumi|manorama|siasat|free press journal|freepressjournal|mid-day|midday|lokmat|dainik|jagran|"
+    r"amar ujala|amarujala|bhaskar|navbharat|pti|ians|ani\b|aninews|live ?law|livelaw|bar (?:and|&) bench|barandbench|"
+    r"scc ?online|pib|petaindia|peta india|down to earth|downtoearth|mongabay india|india\.mongabay",
     re.I,
 )
 
@@ -228,18 +241,29 @@ class Gate:
                 return True
         return False
 
+    @staticmethod
+    def looks_indian(c: Candidate) -> bool:
+        """A second opinion on India, because the model sometimes says "not about India" for Indian stories (12 Oct 2026):
+        an Indian place or body in the title/text, an Indian publisher, or an .in address."""
+        from .research import INDIA
+
+        host = (urlparse(c.url).hostname or "").lower()
+        hay = f"{c.title} {c.text[:1500]} {c.source}"
+        return bool(INDIA.search(hay) or host.endswith(".in") or INDIAN_PUBLISHER.search(f"{c.source} {host}"))
+
     def decide(self, c: Candidate, v: Verdict) -> tuple[bool, str]:
         """(passes, reason). Documents (Library; Resources other than research papers and own guides) need a known
-        issuer; a Library item issued by an Indian body counts as India."""
+        issuer; a Library item issued by an Indian body counts as India. A category is not required: the site assigns
+        topics itself, and opportunities/press have none (false rejections, 12 Oct 2026)."""
         if not v.relevant:
             return False, v.reason or "not about animal welfare"
-        if not self.category_slug(v.category):
-            return False, f"no matching category ({v.category or 'none'}): {v.reason}"
         doc = c.kind in ("legal", "resource")
-        issuer_ok = self.known_issuer(c.issuer, v.issuer) if doc else True
+        issuer_ok = self.known_issuer(c.issuer, v.issuer, c.title, c.text[:600]) if doc else True
         if doc and not issuer_ok:
             return False, f"issuer not a known body ({v.issuer or c.issuer or 'unknown'})"
-        if not v.india and not (c.kind == "legal" and issuer_ok):
+        if c.kind in ("opportunity", "press"):
+            return True, v.reason  # Indian organisations / coverage of Animal Writes: India is a given
+        if not v.india and not (c.kind == "legal" and issuer_ok) and not self.looks_indian(c):
             return False, f"not about India: {v.reason}"
         return True, v.reason
 

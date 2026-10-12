@@ -53,9 +53,11 @@ def test_pass_and_reject_and_log():
 
 
 def test_not_india_and_unknown_category():
-    g = Gate(Summ(Backend([reply(india="no"), reply(category="sports")])))
+    # A missing/unknown category no longer rejects (the site assigns topics); India is double-checked (12 Oct 2026).
+    g = Gate(Summ(Backend([reply(india="no"), reply(category="sports"), reply(india="no")])))
     assert g.admit(Candidate("news", "x", "https://a/1"))[0] == "reject"
-    assert g.admit(Candidate("news", "y", "https://a/2"))[0] == "reject"
+    assert g.admit(Candidate("news", "y", "https://a/2"))[0] == "pass"
+    assert g.admit(Candidate("news", "Peacock plucked by crowd in Uttar Pradesh", "https://a/3"))[0] == "pass"
 
 
 def test_library_needs_known_issuer_and_counts_as_india():
