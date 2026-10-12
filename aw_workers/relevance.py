@@ -23,7 +23,7 @@ from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
-from .summarise import MODEL as HAIKU_MODEL, _is_dead_key_error, note_failure, note_success  # noqa: F401
+from .summarise import MODEL as HAIKU_MODEL, _is_dead_key_error, note_failure, note_success, usable, wait_for_cooldown  # noqa: F401
 
 log = logging.getLogger("aw_workers.relevance")
 
@@ -170,7 +170,7 @@ class Gate:
         self.summariser = summariser
         self.backends = list(getattr(summariser, "backends", []) or [])
         self.dead = getattr(summariser, "dead", set())
-        self.strikes = getattr(summariser, "strikes", {})
+        self.cool = summariser.__dict__.setdefault("cool", {}) if summariser is not None and hasattr(summariser, "__dict__") else {}  # resting keys, shared
         self.client = client
         self.categories = dict(categories or CATEGORIES)
         self.directory = {norm_name(n) for n in (directory or []) if norm_name(n)}
@@ -202,27 +202,30 @@ class Gate:
             kind=c.kind, source=c.source or "unknown", url=c.url, title=c.title,
             text=re.sub(r"\s+", " ", c.text or "")[:1500] or "(no further text)",
         )
-        for i, backend in enumerate(self.backends):
-            if i in self.dead:
-                continue
-            try:
-                data = parse(backend.ask(prompt))
-            except Exception as exc:
-                note_failure(self, i, exc)
-                log.info("relevance: %s failed: %s", backend.name, str(exc)[:150])
-                continue
-            note_success(self, i)
-            if data is None:
-                continue
-            v = Verdict(
-                relevant=_yes(data.get("relevant")), category=str(data.get("category") or "").strip(),
-                india=_yes(data.get("india")), issuer=str(data.get("issuer") or "").strip()[:200],
-                reason=str(data.get("reason") or "").strip()[:300], model=backend_label(backend),
-                at=datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-            )
-            if c.url:
-                self.cache[c.url] = v.to_json()
-            return v
+        for _ in range(2):  # a second pass once a rate-limited key has rested
+            for i, backend in enumerate(self.backends):
+                if not usable(self, i):
+                    continue
+                try:
+                    data = parse(backend.ask(prompt))
+                except Exception as exc:
+                    note_failure(self, i, exc)
+                    log.info("relevance: %s failed: %s", backend.name, str(exc)[:150])
+                    continue
+                note_success(self, i)
+                if data is None:
+                    continue
+                v = Verdict(
+                    relevant=_yes(data.get("relevant")), category=str(data.get("category") or "").strip(),
+                    india=_yes(data.get("india")), issuer=str(data.get("issuer") or "").strip()[:200],
+                    reason=str(data.get("reason") or "").strip()[:300], model=backend_label(backend),
+                    at=datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                )
+                if c.url:
+                    self.cache[c.url] = v.to_json()
+                return v
+            if not wait_for_cooldown(self):
+                break
         return None
 
     # ---- the rules ----

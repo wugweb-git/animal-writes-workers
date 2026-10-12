@@ -242,8 +242,8 @@ def test_dead_keys_are_skipped_for_rest_of_run():
     s = summarise.Summariser([no_credit, limited, good])
     for _ in range(5):
         s.summarise(item())
-    # No credit: dropped at once. Rate-limited: kept until RATE_LIMIT_STRIKES calls in a row ended in 429.
-    assert (no_credit.calls, limited.calls, good.calls) == (1, summarise.RATE_LIMIT_STRIKES, 5)
+    # No credit: dropped at once. Rate-limited: rests COOLDOWN_S (longer than this test), so asked once.
+    assert (no_credit.calls, limited.calls, good.calls) == (1, 1, 5)
     assert s.used == {"gemini": 5}
 
 
@@ -257,11 +257,13 @@ class Flaky429(Fixed):
         return self.reply
 
 
-def test_a_key_still_rate_limited_after_its_retry_is_skipped_for_the_run():
+def test_a_rate_limited_key_rests_then_is_used_again(monkeypatch):
     flaky = Flaky429("groq", GOOD)
-    s = summarise.Summariser([flaky, Fixed("gemini", GOOD)])
-    assert s.summarise(item()) == GOOD
-    assert 0 in s.dead and s.used == {"gemini": 1}
+    s = summarise.Summariser([flaky])
+    monkeypatch.setattr(summarise.time, "sleep", lambda t: None)
+    monkeypatch.setattr(summarise, "COOLDOWN_S", 0.0)
+    assert s.summarise(item()) == GOOD  # 429, rest, second pass
+    assert 0 not in s.dead and flaky.calls == 2 and s.used == {"groq": 1}
 
 
 def test_bad_summary_does_not_kill_key():

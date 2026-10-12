@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import re
+import time
 
 import requests
 from datetime import datetime, timezone
@@ -305,7 +306,6 @@ def backends_from_env(env, ledger: dict | None = None) -> list:
 _DEAD_KEY_MARKERS = ("401", "402", "403", "credit balance", "budget", "quota", "insufficient", "no credits", "suspended")
 # A 429 (rate limit) is not a dead key: _post_with_retry already waited and retried; the key is dropped for the run only
 # after this many calls in a row still ended in 429 (12 Oct 2026: one 429 used to drop Groq, the only working key).
-RATE_LIMIT_STRIKES = 1  # the call already retried once; still limited = skip this key for the run
 
 
 def _is_dead_key_error(exc: Exception) -> bool:
@@ -319,20 +319,34 @@ def _is_rate_limit(exc: Exception) -> bool:
     return "429" in f"{exc}" or "too many requests" in f"{exc}".lower()
 
 
+COOLDOWN_S = 60.0  # free tiers limit per minute: a rate-limited key rests this long, then is used again
+
+
 def note_failure(owner, i: int, exc: Exception) -> None:
-    """Shared by summaries, topics and the relevance gate (`owner` has .dead and .strikes): a dead key is dropped at
-    once; a rate-limited key after RATE_LIMIT_STRIKES calls in a row ended in 429."""
-    strikes = owner.strikes
+    """Shared by summaries, topics and the relevance gate (`owner` has .dead): a dead key is dropped for the run;
+    a key still rate-limited after its retry rests COOLDOWN_S and is then used again (12 Oct 2026: dropping it for
+    the whole run left 199 items unchecked while Groq's per-minute limit had long reset)."""
     if _is_dead_key_error(exc):
         owner.dead.add(i)
     elif _is_rate_limit(exc):
-        strikes[i] = strikes.get(i, 0) + 1
-        if strikes[i] >= RATE_LIMIT_STRIKES:
-            owner.dead.add(i)
+        owner.__dict__.setdefault("cool", {})[i] = time.monotonic() + COOLDOWN_S
 
 
 def note_success(owner, i: int) -> None:
-    getattr(owner, "strikes", {}).pop(i, None)
+    owner.__dict__.setdefault("cool", {}).pop(i, None)
+
+
+def usable(owner, i: int) -> bool:
+    return i not in owner.dead and owner.__dict__.get("cool", {}).get(i, 0) <= time.monotonic()
+
+
+def wait_for_cooldown(owner, sleep=None) -> bool:
+    """Every live key is resting: wait for the first to come back (True), or False when none is resting."""
+    resting = [t for i, t in owner.__dict__.get("cool", {}).items() if i not in owner.dead]
+    if not resting:
+        return False
+    (sleep or time.sleep)(max(0.0, min(resting) - time.monotonic()))
+    return True
 
 
 class Summariser:
@@ -344,7 +358,7 @@ class Summariser:
         self.backends = backends
         self.used: dict[str, int] = {}
         self.dead: set[int] = set()  # indexes of keys that failed hard this run
-        self.strikes: dict[int, int] = {}  # 429s in a row per key (shared with the relevance gate)
+        self.cool: dict[int, float] = {}  # rate-limited keys resting until (monotonic), shared with the relevance gate
 
     def _try(self, backend, prompt: str, item: Item) -> str:
         summary = backend.ask(prompt)
@@ -368,18 +382,21 @@ class Summariser:
             text=item.text[:4000] or "(no further details)",
         )
         reasons = []
-        for i, backend in enumerate(self.backends):
-            if i in self.dead:
-                continue
-            try:
-                summary = self._try(backend, prompt, item)
-            except Exception as exc:  # API error or failed checks: fall through to the next key/provider
-                note_failure(self, i, exc)
-                reasons.append(f"{backend.name}: {str(exc)[:150]}")
-                continue
-            note_success(self, i)
-            self.used[backend.name] = self.used.get(backend.name, 0) + 1
-            return finalise(summary, item)
+        for _ in range(2):  # a second pass once a rate-limited key has rested
+            for i, backend in enumerate(self.backends):
+                if not usable(self, i):
+                    continue
+                try:
+                    summary = self._try(backend, prompt, item)
+                except Exception as exc:  # API error or failed checks: fall through to the next key/provider
+                    note_failure(self, i, exc)
+                    reasons.append(f"{backend.name}: {str(exc)[:150]}")
+                    continue
+                note_success(self, i)
+                self.used[backend.name] = self.used.get(backend.name, 0) + 1
+                return finalise(summary, item)
+            if not wait_for_cooldown(self):
+                break
         raise SummaryError(" | ".join(reasons))
 
 
@@ -400,7 +417,7 @@ def pick_topics(summariser, item: Item, summary: str, allowed: list[str]) -> lis
         return found
     prompt = TOPIC_PROMPT.format(slugs=", ".join(allowed), title=item.title, summary=summary)
     for i, backend in enumerate(summariser.backends):
-        if i in summariser.dead:
+        if not usable(summariser, i):
             continue
         try:
             reply = backend.ask(prompt)
