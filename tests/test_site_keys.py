@@ -41,11 +41,16 @@ def test_each_row_is_its_own_backend_in_order():
         {"provider": "other", "name": "nourl", "model": "m-1", "url": "", "key": "n2"},  # skipped: no address
     ]
     backends = summarise.backends_from_rows(rows)
-    assert [(b.name, b.model, b.api_key) for b in backends] == [
-        ("gemini", "gemini-flash-latest", "g1"), ("gemini", "gemini-3-flash-preview", "g2"), ("newai", "m-1", "n1")]
+    got = [(b.name, b.model, b.api_key) for b in backends]
+    # each Gemini key once per free model (saved model first); "other" once; no address = skipped
+    assert got[:3] == [("gemini", "gemini-flash-latest", "g1"), ("gemini", "gemini-flash-lite-latest", "g1"),
+                       ("gemini", "gemini-3-flash-preview", "g1")]
+    assert got[3] == ("gemini", "gemini-3-flash-preview", "g2") and len([g for g in got if g[2] == "g2"]) == 3
+    assert got[-1] == ("newai", "m-1", "n1") and not any(g[2] == "n2" for g in got)
 
 
 def test_secret_keys_follow_site_rows_without_repeats(monkeypatch):
     monkeypatch.setattr(summarise, "site_rows", lambda env: [{"provider": "groq", "model": "x", "url": "https://g.test", "key": "k1"}])
     backends = summarise.backends_from_env({"GROQ_API_KEY": "k1\nk2", "LLM_PROVIDERS": "groq"})
-    assert [b.api_key for b in backends] == ["k1", "k2"]
+    keys = [b.api_key for b in backends]
+    assert keys[-1] == "k2" and set(keys[:-1]) == {"k1"} and len(keys) == 6  # k1: saved model + 4 free Groq models

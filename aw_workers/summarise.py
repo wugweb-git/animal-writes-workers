@@ -260,17 +260,26 @@ def site_rows(env, session=None) -> list[dict]:
     return [r for r in rows if isinstance(r, dict) and str(r.get("key") or "").strip()]
 
 
+# Free tiers limit each model separately, so a free key is used once per model (12 Oct 2026: one model per key
+# left 199 items unchecked while the same keys' other models were idle). Tried in this order after the saved model.
+EXTRA_MODELS = {
+    "gemini": ["gemini-flash-lite-latest", "gemini-3-flash-preview", "gemini-flash-latest"],
+    "groq": ["openai/gpt-oss-120b", "openai/gpt-oss-20b", "llama-3.3-70b-versatile", "llama-3.1-8b-instant"],
+}
+
+
 def backends_from_rows(rows: list[dict], budget: float | None = None, ledger: dict | None = None) -> list:
-    """One backend per saved row. Anthropic and Gemini use their own clients; everything else is OpenAI-compatible."""
+    """One backend per saved row and model. Anthropic and Gemini use their own clients; the rest are OpenAI-compatible."""
     out = []
     for r in rows:
         key, model, provider = r["key"].strip(), (r.get("model") or "").strip(), r.get("provider") or "other"
+        models = list(dict.fromkeys([m for m in [model, *EXTRA_MODELS.get(provider, [])] if m]))
         if provider == "anthropic":
             out.append(ClaudeBackend(key, budget_usd=budget, ledger=ledger, model=model or MODEL))
         elif provider == "gemini":
-            out.append(GeminiBackend(key, model or "gemini-flash-latest"))
-        elif r.get("url") and model:
-            out.append(OpenAICompatBackend(r.get("name") or provider, r["url"], key, model))
+            out += [GeminiBackend(key, m) for m in models or ["gemini-flash-latest"]]
+        elif r.get("url") and models:
+            out += [OpenAICompatBackend(r.get("name") or provider, r["url"], key, m) for m in models]
         else:
             log.warning("AI model row skipped (%s): needs a model and an API address", r.get("name") or provider)
     return out
