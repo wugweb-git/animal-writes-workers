@@ -2,10 +2,15 @@
 
 from __future__ import annotations
 
+import logging
 import re
+
+import requests
 from datetime import datetime, timezone
 
 from .sources import Item
+
+log = logging.getLogger(__name__)
 
 MODEL = "claude-haiku-4-5"
 MAX_QUOTE_WORDS = 15
@@ -233,22 +238,52 @@ def _keys(*values: str | None) -> list[str]:
     return out
 
 
+# Site provider name (Settings → AI keys) => the environment variable holding that provider's keys.
+SITE_KEY_VARS = {"anthropic": "ANTHROPIC_API_KEY", "gemini": "GEMINI_API_KEY", "groq": "GROQ_API_KEY",
+                 **{name: spec[1] for name, spec in OPENAI_COMPAT.items()}}
+
+
+def site_keys(env, session=None) -> dict[str, list[str]]:
+    """Keys the owner saved on the site (Settings → AI keys), each kept separately. {} when unreachable."""
+    base, user, pw = env.get("WP_BASE_URL"), env.get("WP_INGEST_USER"), env.get("WP_INGEST_APP_PASSWORD")
+    if not (base and user and pw) or env.get("AW_SITE_KEYS") == "0":
+        return {}
+    try:
+        resp = (session or requests).get(base.rstrip("/") + "/wp-json/aw/v1/ai-keys", auth=(user, pw), timeout=30)
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception as exc:  # noqa: BLE001 — the secrets alone still work
+        log.warning("site AI keys not read: %s", type(exc).__name__)
+        return {}
+    return {p: [k for k in v if isinstance(k, str) and k.strip()] for p, v in data.items() if isinstance(v, list)} if isinstance(data, dict) else {}
+
+
+def with_site_keys(env, keys: dict[str, list[str]]) -> dict:
+    """The environment plus the site's keys under FOO_SITE (one per line), next to FOO and FOO_2."""
+    env = dict(env)
+    for provider, var in SITE_KEY_VARS.items():
+        if keys.get(provider):
+            env[var + "_SITE"] = "\n".join(keys[provider])
+    return env
+
+
 def backends_from_env(env, ledger: dict | None = None) -> list:
     """Providers in LLM_PROVIDERS order (default haiku,gemini,groq), one backend per key.
     Providers without a key are skipped. Haiku stops for the month once its estimated spend
     reaches HAIKU_MONTHLY_BUDGET_USD (default 4), shared across all Haiku keys."""
+    env = with_site_keys(env, site_keys(env))
     budget = float(env.get("HAIKU_MONTHLY_BUDGET_USD") or 4)
     ledger = ledger if ledger is not None else {}
     makers = {
-        "haiku": lambda: [ClaudeBackend(k, budget_usd=budget, ledger=ledger) for k in _keys(env.get("ANTHROPIC_API_KEY"), env.get("ANTHROPIC_API_KEY_2"))],
+        "haiku": lambda: [ClaudeBackend(k, budget_usd=budget, ledger=ledger) for k in _keys(env.get("ANTHROPIC_API_KEY"), env.get("ANTHROPIC_API_KEY_2"), env.get("ANTHROPIC_API_KEY_SITE"))],
         "gemini": lambda: [GeminiBackend(k, env.get("GEMINI_MODEL") or "gemini-flash-latest")
-                           for k in _keys(env.get("GEMINI_API_KEY"), env.get("GEMINI_API_KEY_2"))],
+                           for k in _keys(env.get("GEMINI_API_KEY"), env.get("GEMINI_API_KEY_2"), env.get("GEMINI_API_KEY_SITE"))],
         "groq": lambda: [GroqBackend(k, env.get("GROQ_MODEL") or "openai/gpt-oss-120b")
-                         for k in _keys(env.get("GROQ_API_KEY"), env.get("GROQ_API_KEY_2"))],
+                         for k in _keys(env.get("GROQ_API_KEY"), env.get("GROQ_API_KEY_2"), env.get("GROQ_API_KEY_SITE"))],
     }
     for name, (url, key_var, model_var, model) in OPENAI_COMPAT.items():
         makers[name] = (lambda n=name, u=url, kv=key_var, mv=model_var, m=model:
-                        [OpenAICompatBackend(n, u, k, env.get(mv) or m) for k in _keys(env.get(kv), env.get(kv + "_2"))])
+                        [OpenAICompatBackend(n, u, k, env.get(mv) or m) for k in _keys(env.get(kv), env.get(kv + "_2"), env.get(kv + "_SITE"))])
     order = [p.strip().lower() for p in (env.get("LLM_PROVIDERS") or "haiku,gemini,groq").split(",") if p.strip()]
     unknown = [p for p in order if p not in makers]
     if unknown:
