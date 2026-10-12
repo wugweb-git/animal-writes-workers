@@ -194,21 +194,30 @@ def test_budget_default_is_four_dollars():
     assert b.budget_usd == 4.0
 
 
-def test_free_tier_retries_on_429_and_503_then_succeeds():
+def test_free_tier_retries_once_after_a_short_wait():
     ok = FakeResp({"candidates": [{"content": {"parts": [{"text": GOOD}]}}]})
-    sess = FakeSession([FakeResp({}, 429, {"Retry-After": "2"}), FakeResp({}, 503), ok])
+    sess = FakeSession([FakeResp({}, 429, {"Retry-After": "2"}), ok])
     slept = []
     b = summarise.GeminiBackend("gk", session=sess, sleep=slept.append, min_interval=0)
     assert b.ask("p") == GOOD
-    assert slept == [2.0, 20.0] and len(sess.calls) == 3  # Retry-After honoured, then exponential backoff
+    assert slept == [2.0] and len(sess.calls) == 2  # Retry-After honoured
 
 
-def test_free_tier_gives_up_after_four_attempts():
+def test_free_tier_gives_up_after_one_retry():
     sess = FakeSession([FakeResp({}, 429) for _ in range(4)])
     b = summarise.GroqBackend("qk", session=sess, sleep=lambda s: None, min_interval=0)
     with pytest.raises(RuntimeError, match="429"):
         b.ask("p")
-    assert len(sess.calls) == 4
+    assert len(sess.calls) == 2
+
+
+def test_long_retry_after_is_not_waited_out():
+    sess = FakeSession([FakeResp({}, 429, {"Retry-After": "600"}), FakeResp({}, 200)])
+    slept = []
+    b = summarise.GroqBackend("qk", session=sess, sleep=slept.append, min_interval=0)
+    with pytest.raises(RuntimeError, match="429"):
+        b.ask("p")
+    assert slept == [] and len(sess.calls) == 1  # next key instead of a 10-minute wait
 
 
 def test_multiple_keys_per_provider():
@@ -248,16 +257,11 @@ class Flaky429(Fixed):
         return self.reply
 
 
-def test_one_429_does_not_drop_a_key():
+def test_a_key_still_rate_limited_after_its_retry_is_skipped_for_the_run():
     flaky = Flaky429("groq", GOOD)
-    s = summarise.Summariser([flaky])
-    try:
-        s.summarise(item())
-    except summarise.SummaryError:
-        pass
-    assert 0 not in s.dead  # one rate limit: still in use
-    s.summarise(item())
-    assert flaky.calls == 2 and s.used == {"groq": 1} and s.strikes == {}
+    s = summarise.Summariser([flaky, Fixed("gemini", GOOD)])
+    assert s.summarise(item()) == GOOD
+    assert 0 in s.dead and s.used == {"gemini": 1}
 
 
 def test_bad_summary_does_not_kill_key():

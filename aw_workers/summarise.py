@@ -12,6 +12,8 @@ from .sources import Item
 
 log = logging.getLogger(__name__)
 
+MAX_RETRY_WAIT = 15.0  # seconds; longer waits skip to the next key
+
 MODEL = "claude-haiku-4-5"
 MAX_QUOTE_WORDS = 15
 MAX_WORDS = 80
@@ -135,24 +137,25 @@ class ClaudeBackend:
 
 
 def _post_with_retry(session, url, *, headers, json, timeout, sleep, min_interval, state):
-    """Free tiers are rate-limited: keep a minimum gap between calls and back off on 429/5xx."""
+    """Free tiers are rate-limited: keep a minimum gap between calls and retry a 429/5xx once, after a short wait.
+    A key that asks to wait longer than MAX_RETRY_WAIT is given up for this call at once (12 Oct 2026: waiting out
+    Groq's Retry-After held a whole run for 20 minutes); the next key is tried instead."""
     import time
 
     wait = min_interval - (time.monotonic() - state.get("last", 0.0))
     if wait > 0:
         sleep(wait)
-    delay = 10.0
-    for attempt in range(4):
+    for attempt in range(2):
         state["last"] = time.monotonic()
         resp = session.post(url, headers=headers, json=json, timeout=timeout)
-        if resp.status_code == 429 or resp.status_code >= 500:
-            if attempt < 3:
-                retry_after = str((getattr(resp, "headers", None) or {}).get("Retry-After", ""))
-                sleep(float(retry_after) if retry_after.isdigit() else delay)
-                delay *= 2
-                continue
-        resp.raise_for_status()
-        return resp
+        if (resp.status_code == 429 or resp.status_code >= 500) and attempt == 0:
+            retry_after = str((getattr(resp, "headers", None) or {}).get("Retry-After", "")).strip()
+            delay = float(retry_after) if retry_after.replace(".", "", 1).isdigit() else 5.0
+            if delay > MAX_RETRY_WAIT:
+                break
+            sleep(delay)
+            continue
+        break
     resp.raise_for_status()
     return resp
 
@@ -179,7 +182,7 @@ class GeminiBackend:
             self.URL.format(model=self.model),
             headers={"x-goog-api-key": self.api_key},
             json={"contents": [{"parts": [{"text": prompt}]}], "generationConfig": {"maxOutputTokens": 1024}},
-            timeout=60, sleep=self.sleep, min_interval=self.min_interval, state=self.state,
+            timeout=30, sleep=self.sleep, min_interval=self.min_interval, state=self.state,
         )
         parts = resp.json()["candidates"][0]["content"].get("parts", [])
         return "".join(p.get("text", "") for p in parts if not p.get("thought")).strip()
@@ -208,7 +211,7 @@ class GroqBackend:
             headers={"Authorization": f"Bearer {self.api_key}"},
             # 800: gpt-oss models reason before answering, and 300 tokens could end before the answer (12 Oct 2026)
             json={"model": self.model, "max_tokens": 800, "messages": [{"role": "user", "content": prompt}]},
-            timeout=60, sleep=self.sleep, min_interval=self.min_interval, state=self.state,
+            timeout=30, sleep=self.sleep, min_interval=self.min_interval, state=self.state,
         )
         return (resp.json()["choices"][0]["message"]["content"] or "").strip()
 
@@ -302,7 +305,7 @@ def backends_from_env(env, ledger: dict | None = None) -> list:
 _DEAD_KEY_MARKERS = ("401", "402", "403", "credit balance", "budget", "quota", "insufficient", "no credits", "suspended")
 # A 429 (rate limit) is not a dead key: _post_with_retry already waited and retried; the key is dropped for the run only
 # after this many calls in a row still ended in 429 (12 Oct 2026: one 429 used to drop Groq, the only working key).
-RATE_LIMIT_STRIKES = 3
+RATE_LIMIT_STRIKES = 1  # the call already retried once; still limited = skip this key for the run
 
 
 def _is_dead_key_error(exc: Exception) -> bool:
