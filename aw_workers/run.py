@@ -200,6 +200,39 @@ def default_enricher(url: str) -> tuple[str, str]:
     return real, enrich.og_image(real)
 
 
+EXTRA_SEARCHES = ("stray dogs",)  # owner, 12 Oct 2026
+
+
+def keyword_searches(source_list: list, lists: dict) -> list:
+    """Search, don't only filter (owner, 12 Oct 2026): every English keyword in Sourcing (plus EXTRA_SEARCHES) becomes
+    its own Google News search for the last 2 days, India edition, so stories from any publisher that use those words
+    are found. Existing Google News searches get the same 2-day window (without it Google returns older "relevant"
+    stories and nothing new). Hindi keywords are not searched (no Hindi content, owner 10 Oct 2026)."""
+    import re as _re
+    import urllib.parse as up
+    from dataclasses import replace as _replace
+
+    def with_window(url: str) -> str:
+        parts = up.urlsplit(url)
+        qs = up.parse_qs(parts.query, keep_blank_values=True)
+        q = qs.get("q", [""])[0]
+        if "when:" not in q:
+            qs["q"] = [q + " when:2d"]
+        return up.urlunsplit(parts._replace(query=up.urlencode(qs, doseq=True)))
+
+    out = [(_replace(s, url=with_window(s.url)) if "news.google.com/rss/search" in s.url else s) for s in source_list]
+    have = {s.id for s in out}
+    kws = [k for k in (lists.get("keywords") or []) if isinstance(k, str) and k.isascii() and k.strip()]
+    for kw in list(dict.fromkeys([*kws, *EXTRA_SEARCHES])):
+        sid = "gnews-kw-" + _re.sub(r"[^a-z0-9]+", "-", kw.lower()).strip("-")
+        if sid in have:
+            continue
+        url = "https://news.google.com/rss/search?" + up.urlencode({"q": f'"{kw}" India when:2d', "hl": "en-IN", "gl": "IN", "ceid": "IN:en"})
+        out.append(sources.Source(id=sid, name=f"Google News – {kw}", kind="rss", type="news", url=url))
+        have.add(sid)
+    return out
+
+
 def main() -> int:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     dry_run = truthy(os.environ.get("DRY_RUN"), default=True)
@@ -260,6 +293,7 @@ def main() -> int:
         except Exception as exc:  # the site enforces the policy too, so carry on without the pre-filter
             log.warning("policy unavailable, relying on the site to enforce it: %s", exc)
     source_list, defaults = sources.load_sources_data(lists)
+    source_list = keyword_searches(source_list, lists)
     # Opportunities are not fetched (owner, 9 Oct 2026). AW_FETCH_OPPORTUNITIES=1 would turn them back on.
     if not truthy(os.environ.get("AW_FETCH_OPPORTUNITIES"), default=False):
         source_list = [s for s in source_list if s.type != "opportunity"]
