@@ -292,6 +292,11 @@ def main() -> int:
     print(f"fetched={stats.fetched} new={stats.new} duplicate={stats.duplicate} skipped={stats.skipped} failed={stats.failed} "
           f"rejected={stats.rejected} classifier_unavailable={stats.unavailable}")
     print(f"relevance gate: {gate.counts}")
+    if client is not None and not dry_run:
+        try:
+            client.relevance_alert(stats.unavailable)
+        except Exception as exc:  # the alert must never fail the run
+            log.warning("relevance alert not sent: %s", exc)
     if summariser.used:
         print("summaries by provider: " + ", ".join(f"{k}={v}" for k, v in sorted(summariser.used.items())))
     summary_file = os.environ.get("GITHUB_STEP_SUMMARY")

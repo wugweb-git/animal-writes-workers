@@ -193,6 +193,11 @@ def main() -> int:
         save_seen(SEEN_FILE, seen)
         gate.save()
     log.info("relevance gate: %s (rejected %d, classifier unavailable %d)", gate.counts, stats.rejected, stats.unavailable)
+    if inner is not None and not dry_run:
+        try:
+            inner.relevance_alert(stats.unavailable)
+        except Exception as exc:
+            log.warning("relevance alert not sent: %s", exc)
     out = report(client.rows, stats, floor)
     print(json.dumps({k: (v if not isinstance(v, list) else len(v)) for k, v in out.items()}, ensure_ascii=False))
     return 0

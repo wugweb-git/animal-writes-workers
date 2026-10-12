@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+
 import re
 
 import requests
@@ -116,6 +118,13 @@ class Client:
     def reject(self, entry: dict) -> dict:
         """Add an item the relevance gate refused to the site's Rejected log (Inbox → To review)."""
         return self._call("POST", "/relevance-rejected", json=entry)
+
+    def relevance_alert(self, held: int) -> dict:
+        """Tell the site how many items the relevance check had to hold back this run (0 = it worked: clears the notice).
+        The site emails the owner and shows a dashboard notice (owner, 12 Oct 2026)."""
+        run = os.environ.get("GITHUB_RUN_ID", "")
+        link = f"{os.environ.get('GITHUB_SERVER_URL', 'https://github.com')}/{os.environ.get('GITHUB_REPOSITORY', '')}/actions/runs/{run}" if run else ""
+        return self._call("POST", "/relevance-alert", json={"held": int(held), "run": run, "link": link})
 
     def relevance_items(self, page: int, per_page: int = 100, missing_only: bool = False) -> dict:
         """Existing News, Library, Resources, Opportunities and Press items (any status but trash), one page."""
