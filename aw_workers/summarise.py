@@ -104,7 +104,8 @@ class ClaudeBackend:
     name = "haiku"
 
     def __init__(self, api_key: str, client=None, budget_usd: float | None = None,
-                 ledger: dict | None = None, month: str | None = None):
+                 ledger: dict | None = None, month: str | None = None, model: str = MODEL):
+        self.model, self.api_key = model, api_key
         if client is None:
             import anthropic
 
@@ -122,7 +123,7 @@ class ClaudeBackend:
         if self.budget_usd is not None and self.spent_usd >= self.budget_usd:
             raise BudgetExceeded(f"monthly Haiku budget ${self.budget_usd:.2f} reached")
         msg = self.client.messages.create(
-            model=MODEL,
+            model=self.model,
             max_tokens=300,
             messages=[{"role": "user", "content": prompt}],
         )
@@ -238,57 +239,62 @@ def _keys(*values: str | None) -> list[str]:
     return out
 
 
-# Site provider name (Settings → AI keys) => the environment variable holding that provider's keys.
-SITE_KEY_VARS = {"anthropic": "ANTHROPIC_API_KEY", "gemini": "GEMINI_API_KEY", "groq": "GROQ_API_KEY",
-                 **{name: spec[1] for name, spec in OPENAI_COMPAT.items()}}
-
-
-def site_keys(env, session=None) -> dict[str, list[str]]:
-    """Keys the owner saved on the site (Settings → AI keys), each kept separately. {} when unreachable."""
+def site_rows(env, session=None) -> list[dict]:
+    """Rows the owner saved on the site (Settings → AI models): provider, name, model, url, key, in the order
+    to try them. [] when the site can't be reached (the GitHub secrets still work)."""
     base, user, pw = env.get("WP_BASE_URL"), env.get("WP_INGEST_USER"), env.get("WP_INGEST_APP_PASSWORD")
     if not (base and user and pw) or env.get("AW_SITE_KEYS") == "0":
-        return {}
+        return []
     try:
         resp = (session or requests).get(base.rstrip("/") + "/wp-json/aw/v1/ai-keys", auth=(user, pw), timeout=30)
         resp.raise_for_status()
-        data = resp.json()
-    except Exception as exc:  # noqa: BLE001 — the secrets alone still work
-        log.warning("site AI keys not read: %s", type(exc).__name__)
-        return {}
-    return {p: [k for k in v if isinstance(k, str) and k.strip()] for p, v in data.items() if isinstance(v, list)} if isinstance(data, dict) else {}
+        rows = resp.json().get("rows") or []
+    except Exception as exc:  # noqa: BLE001
+        log.warning("site AI models not read: %s", type(exc).__name__)
+        return []
+    return [r for r in rows if isinstance(r, dict) and str(r.get("key") or "").strip()]
 
 
-def with_site_keys(env, keys: dict[str, list[str]]) -> dict:
-    """The environment plus the site's keys under FOO_SITE (one per line), next to FOO and FOO_2."""
-    env = dict(env)
-    for provider, var in SITE_KEY_VARS.items():
-        if keys.get(provider):
-            env[var + "_SITE"] = "\n".join(keys[provider])
-    return env
+def backends_from_rows(rows: list[dict], budget: float | None = None, ledger: dict | None = None) -> list:
+    """One backend per saved row. Anthropic and Gemini use their own clients; everything else is OpenAI-compatible."""
+    out = []
+    for r in rows:
+        key, model, provider = r["key"].strip(), (r.get("model") or "").strip(), r.get("provider") or "other"
+        if provider == "anthropic":
+            out.append(ClaudeBackend(key, budget_usd=budget, ledger=ledger, model=model or MODEL))
+        elif provider == "gemini":
+            out.append(GeminiBackend(key, model or "gemini-flash-latest"))
+        elif r.get("url") and model:
+            out.append(OpenAICompatBackend(r.get("name") or provider, r["url"], key, model))
+        else:
+            log.warning("AI model row skipped (%s): needs a model and an API address", r.get("name") or provider)
+    return out
 
 
 def backends_from_env(env, ledger: dict | None = None) -> list:
     """Providers in LLM_PROVIDERS order (default haiku,gemini,groq), one backend per key.
     Providers without a key are skipped. Haiku stops for the month once its estimated spend
     reaches HAIKU_MONTHLY_BUDGET_USD (default 4), shared across all Haiku keys."""
-    env = with_site_keys(env, site_keys(env))
     budget = float(env.get("HAIKU_MONTHLY_BUDGET_USD") or 4)
     ledger = ledger if ledger is not None else {}
     makers = {
-        "haiku": lambda: [ClaudeBackend(k, budget_usd=budget, ledger=ledger) for k in _keys(env.get("ANTHROPIC_API_KEY"), env.get("ANTHROPIC_API_KEY_2"), env.get("ANTHROPIC_API_KEY_SITE"))],
+        "haiku": lambda: [ClaudeBackend(k, budget_usd=budget, ledger=ledger) for k in _keys(env.get("ANTHROPIC_API_KEY"), env.get("ANTHROPIC_API_KEY_2"))],
         "gemini": lambda: [GeminiBackend(k, env.get("GEMINI_MODEL") or "gemini-flash-latest")
-                           for k in _keys(env.get("GEMINI_API_KEY"), env.get("GEMINI_API_KEY_2"), env.get("GEMINI_API_KEY_SITE"))],
+                           for k in _keys(env.get("GEMINI_API_KEY"), env.get("GEMINI_API_KEY_2"))],
         "groq": lambda: [GroqBackend(k, env.get("GROQ_MODEL") or "openai/gpt-oss-120b")
-                         for k in _keys(env.get("GROQ_API_KEY"), env.get("GROQ_API_KEY_2"), env.get("GROQ_API_KEY_SITE"))],
+                         for k in _keys(env.get("GROQ_API_KEY"), env.get("GROQ_API_KEY_2"))],
     }
     for name, (url, key_var, model_var, model) in OPENAI_COMPAT.items():
         makers[name] = (lambda n=name, u=url, kv=key_var, mv=model_var, m=model:
-                        [OpenAICompatBackend(n, u, k, env.get(mv) or m) for k in _keys(env.get(kv), env.get(kv + "_2"), env.get(kv + "_SITE"))])
+                        [OpenAICompatBackend(n, u, k, env.get(mv) or m) for k in _keys(env.get(kv), env.get(kv + "_2"))])
     order = [p.strip().lower() for p in (env.get("LLM_PROVIDERS") or "haiku,gemini,groq").split(",") if p.strip()]
     unknown = [p for p in order if p not in makers]
     if unknown:
         raise ValueError(f"unknown LLM_PROVIDERS entries: {', '.join(unknown)}")
-    return [b for p in order for b in makers[p]()]
+    ledger = ledger if ledger is not None else {}
+    first = backends_from_rows(site_rows(env), budget, ledger)  # the owner's saved rows, top down
+    used = {b.api_key for b in first}
+    return first + [b for p in order for b in makers[p]() if b.api_key not in used]  # a key saved in both: once
 
 
 # Errors that mean "this key is unusable for the rest of the run" (not a bad summary).
