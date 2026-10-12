@@ -5,11 +5,12 @@ from __future__ import annotations
 import html
 import json
 import re
+import time
 from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
 from email.utils import parsedate_to_datetime
 from pathlib import Path
-from urllib.parse import urljoin
+from urllib.parse import parse_qs, urlencode, urljoin, urlsplit
 
 import feedparser
 import requests
@@ -17,7 +18,13 @@ import yaml
 from bs4 import BeautifulSoup
 
 USER_AGENT = "AnimalWritesWorkers/1.0 (+https://animalwrites.in)"
+# News search engines answer bots with 503 more often; they get a browser user agent, retries and a gap between calls.
+BROWSER_UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36"
+SEARCH_HOSTS = ("news.google.com", "www.bing.com", "bing.com")
+SEARCH_GAP = 2.0  # seconds between two calls to a search engine
+RETRY_WAITS = (5, 20)  # waits before the 2nd and 3rd try on 429/5xx
 TIMEOUT = 30
+_last_search = {"t": 0.0}
 
 
 @dataclass
@@ -34,6 +41,7 @@ class Source:
     lookback_days: int | None = None  # overrides the default (job pages stay open for months)
     match: str = "text"  # keywords looked for in "text" (title + feed text) or "title" only
     ministries: list[str] = field(default_factory=list)  # egazette: ministries we follow
+    max_items: int | None = None  # overrides max_items_per_source (keyword searches: 40)
 
 
 @dataclass
@@ -96,16 +104,62 @@ def load_sources_data(data: dict) -> tuple[list[Source], dict]:
                 lookback_days=s.get("lookback_days"),
                 match=s.get("match", "text"),
                 ministries=list(s.get("ministries") or []),
+                max_items=s.get("max_items"),
             )
         )
     return sources, data.get("defaults", {})
 
 
-def fetch(url: str) -> str:
-    resp = requests.get(url, headers={"User-Agent": USER_AGENT}, timeout=TIMEOUT)
-    resp.raise_for_status()
-    resp.encoding = resp.encoding or "utf-8"
-    return resp.text
+def is_search(url: str) -> bool:
+    return (urlsplit(url).hostname or "").lower() in SEARCH_HOSTS
+
+
+def fetch(url: str, get=requests.get, sleep=time.sleep) -> str:
+    """GET a feed. Search engines (Google News, Bing News): browser user agent, a gap between calls, and up to two
+    retries on 429/5xx (Google answers GitHub's servers with 503 at times, 12 Oct 2026)."""
+    search = is_search(url)
+    headers = {"User-Agent": BROWSER_UA if search else USER_AGENT}
+    waits = RETRY_WAITS if search else ()
+    for attempt in range(len(waits) + 1):
+        if search:
+            gap = SEARCH_GAP - (time.monotonic() - _last_search["t"])
+            if gap > 0:
+                sleep(gap)
+            _last_search["t"] = time.monotonic()
+        resp = get(url, headers=headers, timeout=TIMEOUT)
+        if attempt < len(waits) and (resp.status_code == 429 or resp.status_code >= 500):
+            sleep(waits[attempt])
+            continue
+        resp.raise_for_status()
+        resp.encoding = resp.encoding or "utf-8"
+        return resp.text
+    raise RuntimeError("unreachable")
+
+
+def bing_fallback(source: "Source") -> "Source | None":
+    """The same search on Bing News RSS (India edition, past week), for when Google News fails. None if the source is
+    not a Google News search. Bing's own links are unwrapped to the publisher URL by parse_rss."""
+    from dataclasses import replace
+
+    parts = urlsplit(source.url)
+    if parts.hostname != "news.google.com" or not parts.path.startswith("/rss/search"):
+        return None
+    q = parse_qs(parts.query).get("q", [""])[0]
+    q = re.sub(r"\s*\bwhen:\S+", "", q).strip()
+    if not q:
+        return None
+    url = "https://www.bing.com/news/search?" + urlencode({"q": q, "format": "rss", "mkt": "en-IN", "qft": 'interval="8"'})
+    return replace(source, url=url, lookback_days=min(source.lookback_days or 3, 3))
+
+
+def _unwrap_bing(link: str) -> str:
+    """bing.com/news/apiclick.aspx?...&url=<publisher URL> -> the publisher URL."""
+    parts = urlsplit(link)
+    if (parts.hostname or "").endswith("bing.com") and "apiclick" in parts.path:
+        real = parse_qs(parts.query).get("url", [""])[0]
+        if real.startswith("http"):
+            return real
+    return link
 
 
 def _clean(text: str) -> str:
@@ -118,7 +172,7 @@ def parse_rss(source: Source, body: str) -> list[Item]:
     items = []
     for e in feed.entries:
         title = _clean(e.get("title", ""))
-        link = (e.get("link") or "").strip()
+        link = _unwrap_bing((e.get("link") or "").strip())
         if not title or not link:
             continue
         when = None
@@ -127,7 +181,7 @@ def parse_rss(source: Source, body: str) -> list[Item]:
                 when = parsedate_to_datetime(e.published).astimezone(timezone.utc).date()
             except (TypeError, ValueError):
                 when = None
-        publisher = _clean((e.get("source") or {}).get("title", ""))
+        publisher = _clean((e.get("source") or {}).get("title", "") or e.get("news_source", ""))
         if publisher and title.endswith(f" - {publisher}"):
             title = title[: -len(publisher) - 3].strip()
         items.append(Item(source, title, link, when, _clean(e.get("summary", "")), publisher))
@@ -275,6 +329,9 @@ def collect(source: Source, body: str, today: date, lookback_days: int, limit: i
             i.date = today  # feed gave no date (e.g. PIB): use the day we found it
         if (today - i.date).days <= lookback_days:
             fresh.append(i)
+    # Newest first: search feeds are ordered by relevance, and a cap on that order kept the same old stories every run
+    # (no new News 10-12 Oct 2026). Stable sort, so items of the same day keep the feed's order.
+    fresh.sort(key=lambda i: i.date, reverse=True)
     return fresh[:limit]
 
 

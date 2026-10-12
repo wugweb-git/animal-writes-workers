@@ -24,6 +24,10 @@ ANIMAL_WORDS = re.compile(
     r"jackals?|foxes|fox|rhinos?|pythons?|pangolins?|dolphins?|whales?|sharks?|beef|dairy|leather|fur|ivory|poach\w*|"
     r"hunting|poacher|feeders?|kennels?|canine|feline|livestock|fodder|peta|awbi|zoonotic|zoonoses|lumpy skin|"
     r"bird flu|avian|swine|vultures?|eagles?|hyenas?|bison|gaur|squirrels?|frogs?|bats?|shrimps?|crabs?|insects?|bees?|"
+    # 12 Oct 2026: real stories were skipped for want of these ("100 blackbucks rescued", "orangutan rescued")
+    r"blackbucks?|antelopes?|nilgai|chinkara|chital|sambar deer|orangutans?|apes?|chimpanzees?|gorillas?|hornbills?|"
+    r"gharials?|otters?|civets?|mongoose|porcupines?|hares?|rabbits?|pigeons?|flamingos?|storks?|sparrows?|"
+    r"cobras?|vipers?|lizards?|geckos?|red pandas?|wild boars?|yaks?|mithun|pups|tuskers?|"
     r"sanctuary|national park|tiger reserve|mammals?|creatures?|fauna|vegan|cruelty|geese|goose|gibbons?|foie gras|"
     r"bestiality|cockfight\w*|bullfight\w*|jallikattu|kambala|biodiversity|habitat)\b",
     re.I,

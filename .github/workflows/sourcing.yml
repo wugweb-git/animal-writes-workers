@@ -30,7 +30,7 @@ jobs:
   run:
     needs: test
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 45 # the run stops taking new items after 25 minutes (AW_TIME_BUDGET_MIN) and saves as it goes
     env:
       # DRY_RUN stays ON unless the repo variable DRY_RUN is set to "false"
       # (manual runs use the checkbox instead).

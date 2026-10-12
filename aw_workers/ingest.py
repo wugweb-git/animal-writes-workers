@@ -95,6 +95,7 @@ class Client:
         self.url = base_url.rstrip("/") + "/wp-json/aw/v1/ingest"
         self.session = session or requests.Session()
         self.session.auth = (user, app_password)
+        self.last: dict = {}
 
     def policy(self) -> dict:
         """Sourcing policy from WP Admin (News → Sourcing)."""
@@ -126,12 +127,18 @@ class Client:
         link = f"{os.environ.get('GITHUB_SERVER_URL', 'https://github.com')}/{os.environ.get('GITHUB_REPOSITORY', '')}/actions/runs/{run}" if run else ""
         return self._call("POST", "/relevance-alert", json={"held": int(held), "run": run, "link": link})
 
-    def ingest_heartbeat(self, new: int) -> dict:
-        """Report how many items this run created; the site emails the owner and shows a dashboard notice when nothing
-        new has arrived for 12 hours (owner, 12 Oct 2026)."""
+    def ingest_heartbeat(self, new: int, *, published: int | None = None, sources: int = 0, sources_failed: int = 0,
+                         errors: list[str] | None = None) -> dict:
+        """Report this run: items created and published, sources tried and failed. The site emails the owner when half
+        the sources fail; its own hourly check emails when nothing has been published for 12 hours or no run has
+        reported for 8 hours (owner, 12 Oct 2026)."""
         run = os.environ.get("GITHUB_RUN_ID", "")
         link = f"{os.environ.get('GITHUB_SERVER_URL', 'https://github.com')}/{os.environ.get('GITHUB_REPOSITORY', '')}/actions/runs/{run}" if run else ""
-        return self._call("POST", "/ingest-heartbeat", json={"new": int(new), "link": link})
+        body = {"new": int(new), "link": link, "sources": int(sources), "sources_failed": int(sources_failed),
+                "errors": [str(e)[:200] for e in (errors or [])][:10]}
+        if published is not None:
+            body["published"] = int(published)
+        return self._call("POST", "/ingest-heartbeat", json=body)
 
     def relevance_items(self, page: int, per_page: int = 100, missing_only: bool = False) -> dict:
         """Existing News, Library, Resources, Opportunities and Press items (any status but trash), one page."""
@@ -150,6 +157,7 @@ class Client:
             data = resp.json()
         except ValueError:
             data = {}
+        self.last = data if isinstance(data, dict) else {}  # the site's answer, e.g. {"review": "published"}
         if resp.status_code in (200, 201) and data.get("status") in ("created", "duplicate", "blocked", "filtered"):
             return data["status"]
         raise IngestError(f"HTTP {resp.status_code}: {str(data)[:200]}")

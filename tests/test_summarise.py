@@ -231,10 +231,33 @@ def test_dead_keys_are_skipped_for_rest_of_run():
     limited = Dead("gemini", "429 Client Error: Too Many Requests")
     good = Fixed("gemini", GOOD)
     s = summarise.Summariser([no_credit, limited, good])
+    for _ in range(5):
+        s.summarise(item())
+    # No credit: dropped at once. Rate-limited: kept until RATE_LIMIT_STRIKES calls in a row ended in 429.
+    assert (no_credit.calls, limited.calls, good.calls) == (1, summarise.RATE_LIMIT_STRIKES, 5)
+    assert s.used == {"gemini": 5}
+
+
+class Flaky429(Fixed):
+    """Rate-limited on the first call only."""
+
+    def ask(self, prompt):
+        self.calls += 1
+        if self.calls == 1:
+            raise RuntimeError("429 Client Error: Too Many Requests")
+        return self.reply
+
+
+def test_one_429_does_not_drop_a_key():
+    flaky = Flaky429("groq", GOOD)
+    s = summarise.Summariser([flaky])
+    try:
+        s.summarise(item())
+    except summarise.SummaryError:
+        pass
+    assert 0 not in s.dead  # one rate limit: still in use
     s.summarise(item())
-    s.summarise(item())
-    assert (no_credit.calls, limited.calls, good.calls) == (1, 1, 2)
-    assert s.used == {"gemini": 2}
+    assert flaky.calls == 2 and s.used == {"groq": 1} and s.strikes == {}
 
 
 def test_bad_summary_does_not_kill_key():

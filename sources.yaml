@@ -87,13 +87,32 @@ sources:
     url: "https://www.barandbench.com/feed"
     keywords: *animal_keywords
 
+  # Court news: one Google News search per site, past 7 days (12 Oct 2026: the combined site:A OR site:B query with a
+  # date window returned the sites' latest headlines whatever the words). No keyword list: the animal-word guard and
+  # the relevance check decide ("Livestock markets" has no Sourcing keyword but is an animal case).
   - id: court-news-animals
-    name: Court news (LiveLaw, Bar & Bench, SC Observer)
+    name: Court news – LiveLaw
     kind: rss
     type: legal
     source_type: auto-court
-    url: "https://news.google.com/rss/search?q=(site:livelaw.in+OR+site:barandbench.com+OR+site:scobserver.in)+(animal+OR+animals+OR+dogs+OR+cattle+OR+cow+OR+wildlife+OR+cruelty+OR+stray)&hl=en-IN&gl=IN&ceid=IN:en"
-    keywords: *animal_keywords
+    url: "https://news.google.com/rss/search?q=site:livelaw.in+(animal+OR+animals+OR+dogs+OR+cattle+OR+cow+OR+wildlife+OR+cruelty+OR+stray+OR+livestock)+when:7d&hl=en-IN&gl=IN&ceid=IN:en"
+    lookback_days: 7
+
+  - id: court-news-barandbench
+    name: Court news – Bar & Bench
+    kind: rss
+    type: legal
+    source_type: auto-court
+    url: "https://news.google.com/rss/search?q=site:barandbench.com+(animal+OR+animals+OR+dogs+OR+cattle+OR+cow+OR+wildlife+OR+cruelty+OR+stray+OR+livestock)+when:7d&hl=en-IN&gl=IN&ceid=IN:en"
+    lookback_days: 7
+
+  - id: court-news-scobserver
+    name: Court news – SC Observer
+    kind: rss
+    type: legal
+    source_type: auto-court
+    url: "https://news.google.com/rss/search?q=site:scobserver.in+(animal+OR+animals+OR+dogs+OR+cattle+OR+cow+OR+wildlife+OR+cruelty+OR+stray+OR+livestock)+when:7d&hl=en-IN&gl=IN&ceid=IN:en"
+    lookback_days: 7
 
   - id: pib-releases
     name: Press Information Bureau

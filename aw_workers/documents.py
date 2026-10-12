@@ -212,7 +212,10 @@ def gazette_rows(html: str) -> list[dict]:
 def gazette_items(source: Source, rows: list[dict], ministries: list[str]) -> list[Item]:
     items = []
     for r in rows:
-        if not any(m.lower() == r["ministry"].lower() for m in ministries):
+        # Weekly gazettes list "This Gazette may contains Multiple Ministry / Organization" (half the recent uploads,
+        # 12 Oct 2026): those are judged on the subject alone.
+        multiple = r["ministry"].lower().startswith("this gazette may contain")
+        if not multiple and not any(m.lower() == r["ministry"].lower() for m in ministries):
             continue
         if not about_animals(r["subject"]):
             continue

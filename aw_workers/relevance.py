@@ -23,7 +23,7 @@ from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
-from .summarise import MODEL as HAIKU_MODEL, _is_dead_key_error
+from .summarise import MODEL as HAIKU_MODEL, _is_dead_key_error, note_failure, note_success  # noqa: F401
 
 log = logging.getLogger("aw_workers.relevance")
 
@@ -170,6 +170,7 @@ class Gate:
         self.summariser = summariser
         self.backends = list(getattr(summariser, "backends", []) or [])
         self.dead = getattr(summariser, "dead", set())
+        self.strikes = getattr(summariser, "strikes", {})
         self.client = client
         self.categories = dict(categories or CATEGORIES)
         self.directory = {norm_name(n) for n in (directory or []) if norm_name(n)}
@@ -207,10 +208,10 @@ class Gate:
             try:
                 data = parse(backend.ask(prompt))
             except Exception as exc:
-                if _is_dead_key_error(exc):
-                    self.dead.add(i)
+                note_failure(self, i, exc)
                 log.info("relevance: %s failed: %s", backend.name, str(exc)[:150])
                 continue
+            note_success(self, i)
             if data is None:
                 continue
             v = Verdict(

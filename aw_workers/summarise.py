@@ -206,7 +206,8 @@ class GroqBackend:
             self.session,
             self.URL,
             headers={"Authorization": f"Bearer {self.api_key}"},
-            json={"model": self.model, "max_tokens": 300, "messages": [{"role": "user", "content": prompt}]},
+            # 800: gpt-oss models reason before answering, and 300 tokens could end before the answer (12 Oct 2026)
+            json={"model": self.model, "max_tokens": 800, "messages": [{"role": "user", "content": prompt}]},
             timeout=60, sleep=self.sleep, min_interval=self.min_interval, state=self.state,
         )
         return (resp.json()["choices"][0]["message"]["content"] or "").strip()
@@ -298,7 +299,10 @@ def backends_from_env(env, ledger: dict | None = None) -> list:
 
 
 # Errors that mean "this key is unusable for the rest of the run" (not a bad summary).
-_DEAD_KEY_MARKERS = ("401", "402", "403", "429", "credit balance", "budget", "quota", "insufficient", "no credits", "suspended")
+_DEAD_KEY_MARKERS = ("401", "402", "403", "credit balance", "budget", "quota", "insufficient", "no credits", "suspended")
+# A 429 (rate limit) is not a dead key: _post_with_retry already waited and retried; the key is dropped for the run only
+# after this many calls in a row still ended in 429 (12 Oct 2026: one 429 used to drop Groq, the only working key).
+RATE_LIMIT_STRIKES = 3
 
 
 def _is_dead_key_error(exc: Exception) -> bool:
@@ -306,6 +310,26 @@ def _is_dead_key_error(exc: Exception) -> bool:
         return False
     text = f"{type(exc).__name__} {exc}".lower()
     return isinstance(exc, BudgetExceeded) or any(m in text for m in _DEAD_KEY_MARKERS)
+
+
+def _is_rate_limit(exc: Exception) -> bool:
+    return "429" in f"{exc}" or "too many requests" in f"{exc}".lower()
+
+
+def note_failure(owner, i: int, exc: Exception) -> None:
+    """Shared by summaries, topics and the relevance gate (`owner` has .dead and .strikes): a dead key is dropped at
+    once; a rate-limited key after RATE_LIMIT_STRIKES calls in a row ended in 429."""
+    strikes = owner.strikes
+    if _is_dead_key_error(exc):
+        owner.dead.add(i)
+    elif _is_rate_limit(exc):
+        strikes[i] = strikes.get(i, 0) + 1
+        if strikes[i] >= RATE_LIMIT_STRIKES:
+            owner.dead.add(i)
+
+
+def note_success(owner, i: int) -> None:
+    getattr(owner, "strikes", {}).pop(i, None)
 
 
 class Summariser:
@@ -317,6 +341,7 @@ class Summariser:
         self.backends = backends
         self.used: dict[str, int] = {}
         self.dead: set[int] = set()  # indexes of keys that failed hard this run
+        self.strikes: dict[int, int] = {}  # 429s in a row per key (shared with the relevance gate)
 
     def _try(self, backend, prompt: str, item: Item) -> str:
         summary = backend.ask(prompt)
@@ -346,10 +371,10 @@ class Summariser:
             try:
                 summary = self._try(backend, prompt, item)
             except Exception as exc:  # API error or failed checks: fall through to the next key/provider
-                if _is_dead_key_error(exc):
-                    self.dead.add(i)
+                note_failure(self, i, exc)
                 reasons.append(f"{backend.name}: {str(exc)[:150]}")
                 continue
+            note_success(self, i)
             self.used[backend.name] = self.used.get(backend.name, 0) + 1
             return finalise(summary, item)
         raise SummaryError(" | ".join(reasons))
@@ -377,9 +402,9 @@ def pick_topics(summariser, item: Item, summary: str, allowed: list[str]) -> lis
         try:
             reply = backend.ask(prompt)
         except Exception as exc:
-            if _is_dead_key_error(exc):
-                summariser.dead.add(i)
+            note_failure(summariser, i, exc)
             continue
+        note_success(summariser, i)
         picked = [s for s in re.findall(r"[a-z][a-z-]+", reply.lower()) if s in allowed]
         if picked:
             return list(dict.fromkeys(picked))[:3]
