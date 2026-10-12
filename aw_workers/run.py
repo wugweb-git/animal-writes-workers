@@ -13,6 +13,8 @@ from pathlib import Path
 
 from . import documents, enrich, ingest, policy as policy_mod, press, relevance, sources, summarise
 
+# How far back Google News searches look (AW_WINDOW, e.g. "4d" to catch up after an outage).
+WINDOW = os.environ.get("AW_WINDOW") or "2d"
 log = logging.getLogger("aw_workers")
 
 SEEN_FILE = Path(os.environ.get("AW_SEEN_FILE", ".state/seen.json"))
@@ -277,7 +279,7 @@ def keyword_searches(source_list: list, lists: dict) -> list:
         qs = up.parse_qs(parts.query, keep_blank_values=True)
         q = qs.get("q", [""])[0]
         if "when:" not in q:
-            qs["q"] = [q + " when:2d"]
+            qs["q"] = [q + f" when:{WINDOW}"]
         return up.urlunsplit(parts._replace(query=up.urlencode(qs, doseq=True)))
 
     def norm_q(url: str) -> str:  # the search itself, whatever the parameter order or spacing
@@ -291,7 +293,7 @@ def keyword_searches(source_list: list, lists: dict) -> list:
     kws = [k for k in (lists.get("keywords") or []) if isinstance(k, str) and k.isascii() and k.strip()]
     for kw in list(dict.fromkeys([*kws, *EXTRA_SEARCHES])):
         sid = "gnews-kw-" + _re.sub(r"[^a-z0-9]+", "-", kw.lower()).strip("-")
-        url = "https://news.google.com/rss/search?" + up.urlencode({"q": f'"{kw}" India when:2d', "hl": "en-IN", "gl": "IN", "ceid": "IN:en"})
+        url = "https://news.google.com/rss/search?" + up.urlencode({"q": f'"{kw}" India when:{WINDOW}', "hl": "en-IN", "gl": "IN", "ceid": "IN:en"})
         if sid in have or norm_q(url) in queries:  # the same search is already a source: fetch it once
             continue
         out.append(sources.Source(id=sid, name=f"Google News – {kw}", kind="rss", type="news", url=url, max_items=SEARCH_MAX_ITEMS))

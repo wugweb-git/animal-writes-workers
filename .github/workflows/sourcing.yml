@@ -10,6 +10,10 @@ on:
         description: "Dry run (no POSTs to WordPress)"
         type: boolean
         default: true
+      window:
+        description: "How far back Google News searches look (e.g. 2d, 4d)"
+        type: string
+        default: "2d"
 
 concurrency:
   group: sourcing
@@ -35,6 +39,7 @@ jobs:
       # DRY_RUN stays ON unless the repo variable DRY_RUN is set to "false"
       # (manual runs use the checkbox instead).
       DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && (inputs.dry_run && 'true' || 'false') || vars.DRY_RUN || 'true' }}
+      AW_WINDOW: ${{ inputs.window || '2d' }}
       WP_BASE_URL: ${{ secrets.WP_BASE_URL }}
       WP_INGEST_USER: ${{ secrets.WP_INGEST_USER }}
       WP_INGEST_APP_PASSWORD: ${{ secrets.WP_INGEST_APP_PASSWORD }}
