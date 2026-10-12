@@ -126,6 +126,13 @@ class Client:
         link = f"{os.environ.get('GITHUB_SERVER_URL', 'https://github.com')}/{os.environ.get('GITHUB_REPOSITORY', '')}/actions/runs/{run}" if run else ""
         return self._call("POST", "/relevance-alert", json={"held": int(held), "run": run, "link": link})
 
+    def ingest_heartbeat(self, new: int) -> dict:
+        """Report how many items this run created; the site emails the owner and shows a dashboard notice when nothing
+        new has arrived for 12 hours (owner, 12 Oct 2026)."""
+        run = os.environ.get("GITHUB_RUN_ID", "")
+        link = f"{os.environ.get('GITHUB_SERVER_URL', 'https://github.com')}/{os.environ.get('GITHUB_REPOSITORY', '')}/actions/runs/{run}" if run else ""
+        return self._call("POST", "/ingest-heartbeat", json={"new": int(new), "link": link})
+
     def relevance_items(self, page: int, per_page: int = 100, missing_only: bool = False) -> dict:
         """Existing News, Library, Resources, Opportunities and Press items (any status but trash), one page."""
         return self._call("GET", "/relevance-items", params={"page": page, "per_page": per_page, "missing": int(missing_only)}, timeout=90)

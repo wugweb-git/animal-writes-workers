@@ -328,6 +328,10 @@ def main() -> int:
     print(f"relevance gate: {gate.counts}")
     if client is not None and not dry_run:
         try:
+            client.ingest_heartbeat(stats.new)  # the site alerts the owner when nothing new arrives for 12 hours
+        except Exception as exc:
+            log.warning("heartbeat not sent: %s", exc)
+        try:
             client.relevance_alert(stats.unavailable)
         except Exception as exc:  # the alert must never fail the run
             log.warning("relevance alert not sent: %s", exc)
