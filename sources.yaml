@@ -71,10 +71,11 @@ sources:
   # PIB's own RSS (pib.gov.in/RssMain.aspx) answers 403 to automated clients,
   # so PIB releases come through a Google News query limited to pib.gov.in.
   # Court news (v2). source_type "auto-court" tags Supreme Court / High Court / NGT from the headline.
+  # Reports about cases are journalism, so they go to News (owner, 14 Oct 2026); PIB releases stay in the Library.
   - id: livelaw-top
     name: LiveLaw
     kind: rss
-    type: legal
+    type: news
     source_type: auto-court
     url: "https://www.livelaw.in/category/top-stories/google_feeds.xml"
     keywords: *animal_keywords
@@ -82,7 +83,7 @@ sources:
   - id: barandbench
     name: Bar & Bench
     kind: rss
-    type: legal
+    type: news
     source_type: auto-court
     url: "https://www.barandbench.com/feed"
     keywords: *animal_keywords
@@ -93,7 +94,7 @@ sources:
   - id: court-news-animals
     name: Court news – LiveLaw
     kind: rss
-    type: legal
+    type: news
     source_type: auto-court
     url: "https://news.google.com/rss/search?q=site:livelaw.in+(animal+OR+animals+OR+dogs+OR+cattle+OR+cow+OR+wildlife+OR+cruelty+OR+stray+OR+livestock)+when:7d&hl=en-IN&gl=IN&ceid=IN:en"
     lookback_days: 7
@@ -101,7 +102,7 @@ sources:
   - id: court-news-barandbench
     name: Court news – Bar & Bench
     kind: rss
-    type: legal
+    type: news
     source_type: auto-court
     url: "https://news.google.com/rss/search?q=site:barandbench.com+(animal+OR+animals+OR+dogs+OR+cattle+OR+cow+OR+wildlife+OR+cruelty+OR+stray+OR+livestock)+when:7d&hl=en-IN&gl=IN&ceid=IN:en"
     lookback_days: 7
@@ -109,7 +110,7 @@ sources:
   - id: court-news-scobserver
     name: Court news – SC Observer
     kind: rss
-    type: legal
+    type: news
     source_type: auto-court
     url: "https://news.google.com/rss/search?q=site:scobserver.in+(animal+OR+animals+OR+dogs+OR+cattle+OR+cow+OR+wildlife+OR+cruelty+OR+stray+OR+livestock)+when:7d&hl=en-IN&gl=IN&ceid=IN:en"
     lookback_days: 7

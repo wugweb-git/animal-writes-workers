@@ -56,7 +56,7 @@ def build_payload(item: Item, summary: str, topics: list[str] | None = None) -> 
         "source_url": item.url,
         "source_name": item.publisher or item.source.name,
         "source_date": item.date.isoformat() if item.date else "",
-        "topics": topics if topics is not None else topics_for(item),
+        "topics": (topics if topics is not None else topics_for(item)) + (["courts-judgments"] if item.source.source_type == "auto-court" else []),
         "feed": item.source.id,
     }
     source_type = court_type(item.title) if item.source.source_type == "auto-court" else item.source.source_type
