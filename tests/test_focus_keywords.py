@@ -9,7 +9,8 @@ def test_clean_keeps_a_phrase_from_the_title():
 def test_clean_refuses_brand_unrelated_and_long():
     assert fk.clean("animal writes news", "Animal Writes news roundup") == ""
     assert fk.clean("cricket world cup", "Python rescued in Chhattisgarh") == ""
-    assert fk.clean("one two three four five six seven", "one two three") == ""
+    assert fk.clean("hyderabad vet stray dogs blood", "Hyderabad vet sells blood of stray dogs") == ""
+    assert fk.clean("hyderabad", "Hyderabad vet sells blood") == ""
 
 
 def test_parse_reads_json_inside_prose():

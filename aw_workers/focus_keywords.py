@@ -29,7 +29,7 @@ TYPES = ["aw_news", "aw_legal", "post", "aw_press", "aw_opportunity", "aw_campai
 BATCH = 20
 
 PROMPT = """You choose SEO focus keywords for pages of an Indian animal-welfare website.
-For each item below, write the 2 to 4 word phrase a person in India would type into Google to find that page.
+For each item below, write the phrase of 2 to 4 words (never more) a person in India would type into Google to find that page.
 Rules: lower case, English, no quotes, no site or brand name, no dates unless essential, and use words from the
 item's title. Output only JSON: a list of objects {{"id": <id>, "keyword": "<phrase>"}}, one per item, nothing else.
 
@@ -47,7 +47,7 @@ def clean(keyword: str, title: str) -> str:
     kw = re.sub(r"[\"“”‘’`]+", "", str(keyword or "")).lower()
     kw = re.sub(r"\s+", " ", kw).strip(" \t\n.,;:'-")
     words = kw.split(" ")
-    if not kw or len(words) > 6 or len(kw) > 70 or "animal writes" in kw:
+    if not kw or not 2 <= len(words) <= 4 or len(kw) > 60 or "animal writes" in kw:
         return ""
     return kw if _words(kw) & _words(title) else ""
 
