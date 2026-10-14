@@ -1,0 +1,45 @@
+name: "Focus keywords (Rank Math)"
+
+# Owner, 14 Oct 2026: Rank Math is the one SEO system. Every published item without a focus keyword gets a short
+# search phrase from the AI keys (aw_workers/focus_keywords.py); listings get their name on the site itself. Writes
+# only empty fields; items no provider answered for are picked up by the next run. Daily for new items.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "30 22 * * *" # 04:00 India time
+
+concurrency:
+  group: focus-keywords
+  cancel-in-progress: false
+
+jobs:
+  keywords:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      WP_BASE_URL: ${{ secrets.WP_BASE_URL }}
+      WP_INGEST_USER: ${{ secrets.WP_INGEST_USER }}
+      WP_INGEST_APP_PASSWORD: ${{ secrets.WP_INGEST_APP_PASSWORD }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      GEMINI_API_KEY_2: ${{ secrets.GEMINI_API_KEY_2 }}
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      GROQ_API_KEY_2: ${{ secrets.GROQ_API_KEY_2 }}
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+      DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      XAI_API_KEY: ${{ secrets.XAI_API_KEY }}
+      MOONSHOT_API_KEY: ${{ secrets.MOONSHOT_API_KEY }}
+      MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
+      LLM_PROVIDERS: ${{ vars.LLM_PROVIDERS }}
+      HAIKU_MONTHLY_BUDGET_USD: ${{ vars.HAIKU_MONTHLY_BUDGET_USD || '4' }}
+      GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+      GROQ_MODEL: ${{ vars.GROQ_MODEL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - run: python -m aw_workers.focus_keywords

@@ -148,6 +148,15 @@ class Client:
         """Store verdicts on existing items (meta aw_relevance). Never changes an item's status."""
         return self._call("POST", "/relevance-verdicts", json={"verdicts": verdicts}, timeout=90)
 
+    def seo_items(self, post_type: str, page: int, per_page: int = 100, missing_only: bool = True) -> dict:
+        """Published items of a type for the focus-keyword job: id, title, excerpt, has_focus (aw-seo-extras)."""
+        return self._call("GET", "/seo-items", params={"type": post_type, "page": page, "per_page": per_page,
+                                                         "missing": int(missing_only)}, timeout=90)
+
+    def seo_focus(self, items: list[dict]) -> dict:
+        """Write focus keywords [{id, keyword}]; the site writes only where Rank Math's field is still empty."""
+        return self._call("POST", "/seo-focus", json={"items": items}, timeout=90)
+
     def post(self, payload: dict) -> str:
         """Returns 'created', 'duplicate', or 'blocked' / 'filtered' (refused by the site's sourcing policy)."""
         resp = self.session.post(self.url, json=payload, timeout=TIMEOUT)
