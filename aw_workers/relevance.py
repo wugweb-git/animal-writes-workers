@@ -258,7 +258,7 @@ class Gate:
 
     def near_titles(self, c: Candidate, limit: int = 12) -> list[str]:
         """Recent News titles sharing at least two meaningful words with this item (keeps the prompt short)."""
-        if c.kind != "news" or not self.recent:
+        if c.kind not in ("news", "legal") or not self.recent:  # court reports in the Library repeat each other too
             return []
         mine = _words(c.title)
         scored = sorted(((len(mine & _words(t)), t) for t in self.recent), key=lambda x: -x[0])
@@ -330,7 +330,7 @@ class Gate:
             return "unavailable", None
         ok, why = self.decide(c, v)
         if ok:
-            if c.kind == "news" and c.title:
+            if c.kind in ("news", "legal") and c.title:
                 self.recent.append(c.title)  # later items this run are checked against it too
             self.counts["pass"] += 1
             return "pass", v
