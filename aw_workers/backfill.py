@@ -92,6 +92,12 @@ class BackfillClient:
     def policy(self):
         return self.client.policy() if self.client else {}
 
+    def story(self, story_id: int) -> dict:
+        return self.client.story(story_id)
+
+    def same_story(self, body: dict) -> dict:
+        return self.client.same_story(body)
+
     def post(self, payload: dict) -> str:
         day = (payload.get("source_date") or "")[:10]
         if day and day < self.floor.isoformat():

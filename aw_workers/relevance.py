@@ -197,6 +197,7 @@ class Gate:
         self.cool = summariser.__dict__.setdefault("cool", {}) if summariser is not None and hasattr(summariser, "__dict__") else {}  # resting keys, shared
         self.client = client
         self.recent = list(recent or [])  # News titles from the last days; passed items are added during the run
+        self.recent_ids: dict[str, int] = {}  # title -> site ID, for adding a same-event report to the first story
         self.categories = dict(categories or CATEGORIES)
         self.directory = {norm_name(n) for n in (directory or []) if norm_name(n)}
         self.cache = cache if cache is not None else {}
@@ -206,16 +207,24 @@ class Gate:
     @classmethod
     def from_site(cls, summariser, client, *, dry_run: bool = False, cache_file: Path = CACHE_FILE) -> "Gate":
         """Categories and Directory names from the site when reachable; the built-in list otherwise."""
-        cats, directory, recent = None, None, []
+        cats, directory, recent, ids = None, None, [], {}
         if client is not None and hasattr(client, "relevance_config"):
             try:
                 cfg = client.relevance_config()
                 cats = cfg.get("categories") or None
                 directory = cfg.get("directory") or None
                 recent = [t for t in cfg.get("recent") or [] if isinstance(t, str)]
+                ids = {str(r.get("title")): int(r.get("id") or 0) for r in cfg.get("recent_items") or []
+                       if isinstance(r, dict) and r.get("title") and r.get("id")}
             except Exception as exc:
                 log.warning("relevance config unavailable, using the built-in categories: %s", exc)
-        return cls(summariser, client=client, categories=cats, directory=directory, cache=load_cache(cache_file), dry_run=dry_run, recent=recent)
+        gate = cls(summariser, client=client, categories=cats, directory=directory, cache=load_cache(cache_file), dry_run=dry_run, recent=recent)
+        gate.recent_ids = ids
+        return gate
+
+    def kept_id(self, title: str) -> int:
+        """The site ID of a recent story, by its title (0 when unknown)."""
+        return int(self.recent_ids.get(title or "", 0))
 
     # ---- the model ----
 

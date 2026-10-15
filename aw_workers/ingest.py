@@ -120,6 +120,14 @@ class Client:
         """Add an item the relevance gate refused to the site's Rejected log (Inbox → To review)."""
         return self._call("POST", "/relevance-rejected", json=entry)
 
+    def story(self, story_id: int) -> dict:
+        """A story already on the site, for the same-event merge: title, summary, credits and added facts."""
+        return self._call("GET", "/same-story", params={"id": int(story_id)})
+
+    def same_story(self, body: dict) -> dict:
+        """Fold a same-event report into the first story (credit, and the facts it adds); the date never changes."""
+        return self._call("POST", "/same-story", json=body)
+
     def relevance_alert(self, held: int) -> dict:
         """Tell the site how many items the relevance check had to hold back this run (0 = it worked: clears the notice).
         The site emails the owner and shows a dashboard notice (owner, 12 Oct 2026)."""

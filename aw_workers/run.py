@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from datetime import date, timedelta
 from pathlib import Path
 
-from . import documents, enrich, ingest, policy as policy_mod, press, relevance, sources, summarise
+from . import documents, enrich, ingest, merge, policy as policy_mod, press, relevance, sources, summarise
 
 # How far back Google News searches look (AW_WINDOW, e.g. "4d" to catch up after an outage).
 WINDOW = os.environ.get("AW_WINDOW") or "2d"
@@ -211,6 +211,9 @@ def run(
                     if enricher and original != item.url:
                         seen.add(original)
                     stats.rejected += 1
+                    if verdict is not None and verdict.same_as:  # same event: its facts and credit go to the first story
+                        merge.fold(summariser, client, gate.kept_id(verdict.same_as), title=item.title, url=item.url,
+                                   publisher=item.publisher or item.source.name, text=item.text, dry_run=dry_run)
                     save()
                     continue
             else:
@@ -241,6 +244,12 @@ def run(
                 seen.add(original)
             if result not in ("blocked", "filtered"):
                 remember_title(titles, item.title, item.date)
+            last = getattr(client, "last", None) or {}
+            if result == "created" and gate is not None and last.get("id") and item.source.type in ("news", "legal"):
+                gate.recent_ids[item.title] = int(last["id"])  # later reports this run can be folded into it
+            if last.get("review") == "merged" and last.get("merged_into"):  # the site found the same event by title
+                merge.fold(summariser, client, last["merged_into"], title=item.title, url=item.url,
+                           publisher=item.publisher or item.source.name, text=item.text)
             if result == "duplicate":
                 stats.duplicate += 1
             elif result in ("blocked", "filtered"):
