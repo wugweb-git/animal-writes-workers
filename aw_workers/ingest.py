@@ -173,9 +173,11 @@ class Client:
         return self._call("GET", "/seo-items", params={"type": post_type, "page": page, "per_page": per_page,
                                                          "missing": int(missing_only)}, timeout=90)
 
-    def seo_focus(self, items: list[dict]) -> dict:
-        """Write focus keywords [{id, keyword}]; the site writes only where Rank Math's field is still empty."""
-        return self._call("POST", "/seo-focus", json={"items": items}, timeout=90)
+    def seo_focus(self, items: list[dict], replace: bool = False) -> dict:
+        """Write focus keywords [{id, keyword}]; the site writes where Rank Math's field is still empty, and with replace
+        also over a primary keyword that is not in the item's SEO title."""
+        body = {"items": items, "replace": True} if replace else {"items": items}
+        return self._call("POST", "/seo-focus", json=body, timeout=90)
 
     def post(self, payload: dict) -> str:
         """Returns 'created', 'duplicate', or 'blocked' / 'filtered' (refused by the site's sourcing policy)."""

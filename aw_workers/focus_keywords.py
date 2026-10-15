@@ -1,14 +1,19 @@
 """Focus keywords for Rank Math (owner, 14 Oct 2026: Rank Math is the one SEO system).
 
 Every published News, Library, Resources, Press, Opportunity, Campaign and Page item without a focus keyword gets a
-short search phrase (2–4 words, lower case, English, built from words of its title) written into Rank Math's field
-rank_math_focus_keyword. Listings get their organisation name on the site itself (aw-seo-extras), so they are not
+short search phrase (2–4 words, lower case, English) written into Rank Math's field rank_math_focus_keyword. The
+phrase is words that stand together, in order, in the item's SEO title (owner, 15 Oct 2026: the title is the source
+of truth; a keyword sharing one word with the title made only a quarter of News titles contain their keyword). When
+no AI phrase passes, the best run of 2 to 4 words of the SEO title itself is used. Listings get their organisation name on the site itself (aw-seo-extras), so they are not
 asked here.
 
 Items are read from aw/v1/seo-items (only those still without a keyword) and written through aw/v1/seo-focus, which
 writes only where the field is still empty and applies the same rules as clean() below (aw_seo_clean_keyword on the
 site). Twenty items go in one AI call; items whose phrase breaks a rule are asked once more, with the reason. When no provider answers, the items stay empty and the next run picks them up (the job is
 resumable and runs daily for new items).
+
+With AW_SEO_REPICK=1 every published item whose primary keyword is not in its SEO title gets a new one (the site keeps
+the old one in _aw_focus_history and any extra keywords after the new primary one).
 
 Run: python -m aw_workers.focus_keywords   (needs WP_* secrets and provider keys)
 """
@@ -30,9 +35,10 @@ BATCH = 20
 
 PROMPT = """You choose SEO focus keywords for pages of an Indian animal-welfare website.
 For each item below, write the phrase of 2 to 4 words (never more) a person in India would type into Google to find that page.
-Rules: lower case, English (also for a title in Hindi or Hinglish), no quotes or hashtags, no dates unless essential.
-Use words from the item's title or its "about" text. Prefer the specific thing (species, place, law, court, organisation)
-over generic words: "pune dog shelter", not "animal welfare". Never end on a connector such as "for", "of", "in", "to".
+The phrase must be 2 to 4 words that stand next to each other, in the same order, in the item's "seo_title": copy them
+exactly (lower case), never reorder, add or change a word. Rules: lower case, no quotes or hashtags, no dates unless
+essential. Prefer the specific thing (species, place, law, court, organisation) over generic words: "pune dog shelter",
+not "animal welfare". Never start or end on a connector such as "for", "of", "in", "to".
 Do not use the site name "Animal Writes" unless the title itself is about Animal Writes.
 Output only JSON: a list of objects {{"id": <id>, "keyword": "<phrase>"}}, one per item, nothing else.
 
@@ -52,14 +58,47 @@ GENERIC = {"animal", "animals", "welfare", "india", "indian", "save", "help", "n
            "issue", "case", "story"}
 
 _WORD = re.compile(r"[^\W_]+", re.UNICODE)
+_APOS = re.compile(r"['’‘`]")
+_BRAND = re.compile(r"\s*[–—|-]\s*animal writes\s*$", re.I)
+
+
+def phrase_words(text: str) -> list[str]:
+    """Words for phrase matching: lower case, apostrophes dropped ("India’s" → "indias"); the site's aw_seo_phrase_words."""
+    return _WORD.findall(_APOS.sub("", (text or "").lower()))
+
+
+def in_title(keyword: str, seo_title: str) -> bool:
+    """Whether the keyword's words stand together, in order, in the SEO title (the site's aw_seo_keyword_in_title)."""
+    k, t = phrase_words(keyword), phrase_words(_BRAND.sub("", seo_title or ""))
+    return bool(k) and any(t[i:i + len(k)] == k for i in range(len(t) - len(k) + 1))
+
+
+def from_title(seo_title: str, title: str = "", text: str = "") -> str:
+    """The best run of 2 to 4 words of the SEO title that passes every rule ('' when none does): the most specific
+    words (not generic, not connectors), then three words over two or four, then the earliest."""
+    words = phrase_words(_BRAND.sub("", seo_title or ""))
+    best, best_key = "", None
+    for n in (3, 2, 4):
+        for i in range(len(words) - n + 1):
+            run = words[i:i + n]
+            if run[0] in DANGLING or not all(len(w) > 1 or w.isdigit() for w in run):
+                continue
+            kw = " ".join(run)
+            if why_refused(kw, title or seo_title, text, seo_title):
+                continue
+            key = (-sum(1 for w in run if w not in GENERIC and w not in DANGLING), {3: 0, 2: 1, 4: 2}[n], i)
+            if best_key is None or key < best_key:
+                best, best_key = kw, key
+    return best
 
 
 def _words(text: str) -> set[str]:
     return {w[:5] for w in _WORD.findall((text or "").lower()) if len(w) >= 3}
 
 
-def why_refused(keyword: str, title: str, text: str = "") -> str:
-    """'' when the phrase is usable, else the rule it breaks (the site checks the same rules)."""
+def why_refused(keyword: str, title: str, text: str = "", seo_title: str = "") -> str:
+    """'' when the phrase is usable, else the rule it breaks (the site checks the same rules). With the SEO title, the
+    phrase must also stand in it word for word."""
     kw = _normalise(keyword)
     words = kw.split(" ")
     if not kw or not 2 <= len(words) <= 4 or len(kw) > 60:
@@ -73,6 +112,8 @@ def why_refused(keyword: str, title: str, text: str = "") -> str:
         return "only generic words"
     if not _words(kw) & _words(f"{title} {text}"):
         return "shares no word with the title or text"
+    if seo_title and not in_title(kw, seo_title):
+        return "is not words that stand together in the seo_title"
     return ""
 
 
@@ -81,9 +122,9 @@ def _normalise(keyword: str) -> str:
     return re.sub(r"\s+", " ", kw).strip(" \t\n.,;:'-")
 
 
-def clean(keyword: str, title: str, text: str = "") -> str:
+def clean(keyword: str, title: str, text: str = "", seo_title: str = "") -> str:
     """The phrase as stored, or '' when it breaks a rule."""
-    return "" if why_refused(keyword, title, text) else _normalise(keyword)
+    return "" if why_refused(keyword, title, text, seo_title) else _normalise(keyword)
 
 
 def parse(reply: str) -> dict[int, str]:
@@ -103,8 +144,13 @@ def parse(reply: str) -> dict[int, str]:
 
 
 def _lines(items: list[dict]) -> str:
-    return "\n".join(json.dumps({"id": it["id"], "title": it["title"], "about": (it.get("excerpt") or "")[:300]},
+    return "\n".join(json.dumps({"id": it["id"], "seo_title": _seo(it), "about": (it.get("excerpt") or "")[:300]},
                                 ensure_ascii=False) for it in items)
+
+
+def _seo(it: dict) -> str:
+    """The item's SEO title as the site prints it (the post title from a site that does not send one)."""
+    return it.get("seo_title") or it.get("title") or ""
 
 
 def ask(owner: summarise.Summariser, items: list[dict], refused: dict[int, str] | None = None) -> dict[int, str]:
@@ -137,7 +183,7 @@ def _usable(batch: list[dict], got: dict[int, str]) -> tuple[list[dict], dict[in
     good, refused = [], {}
     for r in batch:
         kw = got.get(r["id"], "")
-        why = why_refused(kw, r["title"], r.get("excerpt") or "") if kw else "no phrase"
+        why = why_refused(kw, r["title"], r.get("excerpt") or "", _seo(r)) if kw else "no phrase"
         if why:
             refused[r["id"]] = f'"{kw}" {why}' if kw else why
         else:
@@ -154,30 +200,37 @@ def main() -> int:
         return 0
     owner = summarise.Summariser(backends)
     types = [t.strip() for t in (os.environ.get("AW_SEO_TYPES") or ",".join(TYPES)).split(",") if t.strip()]
+    repick = os.environ.get("AW_SEO_REPICK", "") in ("1", "true", "yes")
     stats = Counter()
     for t in types:
         rows, page = [], 1
         while True:
-            data = client.seo_items(t, page, 200, missing_only=True)
-            rows += [r for r in data.get("items") or [] if not r.get("has_focus")]
+            data = client.seo_items(t, page, 200, missing_only=not repick)
+            rows += [r for r in data.get("items") or [] if not r.get("has_focus") or (repick and not r.get("in_title", True))]
             if page >= int(data.get("pages") or 1):
                 break
             page += 1
-        log.info("%s: %d item(s) without a focus keyword", t, len(rows))
+        log.info("%s: %d item(s) %s", t, len(rows), "without a keyword in the SEO title" if repick else "without a focus keyword")
         for start in range(0, len(rows), BATCH):
             batch = rows[start:start + BATCH]
             got = ask(owner, batch)
-            if not got:
-                stats["no answer"] += len(batch)
-                continue
-            items, refused = _usable(batch, got)
-            if refused:  # once more, with the reason
+            items, refused = _usable(batch, got) if got else ([], {r["id"]: "no answer" for r in batch})
+            if got and refused:  # once more, with the reason
                 again = [r for r in batch if r["id"] in refused]
                 more, refused = _usable(again, ask(owner, again, refused))
                 items += more
+            if not got:
+                stats["no answer"] += len(batch)
+            for r in batch:  # nothing usable from the AI: the best words of the SEO title itself
+                if r["id"] in refused:
+                    kw = from_title(_seo(r), r["title"], r.get("excerpt") or "")
+                    if kw:
+                        items.append({"id": r["id"], "keyword": kw})
+                        stats["from the title"] += 1
+                        del refused[r["id"]]
             stats["unusable"] += len(refused)
             if items:
-                res = client.seo_focus(items)
+                res = client.seo_focus(items, replace=True) if repick else client.seo_focus(items)
                 stats["written"] += int(res.get("written") or 0)
                 stats["refused by site"] += len(res.get("skipped") or [])
     log.info("done: %s; providers used: %s", dict(stats), owner.used)

@@ -90,3 +90,76 @@ def test_main_asks_again_for_refused_phrases(monkeypatch):
     monkeypatch.setenv("WP_INGEST_APP_PASSWORD", "p")
     assert fk.main() == 0
     assert client.written == [{"id": 5, "keyword": "jaipur dog shelter"}]
+
+
+# The SEO title is the source of truth (owner, 15 Oct 2026): the keyword is words that stand together in it.
+
+def test_keyword_must_stand_together_in_the_seo_title():
+    seo = "Pune bans fodder transport outside district amid drought"
+    assert fk.clean("pune fodder transport ban", "Pune bans fodder", "", seo) == ""  # words reordered and changed
+    assert fk.why_refused("pune fodder ban", "Pune bans fodder", "", seo) == "is not words that stand together in the seo_title"
+    assert fk.clean("fodder transport", "Pune bans fodder", "", seo) == "fodder transport"
+    assert fk.clean("Pune bans fodder transport", "Pune bans fodder", "", seo) == "pune bans fodder transport"
+
+
+def test_in_title_ignores_case_apostrophes_hyphens_and_the_site_name():
+    assert fk.in_title("india's declining birdlife", "India’s declining birdlife affects more than biodiversity")
+    assert fk.in_title("human wildlife conflict", "Coimbatore human-wildlife conflict centre – Animal Writes")
+    assert not fk.in_title("animal writes", "Strangulation suspected in puppy’s death – Animal Writes")
+    assert not fk.in_title("dog bite", "Dog bites rise")  # whole words only
+
+
+def test_from_title_picks_specific_words_of_the_seo_title():
+    kw = fk.from_title("Dehradun Zoo changes diets of animals, birds to protect them")
+    assert kw and fk.in_title(kw, "Dehradun Zoo changes diets of animals, birds to protect them")
+    assert kw.split()[0] not in fk.DANGLING and kw.split()[-1] not in fk.DANGLING
+    assert fk.from_title("Save animals – Animal Writes") == ""  # only generic words: nothing usable
+
+
+class _RepickClient(_Client):
+    def __init__(self):
+        super().__init__()
+        self.replace = None
+        self.missing = None
+
+    def seo_items(self, post_type, page, per_page=100, missing_only=True):
+        self.missing = missing_only
+        if post_type != "aw_news":
+            return {"items": [], "pages": 1}
+        return {"items": [
+            {"id": 7, "title": "Pune bans fodder transport", "seo_title": "Pune bans fodder transport outside district amid drought",
+             "excerpt": "", "has_focus": True, "focus": "pune fodder transport ban", "in_title": False},
+            {"id": 8, "title": "Already fine", "seo_title": "Jaipur dog shelter opens", "excerpt": "", "has_focus": True,
+             "focus": "jaipur dog shelter", "in_title": True},
+        ], "pages": 1}
+
+    def seo_focus(self, items, replace=False):
+        self.replace = replace
+        return super().seo_focus(items)
+
+
+def _env(monkeypatch, client, reply):
+    monkeypatch.setattr(fk.ingest, "Client", lambda *a, **k: client)
+    monkeypatch.setattr(fk.summarise, "backends_from_env", lambda env, ledger=None: [_Backend(reply)])
+    monkeypatch.setenv("WP_BASE_URL", "https://example.test")
+    monkeypatch.setenv("WP_INGEST_USER", "u")
+    monkeypatch.setenv("WP_INGEST_APP_PASSWORD", "p")
+    monkeypatch.setenv("AW_SEO_TYPES", "aw_news")
+
+
+def test_repick_replaces_only_keywords_not_in_the_seo_title(monkeypatch):
+    client = _RepickClient()
+    _env(monkeypatch, client, '[{"id": 7, "keyword": "pune bans fodder transport"}]')
+    monkeypatch.setenv("AW_SEO_REPICK", "1")
+    assert fk.main() == 0
+    assert client.missing is False and client.replace is True
+    assert client.written == [{"id": 7, "keyword": "pune bans fodder transport"}]
+
+
+def test_falls_back_to_words_of_the_seo_title_when_the_ai_phrase_is_not_in_it(monkeypatch):
+    client = _RepickClient()
+    _env(monkeypatch, client, '[{"id": 7, "keyword": "pune fodder transport ban"}]')  # refused twice
+    monkeypatch.setenv("AW_SEO_REPICK", "1")
+    assert fk.main() == 0
+    assert len(client.written) == 1 and client.written[0]["id"] == 7
+    assert fk.in_title(client.written[0]["keyword"], "Pune bans fodder transport outside district amid drought")

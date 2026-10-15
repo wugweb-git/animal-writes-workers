@@ -3,8 +3,18 @@ name: "Focus keywords (Rank Math)"
 # Owner, 14 Oct 2026: Rank Math is the one SEO system. Every published item without a focus keyword gets a short
 # search phrase from the AI keys (aw_workers/focus_keywords.py); listings get their name on the site itself. Writes
 # only empty fields; items no provider answered for are picked up by the next run. Daily for new items.
+# Run by hand with "repick" to give every item whose primary keyword is not in its SEO title a new one (owner, 15 Oct 2026).
 on:
   workflow_dispatch:
+    inputs:
+      repick:
+        description: "Re-pick keywords that are not words of the SEO title"
+        type: boolean
+        default: false
+      types:
+        description: "Post types (comma-separated; empty = all)"
+        type: string
+        default: ""
   schedule:
     - cron: "30 22 * * *" # 04:00 India time
 
@@ -35,6 +45,8 @@ jobs:
       HAIKU_MONTHLY_BUDGET_USD: ${{ vars.HAIKU_MONTHLY_BUDGET_USD || '4' }}
       GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
       GROQ_MODEL: ${{ vars.GROQ_MODEL }}
+      AW_SEO_REPICK: ${{ inputs.repick && '1' || '' }}
+      AW_SEO_TYPES: ${{ inputs.types }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
