@@ -9,6 +9,10 @@ on:
         description: "dup:keep pairs, comma-separated (e.g. 9637:146,10673:10665)"
         type: string
         required: true
+      redo:
+        description: "Fold reports already folded once again (after a rule change)"
+        type: boolean
+        default: false
       dry_run:
         description: "Only show what would be added"
         type: boolean
@@ -21,6 +25,7 @@ jobs:
     env:
       AW_PAIRS: ${{ inputs.pairs }}
       DRY_RUN: ${{ inputs.dry_run && 'true' || 'false' }}
+      AW_REDO: ${{ inputs.redo && 'true' || 'false' }}
       WP_BASE_URL: ${{ secrets.WP_BASE_URL }}
       WP_INGEST_USER: ${{ secrets.WP_INGEST_USER }}
       WP_INGEST_APP_PASSWORD: ${{ secrets.WP_INGEST_APP_PASSWORD }}

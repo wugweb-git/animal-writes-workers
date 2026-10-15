@@ -1,17 +1,17 @@
 """Same event, one story (owner, 15 Oct 2026).
 
-When a new report is the same event as a story already on the site, the first story stays the one story. The model
-reads the new report's own text next to what our story already says and writes the facts the report adds, in the house
-style of the summaries. The site shows them under the first story's summary, credited to the publisher
-("Also reported by X, which adds: …"), and keeps them as an audit (aw_merge_additions). With nothing new, or when the
-written facts fail a check, only the credit is added.
+When a new report is the same event as a story already on the site, the first story stays the one story. When the
+report has facts our story lacks, the model rewrites the first story's summary with them woven in: one better summary in
+the house style, reading like edited journalism (no templated "also reported" block, no stock phrasing). The credit is
+the publisher's logo in the source row. With nothing new, or when the rewrite fails a check, only the credit is added.
 
-Invented facts cannot get through: the prompt gives the new report's text as the only source of facts, and every number
-and every name in the written facts must appear in that text, or nothing is added. The first story's date is never
-changed (the site changes post meta only).
+Invented facts cannot get through: the prompt allows only facts from our summary (written from the first report) and the
+new report's own text; every number and every name in the rewrite must appear in one of them, every number our summary
+already gives must stay, and stock phrases are refused, or nothing changes. The site keeps the summary before each
+rewrite and the facts each report added (audit), and never changes the story's dates.
 
-The enrichment runs here, not on the site, because the workers hold the new report's own text (the site keeps only our
-summary of it) and already rotate the keys, cool down rate-limited ones and drop dead ones.
+This runs here, not on the site, because the workers hold the new report's own text (the site keeps only our summary of
+it) and already rotate the keys, cool down rate-limited ones and drop dead ones.
 """
 
 from __future__ import annotations
@@ -25,35 +25,47 @@ from .summarise import MAX_QUOTE_WORDS, longest_copied_run, longest_quote_words,
 
 log = logging.getLogger("aw_workers.merge")
 
-MAX_WORDS = 50
+MAX_WORDS = 50  # the facts line kept for the audit
+SUMMARY_MAX_WORDS = 90  # the site holds summaries of 15-90 words
 
-PROMPT = """You help keep one story per event on Animal Writes, an Indian animal-welfare site.
+PROMPT = """You edit news summaries for Animal Writes, an Indian animal-welfare site.
 
-OUR STORY already says:
+OUR SUMMARY of an event:
 {ours}
 
-A NEW REPORT of the same event. Its text is the only source of facts you may use:
+A NEW REPORT of the same event:
 Title: {title}
 Text: {text}
 
-Write the facts the NEW REPORT states that OUR STORY does not already say (for example a name, a number, a place,
-a date, what an official, a court or the police did).
-Rules:
-- Use only facts written in the NEW REPORT title and text above. Never add anything from memory or from elsewhere,
-  and never guess.
-- Plain facts only, in your own words: who, what, where, when. No opinion, praise, advice or calls to action.
-- 1 or 2 sentences, at most {max_words} words. Never quote more than {max_quote} words.
-- Do not name any newspaper, channel or website, and do not mention the report itself ("the report says").
-- Give a date only when the text says the event happened on that date (never the day it was published).
-- Every sentence must add a specific fact (a name, a number, a place, an action). Nothing vague or general, and
-  nothing OUR STORY already says in other words.
-- If the new report adds nothing that our story lacks, answer with an empty value.
-Answer with JSON only: {{"adds": "<the new facts, or empty>"}}"""
+1. adds: the facts the NEW REPORT states that OUR SUMMARY does not (a name, a number, a place, a date, what an
+   official, a court or the police did), in one plain line. Empty when it adds nothing that matters.
+2. summary: when adds is not empty, OUR SUMMARY rewritten so those facts sit naturally in it. One summary, as a good
+   news editor would write it: clear and specific, most important fact first.
 
-# Sentence-opening words that need not appear in the report (they are not facts).
+Rules for both:
+- Use only facts written in OUR SUMMARY and in the NEW REPORT title and text. Never add anything from memory or from
+  elsewhere, and never guess. Keep every fact of OUR SUMMARY.
+- Plain facts in your own words: who, what, where, when. No opinion, praise, advice or calls to action.
+- Give a date only when the text says the event happened on that date (never the day it was published).
+- Do not name any newspaper, channel or website, and do not mention the reports ("the report says").
+- summary: {min_s} to {max_s} sentences, at most {max_words} words, plain text with no heading, list or bold.
+  Vary sentence length. Never quote more than {max_quote} words. No filler and no stock phrases such as
+  "in a significant development", "it is worth noting", "furthermore", "moreover", "additionally", "underscores",
+  "amid", "highlighting", "pivotal" or "a testament to".
+Answer with JSON only: {{"adds": "<the new facts, or empty>", "summary": "<the rewritten summary, or empty>"}}"""
+
+# Stock phrasing that reads as generated text (owner, 15 Oct 2026: no AI content label).
+STOCK = re.compile(
+    r"\b(?:in a (?:significant|major|notable) development|(?:it is )?worth noting|it should be noted|furthermore|moreover|"
+    r"additionally|underscor\w*|amid(?:st)?|notably|in conclusion|highlighting|highlights the|crucial role|pivotal|"
+    r"testament|delv\w*|landscape|paving the way|paves the way|shed(?:s|ding)? light|in a bid to|a move that|"
+    r"this comes as|groundbreaking|commendable|robust|comprehensive|boasts?|serves as a reminder|in today's)\b",
+    re.I,
+)
+
+# Sentence-opening words that need not appear in the sources (they are not facts).
 _OPENERS = set("""a an the it its he she they his her their this that these those there here in on at by for from with
 after before during while when according also both each officials authorities police residents locals""".split())
-_MONTHS = set("january february march april may june july august september october november december".split())
 
 
 def _norm_num(s: str) -> str:
@@ -68,17 +80,15 @@ def _tokens(text: str) -> set[str]:
     return set(re.findall(r"[\w'’-]+", (text or "").lower()))
 
 
-def check(adds: str, title: str, text: str) -> list[str]:
-    """Why the written facts cannot be used ([] = they can). Every number and every capitalised word (a name, a place,
-    a body, a month) must be in the new report's own title or text."""
-    source = f"{title} {text}"
+def _unsourced(written: str, source: str) -> list[str]:
+    """Numbers and capitalised words (names, places, bodies, months) in `written` that `source` does not contain."""
     problems = []
-    missing = sorted(_numbers(adds) - _numbers(source))
+    missing = sorted(_numbers(written) - _numbers(source))
     if missing:
-        problems.append("numbers not in the report: " + ", ".join(missing))
+        problems.append("numbers not in the reports: " + ", ".join(missing))
     have = _tokens(source)
     names = []
-    for sentence in re.split(r"(?<=[.!?])\s+", adds.strip()):
+    for sentence in re.split(r"(?<=[.!?])\s+", written.strip()):
         for i, w in enumerate(re.findall(r"[\w'’-]+", sentence)):
             if not w[:1].isupper():
                 continue
@@ -88,7 +98,14 @@ def check(adds: str, title: str, text: str) -> list[str]:
             if low not in have and low.rstrip("'’s") not in have:
                 names.append(w)
     if names:
-        problems.append("names not in the report: " + ", ".join(dict.fromkeys(names)))
+        problems.append("names not in the reports: " + ", ".join(dict.fromkeys(names)))
+    return problems
+
+
+def check(adds: str, title: str, text: str) -> list[str]:
+    """Why the facts line cannot be used ([] = it can): every number and name must be in the new report."""
+    source = f"{title} {text}"
+    problems = _unsourced(adds, source)
     n = sentence_count(adds)
     if n > 2:
         problems.append(f"needs 1-2 sentences, got {n}")
@@ -99,7 +116,34 @@ def check(adds: str, title: str, text: str) -> list[str]:
     return problems
 
 
-def parse(reply: str) -> str | None:
+def check_summary(summary: str, ours: str, title: str, text: str, publisher: str = "") -> list[str]:
+    """Why the rewritten summary cannot replace ours ([] = it can)."""
+    problems = _unsourced(summary, f"{ours} {title} {text}")
+    lost = sorted(_numbers(ours) - _numbers(summary))
+    if lost:
+        problems.append("numbers from our summary left out: " + ", ".join(lost))
+    n = sentence_count(summary)
+    if not 2 <= n <= 4:
+        problems.append(f"needs 2-4 sentences, got {n}")
+    words = len(re.findall(r"[\w'’-]+", summary))
+    if words > SUMMARY_MAX_WORDS or words < 15:
+        problems.append(f"needs 15-{SUMMARY_MAX_WORDS} words, got {words}")
+    stock = sorted({m.group(0).lower() for m in STOCK.finditer(summary)})
+    if stock:
+        problems.append("stock phrases: " + ", ".join(stock))
+    if re.search(r"(^|\n)\s*(#|[-*•]\s|\*\*)|\*\*|\n", summary):
+        problems.append("plain text only: no heading, list, bold or line break")
+    if publisher and publisher.strip() and publisher.strip().lower() in summary.lower():
+        problems.append("names the publisher")
+    if longest_quote_words(summary) > MAX_QUOTE_WORDS or longest_copied_run(summary, f"{title} {text}") > MAX_QUOTE_WORDS:
+        problems.append(f"copies more than {MAX_QUOTE_WORDS} words from the new report")
+    if re.sub(r"\W+", "", summary.lower()) == re.sub(r"\W+", "", ours.lower()):
+        problems.append("unchanged")
+    return problems
+
+
+def parse(reply: str) -> tuple[str, str] | None:
+    """(adds, summary), or None when the reply holds no usable JSON."""
     m = re.search(r"\{.*\}", reply or "", re.S)
     if not m:
         return None
@@ -109,74 +153,84 @@ def parse(reply: str) -> str | None:
         return None
     if not isinstance(data, dict) or "adds" not in data:
         return None
-    adds = re.sub(r"\s+", " ", str(data.get("adds") or "")).strip()
-    return "" if adds.lower() in ("", "none", "nothing", "n/a", "empty") else adds
+
+    def clean(v) -> str:
+        v = re.sub(r"\s+", " ", str(v or "")).strip()
+        return "" if v.lower() in ("", "none", "nothing", "n/a", "empty") else v
+
+    adds, summary = clean(data.get("adds")), clean(data.get("summary"))
+    return (adds, summary) if adds and summary else ("", "")
 
 
 def prompt_for(ours: str, title: str, text: str) -> str:
     return PROMPT.format(ours=ours.strip() or "(nothing yet)", title=title.strip(), text=re.sub(r"\s+", " ", text)[:4000],
-                         max_words=MAX_WORDS, max_quote=MAX_QUOTE_WORDS)
+                         max_words=SUMMARY_MAX_WORDS, max_quote=MAX_QUOTE_WORDS, min_s=2, max_s=4)
 
 
-def new_facts(summariser, ours: str, title: str, text: str) -> tuple[str, str]:
-    """(the facts the report adds, the model that wrote them); ('', '') = credit only."""
+def _problems(got: tuple[str, str], ours: str, title: str, text: str, publisher: str) -> list[str]:
+    adds, summary = got
+    return check(adds, title, text) + check_summary(summary, ours, title, text, publisher) if adds else []
+
+
+def rewrite(summariser, ours: str, title: str, text: str, publisher: str = "") -> tuple[str, str, str]:
+    """(the facts the report adds, our summary rewritten with them, the model); ('', '', '') = credit only."""
     text = (text or "").strip()
     backends = list(getattr(summariser, "backends", []) or [])
-    if not text or not backends:
-        return "", ""
+    if not text or not ours.strip() or not backends:
+        return "", "", ""
     prompt = prompt_for(ours, title, text)
     for i, backend in enumerate(backends):
         if not usable(summariser, i):
             continue
         try:
-            adds = parse(backend.ask(prompt))
-            if adds:
-                problems = check(adds, title, text)
-                if problems:
-                    adds = parse(backend.ask(prompt + "\n\nYour previous answer broke these rules: " + "; ".join(problems)
-                                             + f"\nPrevious answer: {adds}\nAnswer again, using only the NEW REPORT text."))
-                    if adds and check(adds, title, text):
-                        log.info("merge: facts refused (%s); credit only", "; ".join(check(adds, title, text)))
-                        return "", ""
+            got = parse(backend.ask(prompt))
+            problems = _problems(got, ours, title, text, publisher) if got else []
+            if problems:
+                got = parse(backend.ask(prompt + "\n\nYour previous answer broke these rules: " + "; ".join(problems)
+                                        + f"\nPrevious answer: {json.dumps({'adds': got[0], 'summary': got[1]}, ensure_ascii=False)}"
+                                        + "\nAnswer again, using only facts from OUR SUMMARY and the NEW REPORT."))
+                again = _problems(got, ours, title, text, publisher) if got else []
+                if again:
+                    log.info("merge: rewrite refused (%s); credit only", "; ".join(again))
+                    return "", "", ""
         except Exception as exc:
             note_failure(summariser, i, exc)
             continue
         note_success(summariser, i)
-        if adds is None:
+        if got is None:
             continue  # no JSON: the next provider
-        return adds, f"{backend.name}:{getattr(backend, 'model', '')}"
-    return "", ""
+        adds, summary = got
+        return (adds, summary, f"{backend.name}:{getattr(backend, 'model', '')}") if adds else ("", "", "")
+    return "", "", ""
 
 
-def ours_text(story: dict) -> str:
-    parts = [story.get("summary") or ""] + [a.get("text", "") for a in story.get("additions") or [] if isinstance(a, dict)]
-    return " ".join(p.strip() for p in parts if p and p.strip())
-
-
-def payload(keep_id: int, *, url: str, publisher: str, adds: str, model: str, dup_id: int = 0) -> dict:
-    body = {"keep_id": int(keep_id), "source_url": url, "publisher": publisher, "added_text": adds, "model": model if adds else ""}
+def payload(keep_id: int, *, url: str, publisher: str, adds: str, summary: str, model: str, dup_id: int = 0) -> dict:
+    body = {"keep_id": int(keep_id), "source_url": url, "publisher": publisher, "added_text": adds,
+            "summary": summary if adds else "", "model": model if adds else ""}
     if dup_id:
         body["dup_id"] = int(dup_id)
     return body
 
 
 def fold(summariser, client, keep_id, *, title: str, url: str, publisher: str, text: str, dup_id: int = 0,
-         dry_run: bool = False) -> dict | None:
-    """Add a same-event report to the first story: its facts (when it has new ones) and its publisher's credit.
-    Never raises: a failure leaves the story as it was (the report is already held or rejected)."""
+         dry_run: bool = False, redo: bool = False) -> dict | None:
+    """Add a same-event report to the first story: its credit, and (with new facts) the rewritten summary.
+    `redo` folds a report already folded once again (after the rule changed). Never raises: a failure leaves the story
+    as it was (the report is already held or rejected)."""
     if not keep_id or client is None or not hasattr(client, "same_story"):
         return None
     try:
         story = client.story(int(keep_id))
         done = {a.get("url") for a in story.get("additions") or [] if isinstance(a, dict)}
-        adds, model = ("", "") if url in done else new_facts(summariser, ours_text(story), title, text)
-        body = payload(int(keep_id), url=url, publisher=publisher, adds=adds, model=model, dup_id=dup_id)
+        ours = (story.get("summary") or "").strip()
+        adds, summary, model = ("", "", "") if url in done and not redo else rewrite(summariser, ours, title, text, publisher)
+        body = payload(int(keep_id), url=url, publisher=publisher, adds=adds, summary=summary, model=model, dup_id=dup_id)
         if dry_run:
             log.info("DRY_RUN would fold into #%s: %s", keep_id, json.dumps(body, ensure_ascii=False))
-            return body
+            return dict(body, summary_before=ours)
         client.same_story(body)
-        log.info("merge: %s into #%s (%s)", url, keep_id, "new facts" if adds else "credit only")
-        return body
+        log.info("merge: %s into #%s (%s)", url, keep_id, "summary rewritten" if adds else "credit only")
+        return dict(body, summary_before=ours)
     except Exception as exc:  # noqa: BLE001
         log.warning("merge: could not fold %s into #%s: %s", url, keep_id, exc)
         return None
