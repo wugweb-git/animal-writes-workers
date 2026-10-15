@@ -7,7 +7,7 @@ def test_clean_keeps_a_phrase_from_the_title():
 
 
 def test_clean_refuses_brand_unrelated_and_long():
-    assert fk.clean("animal writes news", "Animal Writes news roundup") == ""
+    assert fk.clean("animal writes news", "Weekly news roundup") == ""  # site name, title not about the site
     assert fk.clean("cricket world cup", "Python rescued in Chhattisgarh") == ""
     assert fk.clean("hyderabad vet stray dogs blood", "Hyderabad vet sells blood of stray dogs") == ""
     assert fk.clean("hyderabad", "Hyderabad vet sells blood") == ""
@@ -61,6 +61,30 @@ def test_main_writes_only_usable_keywords(monkeypatch):
     client = _Client()
     monkeypatch.setattr(fk.ingest, "Client", lambda *a, **k: client)
     monkeypatch.setattr(fk.summarise, "backends_from_env", lambda env, ledger=None: [_Backend('[{"id": 5, "keyword": "jaipur dog shelter"}, {"id": 6, "keyword": "x"}]')])
+    monkeypatch.setenv("WP_BASE_URL", "https://example.test")
+    monkeypatch.setenv("WP_INGEST_USER", "u")
+    monkeypatch.setenv("WP_INGEST_APP_PASSWORD", "p")
+    assert fk.main() == 0
+    assert client.written == [{"id": 5, "keyword": "jaipur dog shelter"}]
+
+
+def test_clean_rules_shared_with_the_site():
+    assert fk.clean("india writes for", "India Writes for Animal Rights") == ""          # ends on a connector
+    assert fk.clean("save animals", "Save animals now") == ""                           # only generic words
+    assert fk.clean("animal writes campaign", "Animal Writes 1.0") == "animal writes campaign"  # title names the site
+    assert fk.clean("#BeTheirVoice stray dogs", "#BeTheirVoice #AnimalWrites") == "betheirvoice stray dogs"  # no hashtags
+    # a word from the item's own text is enough when the title shares none
+    assert fk.clean("stray dog protest", "Heartbroken, enraged", "Residents protest after stray dog killed") == "stray dog protest"
+    assert fk.why_refused("rescued in", "Python rescued in Chhattisgarh") == 'ends on "in"'
+
+
+def test_main_asks_again_for_refused_phrases(monkeypatch):
+    client = _Client()
+    backend = _Backend('[{"id": 5, "keyword": "animal welfare"}]')
+    replies = iter(['[{"id": 5, "keyword": "animal welfare"}]', '[{"id": 5, "keyword": "jaipur dog shelter"}]'])
+    backend.ask = lambda prompt: next(replies)
+    monkeypatch.setattr(fk.ingest, "Client", lambda *a, **k: client)
+    monkeypatch.setattr(fk.summarise, "backends_from_env", lambda env, ledger=None: [backend])
     monkeypatch.setenv("WP_BASE_URL", "https://example.test")
     monkeypatch.setenv("WP_INGEST_USER", "u")
     monkeypatch.setenv("WP_INGEST_APP_PASSWORD", "p")

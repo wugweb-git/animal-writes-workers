@@ -6,8 +6,8 @@ rank_math_focus_keyword. Listings get their organisation name on the site itself
 asked here.
 
 Items are read from aw/v1/seo-items (only those still without a keyword) and written through aw/v1/seo-focus, which
-writes only where the field is still empty and refuses a phrase that shares no word with the title. Twenty items go
-in one AI call. When no provider answers, the items stay empty and the next run picks them up (the job is
+writes only where the field is still empty and applies the same rules as clean() below (aw_seo_clean_keyword on the
+site). Twenty items go in one AI call; items whose phrase breaks a rule are asked once more, with the reason. When no provider answers, the items stay empty and the next run picks them up (the job is
 resumable and runs daily for new items).
 
 Run: python -m aw_workers.focus_keywords   (needs WP_* secrets and provider keys)
@@ -30,10 +30,26 @@ BATCH = 20
 
 PROMPT = """You choose SEO focus keywords for pages of an Indian animal-welfare website.
 For each item below, write the phrase of 2 to 4 words (never more) a person in India would type into Google to find that page.
-Rules: lower case, English, no quotes, no site or brand name, no dates unless essential, and use words from the
-item's title. Output only JSON: a list of objects {{"id": <id>, "keyword": "<phrase>"}}, one per item, nothing else.
+Rules: lower case, English (also for a title in Hindi or Hinglish), no quotes or hashtags, no dates unless essential.
+Use words from the item's title or its "about" text. Prefer the specific thing (species, place, law, court, organisation)
+over generic words: "pune dog shelter", not "animal welfare". Never end on a connector such as "for", "of", "in", "to".
+Do not use the site name "Animal Writes" unless the title itself is about Animal Writes.
+Output only JSON: a list of objects {{"id": <id>, "keyword": "<phrase>"}}, one per item, nothing else.
 
 {items}"""
+
+RETRY = """These phrases were refused. Write a new 2 to 4 word phrase for each item, following the same rules.
+{reasons}"""
+
+# Words a phrase must not end on (the site's AW_SEO_DANGLING list).
+DANGLING = set("""& + and or but nor of the a an to in on at by for with from into onto over under after before amid as via
+per than that which who whose its their his her is are was were be has have had will can against between near about
+across during without within vs v every each all some any this these those our your my what how why when where whether
+if not also so very more most such both says said""".split())
+
+# Words that alone make no search phrase (the site's AW_SEO_GENERIC_WORDS).
+GENERIC = {"animal", "animals", "welfare", "india", "indian", "save", "help", "news", "care", "update", "updates",
+           "issue", "case", "story"}
 
 _WORD = re.compile(r"[^\W_]+", re.UNICODE)
 
@@ -42,14 +58,32 @@ def _words(text: str) -> set[str]:
     return {w[:5] for w in _WORD.findall((text or "").lower()) if len(w) >= 3}
 
 
-def clean(keyword: str, title: str) -> str:
-    """The phrase as stored, or '' when it breaks a rule (the site checks the same)."""
-    kw = re.sub(r"[\"“”‘’`]+", "", str(keyword or "")).lower()
-    kw = re.sub(r"\s+", " ", kw).strip(" \t\n.,;:'-")
+def why_refused(keyword: str, title: str, text: str = "") -> str:
+    """'' when the phrase is usable, else the rule it breaks (the site checks the same rules)."""
+    kw = _normalise(keyword)
     words = kw.split(" ")
-    if not kw or not 2 <= len(words) <= 4 or len(kw) > 60 or "animal writes" in kw:
-        return ""
-    return kw if _words(kw) & _words(title) else ""
+    if not kw or not 2 <= len(words) <= 4 or len(kw) > 60:
+        return "not 2 to 4 words"
+    t = (title or "").lower()
+    if "animal writes" in kw and "animal writes" not in t and "animalwrites" not in t:
+        return "uses the site name"
+    if words[-1] in DANGLING:
+        return f'ends on "{words[-1]}"'
+    if set(words) <= GENERIC:
+        return "only generic words"
+    if not _words(kw) & _words(f"{title} {text}"):
+        return "shares no word with the title or text"
+    return ""
+
+
+def _normalise(keyword: str) -> str:
+    kw = re.sub(r"[\"“”‘’`#]+", "", str(keyword or "")).lower()
+    return re.sub(r"\s+", " ", kw).strip(" \t\n.,;:'-")
+
+
+def clean(keyword: str, title: str, text: str = "") -> str:
+    """The phrase as stored, or '' when it breaks a rule."""
+    return "" if why_refused(keyword, title, text) else _normalise(keyword)
 
 
 def parse(reply: str) -> dict[int, str]:
@@ -68,11 +102,17 @@ def parse(reply: str) -> dict[int, str]:
     return out
 
 
-def ask(owner: summarise.Summariser, items: list[dict]) -> dict[int, str]:
-    """One call for a batch, trying each usable key in turn (rate-limited keys rest, then are used again)."""
-    lines = "\n".join(json.dumps({"id": it["id"], "title": it["title"], "about": (it.get("excerpt") or "")[:300]},
-                                 ensure_ascii=False) for it in items)
-    prompt = PROMPT.format(items=lines)
+def _lines(items: list[dict]) -> str:
+    return "\n".join(json.dumps({"id": it["id"], "title": it["title"], "about": (it.get("excerpt") or "")[:300]},
+                                ensure_ascii=False) for it in items)
+
+
+def ask(owner: summarise.Summariser, items: list[dict], refused: dict[int, str] | None = None) -> dict[int, str]:
+    """One call for a batch, trying each usable key in turn (rate-limited keys rest, then are used again).
+    With `refused` ({id: reason}), the call asks again for those items, giving the reason."""
+    prompt = PROMPT.format(items=_lines(items))
+    if refused:
+        prompt += "\n\n" + RETRY.format(reasons="\n".join(f"id {i}: {r}" for i, r in refused.items()))
     for _ in range(2):
         for i, backend in enumerate(owner.backends):
             if not summarise.usable(owner, i):
@@ -90,6 +130,19 @@ def ask(owner: summarise.Summariser, items: list[dict]) -> dict[int, str]:
         if not summarise.wait_for_cooldown(owner):
             break
     return {}
+
+
+def _usable(batch: list[dict], got: dict[int, str]) -> tuple[list[dict], dict[int, str]]:
+    """([{id, keyword}] that pass the rules, {id: reason} for the rest of the batch)."""
+    good, refused = [], {}
+    for r in batch:
+        kw = got.get(r["id"], "")
+        why = why_refused(kw, r["title"], r.get("excerpt") or "") if kw else "no phrase"
+        if why:
+            refused[r["id"]] = f'"{kw}" {why}' if kw else why
+        else:
+            good.append({"id": r["id"], "keyword": _normalise(kw)})
+    return good, refused
 
 
 def main() -> int:
@@ -117,10 +170,12 @@ def main() -> int:
             if not got:
                 stats["no answer"] += len(batch)
                 continue
-            titles = {r["id"]: r["title"] for r in batch}
-            items = [{"id": i, "keyword": k} for i, k in ((i, clean(k, titles.get(i, ""))) for i, k in got.items())
-                     if i in titles and k]
-            stats["unusable"] += len(batch) - len(items)
+            items, refused = _usable(batch, got)
+            if refused:  # once more, with the reason
+                again = [r for r in batch if r["id"] in refused]
+                more, refused = _usable(again, ask(owner, again, refused))
+                items += more
+            stats["unusable"] += len(refused)
             if items:
                 res = client.seo_focus(items)
                 stats["written"] += int(res.get("written") or 0)
