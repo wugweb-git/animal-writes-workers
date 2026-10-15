@@ -60,11 +60,13 @@ def test_date_phrases_come_out_and_every_other_word_stays():
         "Police booked the man. This decision was made on December 8, 2025. The dog is safe.":
             "Police booked the man. The dog is safe.",
         "A cow was rescued on 8 December 2025 in Pune by volunteers.": "A cow was rescued in Pune by volunteers.",
-        "The cat fell. The event occurred on December 8, 2025, in India.": "The cat fell. The event occurred in India.",
         "An article published on 8 December 2025 examines street dogs.": "An article examines street dogs.",
         "Released on 8 December 2025, the survey showed concern for animals.": "The survey showed concern for animals.",
         "The event took place in Kerala and was reported on 8 December 2025.": "The event took place in Kerala.",
         "The concerns were raised on December 8, 2025. Activists asked for action.": "Activists asked for action.",
+        "A shelter broke the rules. The report was dated December 8, 2025.": "A shelter broke the rules.",
+        "The cat fell. The event occurred on December 8, 2025 in India.": "The cat fell.",
+        "NGOs asked for a ban. The appeal was made public on December 8, 2025.": "NGOs asked for a ban.",
     }
     for before, after in cases.items():
         got = _out(before)

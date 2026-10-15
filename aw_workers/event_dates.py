@@ -226,8 +226,10 @@ def strip_mentions(summary: str, mentions: list[Mention]) -> str | None:
 
 # "The concerns were raised." / "The identification of these spots was reported." once the date is out.
 _EMPTY_SHORT = re.compile(r"^(?:the|this|these|that|it|such)\b[^,;:]{0,50}?\b(?:was|were|has been|have been|had been)\s+"
-                          r"(?:\w+ed|made|held|done|given|taken|seen|shown|brought|put|set|known)(?:\s+(?:up|out|to light))?[.!?]?$",
+                          r"(?:\w+ed|made|held|done|given|taken|seen|shown|brought|put|set|known)(?:\s+(?:up|out|to light))?(?:\s+(?:public|recently|in India|in an unspecified location))?[.!?]?$",
                           re.I)
+# A sentence left as "The report was." ("... was dated 21 September 2026." without the date): nothing left to say.
+_EMPTY_COPULA = re.compile(r"^(?:the|this|these|that|it)\b[^,;:]{0,50}?\b(?:was|were|is|are)[.!?]?$", re.I)
 _EMPTY = re.compile(
     r"^(?:the|this|that|these|it|they)?\s*(?:\w+[\s-]){0,2}?"
     r"(?:incident|event|decision|ruling|order|judgment|judgement|announcement|action|directive|filing|raid|change|"
@@ -236,7 +238,7 @@ _EMPTY = re.compile(
     r"(?:(?:has|have)\s+been|was|were|is|are)?\s*"
     r"(?:occurred|took place|happened|made|issued|reported|announced|passed|delivered|published|released|filed|"
     r"posted|shared|dated|given|held|registered|came|surfaced|emerged|recorded)"
-    r"(?:\s+(?:to light|out|up))?\s*[.!?]?$", re.I)
+    r"(?:\s+(?:to light|out|up))?(?:\s+(?:public|recently|in India|in an unspecified location))?\s*[.!?]?$", re.I)
 
 
 def _sentences(text: str) -> list[tuple[int, int]]:
@@ -263,7 +265,7 @@ def remove_dates(summary: str, mentions: list[Mention]) -> str | None:
             new = strip_mentions(sentence, inside)
         if new is None:
             return None
-        if _EMPTY.match(new.strip()) or _EMPTY_SHORT.match(new.strip()):
+        if _EMPTY.match(new.strip()) or _EMPTY_SHORT.match(new.strip()) or _EMPTY_COPULA.match(new.strip()):
             continue  # the sentence said only when
         keep_parts.append(new)
     out = " ".join(p.strip() for p in keep_parts if p.strip())
