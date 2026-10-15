@@ -163,3 +163,8 @@ def test_falls_back_to_words_of_the_seo_title_when_the_ai_phrase_is_not_in_it(mo
     assert fk.main() == 0
     assert len(client.written) == 1 and client.written[0]["id"] == 7
     assert fk.in_title(client.written[0]["keyword"], "Pune bans fodder transport outside district amid drought")
+
+
+def test_from_title_prefers_a_run_without_connectors():
+    kw = fk.from_title("SC’s Order on Street Dogs: Opportunities and Implementation")
+    assert kw and not set(kw.split()) & fk.DANGLING  # never "order on street"

@@ -75,7 +75,7 @@ def in_title(keyword: str, seo_title: str) -> bool:
 
 def from_title(seo_title: str, title: str = "", text: str = "") -> str:
     """The best run of 2 to 4 words of the SEO title that passes every rule ('' when none does): the most specific
-    words (not generic, not connectors), then three words over two or four, then the earliest."""
+    words (not generic, not connectors), then no connector inside, then three words over two or four, then the earliest."""
     words = phrase_words(_BRAND.sub("", seo_title or ""))
     best, best_key = "", None
     for n in (3, 2, 4):
@@ -86,7 +86,8 @@ def from_title(seo_title: str, title: str = "", text: str = "") -> str:
             kw = " ".join(run)
             if why_refused(kw, title or seo_title, text, seo_title):
                 continue
-            key = (-sum(1 for w in run if w not in GENERIC and w not in DANGLING), {3: 0, 2: 1, 4: 2}[n], i)
+            key = (-sum(1 for w in run if w not in GENERIC and w not in DANGLING), sum(1 for w in run if w in DANGLING),
+                   {3: 0, 2: 1, 4: 2}[n], i)  # no connector inside ("street dogs" over "order on street")
             if best_key is None or key < best_key:
                 best, best_key = kw, key
     return best
