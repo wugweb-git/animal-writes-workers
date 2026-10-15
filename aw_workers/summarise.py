@@ -9,6 +9,7 @@ import time
 import requests
 from datetime import datetime, timezone
 
+from . import event_dates
 from .sources import Item
 
 log = logging.getLogger(__name__)
@@ -29,11 +30,14 @@ Rules:
 - If the source is not in English, write the summary in English.
 - If the item gives too little to summarise, state only what it says.
 - Do not say which outlets reported it or name any publication; describe only what happened.
+- Give a date only when the title or details say the event happened on that date ("on 8 December", or "on Monday"
+  or "yesterday" worked out from the report's own date). Never give the publication date below as the date of the
+  event, and never say when the report was published. If the source gives no event date, give no date.
 - Output only the summary text, nothing else.
 
 Source: {source}
 Title: {title}
-Date: {date}
+Published: {date} (the day the report came out, not the date of the event)
 Details: {text}"""
 
 
@@ -83,6 +87,25 @@ def check_summary(summary: str, item: Item) -> list[str]:
     if longest_copied_run(summary, f"{item.title} {item.text}") > MAX_QUOTE_WORDS:
         problems.append(f"copies more than {MAX_QUOTE_WORDS} consecutive words from the source")
     return problems
+
+
+def date_problems(summary: str, item: Item) -> list[str]:
+    """The publication date given as the event date (owner, 15 Oct 2026): a date in the summary that equals the item's
+    date, when the title and text do not say the event happened then."""
+    wrong = event_dates.pub_date_mentions(summary, [item.date], f"{item.title}. {item.text}") if item.date else []
+    return [event_dates.problem(wrong)] if wrong else []
+
+
+def drop_pub_dates(summary: str, item: Item) -> str:
+    """The summary with such a date phrase taken out (a sentence that only gave the date goes); unchanged when there is
+    none or it can't be taken out cleanly (then the checks refuse it)."""
+    if not item.date:
+        return summary
+    wrong = event_dates.pub_date_mentions(summary, [item.date], f"{item.title}. {item.text}")
+    if not wrong:
+        return summary
+    out = event_dates.remove_dates(summary, wrong)
+    return out if out and event_dates.clean_removal(summary, out) else summary
 
 
 def finalise(summary: str, item: Item) -> str:
@@ -371,13 +394,14 @@ class Summariser:
 
     def _try(self, backend, prompt: str, item: Item) -> str:
         summary = backend.ask(prompt)
-        problems = check_summary(summary, item)
+        problems = check_summary(summary, item) + date_problems(summary, item)
         if problems:
             summary = backend.ask(
                 prompt + "\n\nYour previous attempt broke these rules: " + "; ".join(problems)
                 + f"\nPrevious attempt: {summary}\nWrite a corrected summary."
             )
-            problems = check_summary(summary, item)
+            summary = drop_pub_dates(summary, item)  # still the publication date: the date phrase goes
+            problems = check_summary(summary, item) + date_problems(summary, item)
         if problems:
             raise SummaryError("; ".join(problems))
         return summary

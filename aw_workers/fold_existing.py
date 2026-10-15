@@ -40,7 +40,8 @@ def main(env=os.environ) -> int:
         if len(text) < 200:  # the page could not be read: credit only (our summary of it is not the report's own text)
             text, where = "", "nothing readable"
         body = merge.fold(summariser, client, keep, title=d.get("title") or "", url=d.get("source_url") or "",
-                          publisher=d.get("publisher") or "", text=text, dup_id=dup, dry_run=dry, redo=redo)
+                          publisher=d.get("publisher") or "", text=text, dup_id=dup, dry_run=dry, redo=redo,
+                          date=d.get("source_date"))
         if body is None:
             failed += 1
         if body is None:

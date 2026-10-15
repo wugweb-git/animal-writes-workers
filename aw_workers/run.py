@@ -213,7 +213,8 @@ def run(
                     stats.rejected += 1
                     if verdict is not None and verdict.same_as:  # same event: its facts and credit go to the first story
                         merge.fold(summariser, client, gate.kept_id(verdict.same_as), title=item.title, url=item.url,
-                                   publisher=item.publisher or item.source.name, text=item.text, dry_run=dry_run)
+                                   publisher=item.publisher or item.source.name, text=item.text, dry_run=dry_run,
+                                   date=item.date)
                     save()
                     continue
             else:
@@ -249,7 +250,7 @@ def run(
                 gate.recent_ids[item.title] = int(last["id"])  # later reports this run can be folded into it
             if last.get("review") == "merged" and last.get("merged_into"):  # the site found the same event by title
                 merge.fold(summariser, client, last["merged_into"], title=item.title, url=item.url,
-                           publisher=item.publisher or item.source.name, text=item.text)
+                           publisher=item.publisher or item.source.name, text=item.text, date=item.date)
             if result == "duplicate":
                 stats.duplicate += 1
             elif result in ("blocked", "filtered"):

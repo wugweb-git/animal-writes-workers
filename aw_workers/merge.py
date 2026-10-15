@@ -20,6 +20,7 @@ import json
 import logging
 import re
 
+from . import event_dates
 from .summarise import MAX_QUOTE_WORDS, longest_copied_run, longest_quote_words, note_failure, note_success, \
     sentence_count, usable
 
@@ -46,7 +47,9 @@ Rules for both:
 - Use only facts written in OUR SUMMARY and in the NEW REPORT title and text. Never add anything from memory or from
   elsewhere, and never guess. Keep every fact of OUR SUMMARY.
 - Plain facts in your own words: who, what, where, when. No opinion, praise, advice or calls to action.
-- Give a date only when the text says the event happened on that date (never the day it was published).
+- Give a date only when the NEW REPORT text says the event happened on that date. Never give the day a report was
+  published as the event date{pub_note}. OUR SUMMARY may wrongly give such a publication date as the event date: leave it
+  out unless the NEW REPORT says the event happened on it.
 - Do not name any newspaper, channel or website, and do not mention the reports ("the report says").
 - summary: {min_s} to {max_s} sentences, at most {max_words} words, plain text with no heading, list or bold.
   Vary sentence length. Never quote more than {max_quote} words. No filler and no stock phrases such as
@@ -117,10 +120,16 @@ def check(adds: str, title: str, text: str) -> list[str]:
     return problems
 
 
-def check_summary(summary: str, ours: str, title: str, text: str, publisher: str = "") -> list[str]:
-    """Why the rewritten summary cannot replace ours ([] = it can)."""
+def check_summary(summary: str, ours: str, title: str, text: str, publisher: str = "", pub_dates=None) -> list[str]:
+    """Why the rewritten summary cannot replace ours ([] = it can). A publication date our summary gives as the event
+    date is not a fact to keep (owner, 15 Oct 2026); the rewrite may not give one either, unless the new report says the
+    event happened on it."""
     problems = _unsourced(summary, f"{ours} {title} {text}")
-    lost = sorted(_numbers(ours) - _numbers(summary))
+    pubs = _pubs(pub_dates)
+    wrong = event_dates.pub_date_mentions(summary, pubs, f"{title}. {text}")
+    if wrong:
+        problems.append(event_dates.problem(wrong))
+    lost = sorted(_numbers(event_dates.without_pub_dates(ours, pubs)) - _numbers(summary))
     if lost:
         problems.append("numbers from our summary left out: " + ", ".join(lost))
     n = sentence_count(summary)
@@ -163,34 +172,40 @@ def parse(reply: str) -> tuple[str, str] | None:
     return (adds, summary) if adds and summary else ("", "")
 
 
-def prompt_for(ours: str, title: str, text: str) -> str:
+def _pubs(pub_dates) -> list:
+    return [d for d in (event_dates.to_date(p) for p in (pub_dates or [])) if d]
+
+
+def prompt_for(ours: str, title: str, text: str, pub_dates=None) -> str:
+    pubs = _pubs(pub_dates)
+    note = (" (the reports came out on " + " and ".join(sorted({d.strftime("%-d %B %Y") for d in pubs})) + ")") if pubs else ""
     return PROMPT.format(ours=ours.strip() or "(nothing yet)", title=title.strip(), text=re.sub(r"\s+", " ", text)[:4000],
-                         max_words=SUMMARY_MAX_WORDS, max_quote=MAX_QUOTE_WORDS, min_s=2, max_s=4)
+                         max_words=SUMMARY_MAX_WORDS, max_quote=MAX_QUOTE_WORDS, min_s=2, max_s=4, pub_note=note)
 
 
-def _problems(got: tuple[str, str], ours: str, title: str, text: str, publisher: str) -> list[str]:
+def _problems(got: tuple[str, str], ours: str, title: str, text: str, publisher: str, pub_dates=None) -> list[str]:
     adds, summary = got
-    return check(adds, title, text) + check_summary(summary, ours, title, text, publisher) if adds else []
+    return check(adds, title, text) + check_summary(summary, ours, title, text, publisher, pub_dates) if adds else []
 
 
-def rewrite(summariser, ours: str, title: str, text: str, publisher: str = "") -> tuple[str, str, str]:
+def rewrite(summariser, ours: str, title: str, text: str, publisher: str = "", pub_dates=None) -> tuple[str, str, str]:
     """(the facts the report adds, our summary rewritten with them, the model); ('', '', '') = credit only."""
     text = (text or "").strip()
     backends = list(getattr(summariser, "backends", []) or [])
     if not text or not ours.strip() or not backends:
         return "", "", ""
-    prompt = prompt_for(ours, title, text)
+    prompt = prompt_for(ours, title, text, pub_dates)
     for i, backend in enumerate(backends):
         if not usable(summariser, i):
             continue
         try:
             got = parse(backend.ask(prompt))
-            problems = _problems(got, ours, title, text, publisher) if got else []
+            problems = _problems(got, ours, title, text, publisher, pub_dates) if got else []
             if problems:
                 got = parse(backend.ask(prompt + "\n\nYour previous answer broke these rules: " + "; ".join(problems)
                                         + f"\nPrevious answer: {json.dumps({'adds': got[0], 'summary': got[1]}, ensure_ascii=False)}"
                                         + "\nAnswer again, using only facts from OUR SUMMARY and the NEW REPORT."))
-                again = _problems(got, ours, title, text, publisher) if got else []
+                again = _problems(got, ours, title, text, publisher, pub_dates) if got else []
                 if again:
                     log.info("merge: rewrite refused (%s); credit only", "; ".join(again))
                     return "", "", ""
@@ -214,7 +229,7 @@ def payload(keep_id: int, *, url: str, publisher: str, adds: str, summary: str, 
 
 
 def fold(summariser, client, keep_id, *, title: str, url: str, publisher: str, text: str, dup_id: int = 0,
-         dry_run: bool = False, redo: bool = False) -> dict | None:
+         dry_run: bool = False, redo: bool = False, date=None) -> dict | None:
     """Add a same-event report to the first story: its credit, and (with new facts) the rewritten summary.
     `redo` folds a report already folded once again (after the rule changed). Never raises: a failure leaves the story
     as it was (the report is already held or rejected)."""
@@ -224,7 +239,8 @@ def fold(summariser, client, keep_id, *, title: str, url: str, publisher: str, t
         story = client.story(int(keep_id))
         done = {a.get("url") for a in story.get("additions") or [] if isinstance(a, dict)}
         ours = (story.get("summary") or "").strip()
-        adds, summary, model = ("", "", "") if url in done and not redo else rewrite(summariser, ours, title, text, publisher)
+        adds, summary, model = ("", "", "") if url in done and not redo else rewrite(summariser, ours, title, text, publisher,
+                                                       [story.get("source_date"), story.get("date"), date])
         body = payload(int(keep_id), url=url, publisher=publisher, adds=adds, summary=summary, model=model, dup_id=dup_id)
         if dry_run:
             log.info("DRY_RUN would fold into #%s: %s", keep_id, json.dumps(body, ensure_ascii=False))
