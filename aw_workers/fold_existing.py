@@ -35,8 +35,8 @@ def main(env=os.environ) -> int:
         d = client.story(dup)
         text = merge.page_text(d.get("source_url") or "")
         where = "publisher page"
-        if len(text) < 200:  # the page could not be read: our own summary of that report (its facts only)
-            text, where = d.get("summary") or "", "our summary of it"
+        if len(text) < 200:  # the page could not be read: credit only (our summary of it is not the report's own text)
+            text, where = "", "nothing readable"
         body = merge.fold(summariser, client, keep, title=d.get("title") or "", url=d.get("source_url") or "",
                           publisher=d.get("publisher") or "", text=text, dup_id=dup, dry_run=dry)
         if body is None:

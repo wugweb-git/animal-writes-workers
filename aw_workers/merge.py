@@ -43,7 +43,10 @@ Rules:
   and never guess.
 - Plain facts only, in your own words: who, what, where, when. No opinion, praise, advice or calls to action.
 - 1 or 2 sentences, at most {max_words} words. Never quote more than {max_quote} words.
-- Do not name any newspaper, channel or website.
+- Do not name any newspaper, channel or website, and do not mention the report itself ("the report says").
+- Give a date only when the text says the event happened on that date (never the day it was published).
+- Every sentence must add a specific fact (a name, a number, a place, an action). Nothing vague or general, and
+  nothing OUR STORY already says in other words.
 - If the new report adds nothing that our story lacks, answer with an empty value.
 Answer with JSON only: {{"adds": "<the new facts, or empty>"}}"""
 
