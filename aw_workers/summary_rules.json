@@ -1,6 +1,6 @@
 {
   "version": "2026-10-15",
-  "description_max_chars": 160,
+  "description_max_chars": 155,
   "lead_max_words": 30,
   "max_quotes": 1,
   "max_quote_words": 25,
@@ -48,7 +48,7 @@
     "The page's focus keyword (its main subject in searched words) belongs in the lead sentence, once, naturally. No keyword stuffing.",
     "Linkable names: name laws, bodies, organisations, places and types exactly as the site names them (see Linkable entities), one form per entity, so they can be linked later. At most a few such names per summary."
   ],
-  "description": "The search description (Rank Math, at most 160 characters) is the summary condensed, never a separate text: the lead sentence, or the first sentences that fit whole. Only when the lead alone is longer is it cut at a word with an ellipsis. So the lead should answer what happened in about 30 words or fewer.",
+  "description": "The search description (Rank Math, at most 155 characters) is the summary condensed, never a separate text: the lead sentence, or the first sentences that fit whole. Only when the lead alone is longer is it cut at a word with an ellipsis. So the lead should answer what happened in about 30 words or fewer.",
   "card": "Cards show the summary itself, cut to a few lines: the lead sentence must make sense on its own.",
   "merge": "Same story: a later report's new facts are woven into the first story's summary, which stays one summary in these rules (new facts only from the new report, every number of ours kept). The story's date never changes; the summary before each rewrite is kept in its history.",
   "fallback": "Short fallback: a summary below the section's minimum is never padded and never sent to To review. The source page is read again; if it is still thin or cannot be read, other coverage of the same event is found (a Google News search with its key names, place and date) and the facts of reputable reports of that same event are merged; the summary is written again from them. The extra publishers are credited as logos in the source row, not in the text. If it is still below the minimum, the best summary that follows the rules is published (accurate and complete beats long). To review is only for critical flags (legitimacy, legal, safety).",
