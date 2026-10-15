@@ -100,7 +100,7 @@ def _item(text="Anant Ambani has received the Global Humanitarian Award for Anim
 def test_the_summary_prompt_forbids_the_publication_date():
     b = Backend(["Anant Ambani received an animal welfare award in Washington. It recognised his Vantara centre."])
     summarise.Summariser([b]).summarise(_item())
-    assert "Never give the publication date below as the date of the\n  event" in b.prompts[0]
+    assert "The publication date of the report is never the date of the event" in b.prompts[0]  # the summary rules
     assert "Published: 2025-12-08 (the day the report came out, not the date of the event)" in b.prompts[0]
 
 

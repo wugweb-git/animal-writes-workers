@@ -3,22 +3,32 @@ from types import SimpleNamespace
 
 import pytest
 
-from aw_workers import summarise
+from aw_workers import summarise, summary_rules
 from aw_workers.sources import Item, Source
 
 NEWS = Source("n", "News", "rss", "news", "https://x")
 LEGAL = Source("l", "AWBI", "awbi", "legal", "https://x")
 SOURCE_TEXT = (
     "The district administration in Pune opened a new animal shelter on Monday that will house up to "
-    "two hundred street dogs and provide free vaccination and sterilisation for community animals."
+    "two hundred street dogs and provide free vaccination and sterilisation for community animals. The shelter in "
+    "Hadapsar was built at a cost of Rs 2 crore and has a veterinary clinic, an isolation ward and space for "
+    "adoption drives. Officials said volunteers from three local NGOs will help run the centre, and residents can "
+    "report injured or sick animals on a helpline. The municipal corporation will review the shelter's work after "
+    "six months, the collector said, and a second shelter is planned for Pimpri."
 )
 
 
-def item(src=NEWS):
-    return Item(src, "Pune opens new animal shelter", "https://x/1", date(2026, 10, 1), SOURCE_TEXT)
+def item(src=NEWS, text=SOURCE_TEXT):
+    return Item(src, "Pune opens new animal shelter", "https://x/1", date(2026, 10, 1), text)
 
 
-GOOD = "Pune's district administration has opened an animal shelter. It can hold about 200 dogs and offers free vaccination."
+# Follows the News rules: 45-100 words, 3-5 sentences, a short lead, the searched words (street dogs, NGOs).
+GOOD = ("Pune's district administration has opened an animal shelter in Hadapsar for up to 200 street dogs. "
+        "Built for Rs 2 crore, it has a veterinary clinic and an isolation ward, and offers free vaccination and "
+        "sterilisation. Volunteers from three local NGOs will help run it, and the municipal corporation will review "
+        "its work after six months.")
+BAD = "Furthermore, " + GOOD  # stock wording: refused, not short
+SHORT = "Pune has opened a shelter for 200 street dogs. It is in Hadapsar. Three NGOs help."
 
 
 class FakeClient:
@@ -41,20 +51,42 @@ def test_good_summary_passes():
 @pytest.mark.parametrize(
     "text,problem",
     [
-        ("One sentence only.", "2-3 sentences"),
-        ("One. Two. Three. Four.", "2-3 sentences"),
-        (" ".join(["Word"] * 85) + ". Second sentence.", "over 80 words"),
-        ('Officials said "this is a very long quoted statement that goes on well past the fifteen word limit we set for quotes". It opened.', "quote longer"),
+        ("One sentence only.", "short: needs at least 45 words"),
+        ("One. Two. Three. Four. Five. Six.", "at most 5 sentences"),
+        (GOOD + " " + " ".join(["word"] * 50) + ".", "over 100 words"),
+        (GOOD + ' Officials said "this is a very long quoted statement that goes on and on well past the twenty-five '
+         'word limit we set for any quote in a summary".', "quote longer than 25"),
+        (GOOD + " The rescue highlights the visionary work of the city.", "stock or praise phrases: highlights, visionary"),
+        (GOOD + " Here is a summary of it.", "reads as generated text"),
+        (GOOD + " यह आश्रय है.", "English only"),
+        (GOOD + " Read more at https://x.example/a.", "plain text only"),
+        (GOOD.replace("street dogs", "neighbourhood animals"), "keep the searched words"),
+        (GOOD + " It follows the ABC Rules.", "write 'Animal Birth Control Rules, 2023', not 'ABC Rules'"),
     ],
 )
 def test_bad_summaries_fail(text, problem):
     assert any(problem in p for p in summarise.check_summary(text, item()))
 
 
+def test_each_section_has_its_own_length():
+    assert any("at least 60 words" in p for p in summarise.check_summary(GOOD, item(LEGAL)))  # Library: 60-130
+    rules = summary_rules.merged({"sections": {"news": {"min_words": 20}}})  # the site's numbers win
+    assert summarise.check_summary(GOOD, item(), rules) == []
+    assert rules["sections"]["news"]["max_words"] == 100  # the rest stays as the defaults
+
+
 def test_copied_run_detected():
-    copied = SOURCE_TEXT.split(" on Monday")[1] + ". It is in Pune."
-    assert summarise.longest_copied_run(copied, SOURCE_TEXT) > 15
+    copied = GOOD + " The shelter in Hadapsar was built at a cost of Rs 2 crore and has a veterinary clinic, an isolation ward and space for adoption drives."
     assert any("consecutive words" in p for p in summarise.check_summary(copied, item()))
+
+
+def test_exact_names_and_quotes_are_not_copying():
+    name = "the Prevention of Cruelty to Animals (Dog Breeding and Marketing) Rules, 2017"
+    src = SOURCE_TEXT + f" The breeder was booked under {name} and Section 11 of the Act."
+    entities = summarise.summary_rules.DEFAULTS["entities"] + [name.replace("the ", "", 1)]
+    rules = summary_rules.merged({"entities": entities})
+    ok = GOOD + f" The breeder was booked under {name}."
+    assert not any("consecutive" in p for p in summarise.check_summary(ok, item(text=src), rules))
 
 
 def test_quote_of_fifteen_words_allowed():
@@ -69,13 +101,53 @@ def test_retry_then_success():
 
 
 def test_gives_up_after_retry():
-    client = FakeClient(["Too short.", "Still short."])
+    client = FakeClient([BAD, BAD])
     with pytest.raises(summarise.SummaryError):
         summarise.Summariser([summarise.ClaudeBackend("k", client=client)]).summarise(item())
 
 
+def test_short_fallback_reads_the_page_again_then_holds_for_review():
+    thin = item(text="Pune opened a shelter for 200 street dogs in Hadapsar.")
+    pages = []
+    b = Fixed("haiku", SHORT)
+    s = summarise.Summariser([b], fetch=lambda url: pages.append(url) or "")
+    thin.url = "https://news.example/pune-shelter"
+    out = s.summarise(thin)
+    assert out == SHORT and s.last_short and pages == [thin.url] and b.calls == 1  # never padded, no second ask
+    b2 = Fixed("haiku", SHORT)
+    b2.ask = lambda prompt, _b=b2: (setattr(_b, "calls", _b.calls + 1), GOOD if SOURCE_TEXT[:60] in prompt else SHORT)[1]
+    s = summarise.Summariser([b2], fetch=lambda url: SOURCE_TEXT)
+    assert s.summarise(thin) == GOOD and not s.last_short  # written again from the page
+
+
+def test_prompt_is_built_from_the_rules():
+    p = summarise.prompt_for(item(LEGAL, SOURCE_TEXT + " under the PCA Act."))
+    assert "60 to 130 words" in p and "who it applies to" in p and "for its Library" in p
+    assert "Name these exactly so: Prevention of Cruelty to Animals Act, 1960" in p
+    rules = summary_rules.merged({"sections": {"news": {"structure": "Lead first, then the rest."}}})
+    assert "Structure: Lead first, then the rest." in summarise.prompt_for(item(), rules)
+
+
+def test_rules_are_read_from_the_site_and_fall_back_to_the_defaults():
+    class Site:
+        def summary_rules(self):
+            return {"sections": {"news": {"min_words": "50"}}, "stock_phrases": ["iconic"]}
+
+    class Down:
+        def summary_rules(self):
+            raise RuntimeError("HTTP 500")
+
+    try:
+        assert summary_rules.use(Site())["sections"]["news"]["min_words"] == 50
+        assert summary_rules.current()["stock_phrases"] == ["iconic"]
+        assert summary_rules.use(Down()) == summary_rules.merged(None)
+    finally:
+        summary_rules.reset()
+
+
 def test_legal_note_added():
-    out = summarise.Summariser([summarise.ClaudeBackend("k", client=FakeClient([GOOD]))]).summarise(item(LEGAL))
+    legal_good = GOOD + " Feeders and residents can report injured animals on the helpline, officials said."
+    out = summarise.Summariser([summarise.ClaudeBackend("k", client=FakeClient([legal_good]))]).summarise(item(LEGAL))
     assert out.endswith("\n[Needs legal review]")
     news = summarise.Summariser([summarise.ClaudeBackend("k", client=FakeClient([GOOD]))]).summarise(item())
     assert "legal review" not in news
@@ -145,7 +217,7 @@ def test_haiku_first_when_it_works():
 
 
 def test_falls_back_on_error_and_on_failed_checks():
-    bad_quality = Fixed("gemini", "Too short.")
+    bad_quality = Fixed("gemini", BAD)
     groq = Fixed("groq", GOOD)
     s = summarise.Summariser([Failing(), bad_quality, groq])
     assert s.summarise(item()) == GOOD
@@ -154,7 +226,7 @@ def test_falls_back_on_error_and_on_failed_checks():
 
 def test_all_providers_fail():
     with pytest.raises(summarise.SummaryError, match="haiku: overloaded"):
-        summarise.Summariser([Failing(), Fixed("groq", "Short.")]).summarise(item())
+        summarise.Summariser([Failing(), Fixed("groq", BAD)]).summarise(item())
 
 
 def test_backends_from_env_order_and_skips_missing_keys():
@@ -267,7 +339,7 @@ def test_a_rate_limited_key_rests_then_is_used_again(monkeypatch):
 
 
 def test_bad_summary_does_not_kill_key():
-    flaky = Fixed("haiku", "Too short.")
+    flaky = Fixed("haiku", BAD)
     backup = Fixed("gemini", GOOD)
     s = summarise.Summariser([flaky, backup])
     s.summarise(item())

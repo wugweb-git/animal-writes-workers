@@ -23,7 +23,7 @@ from pathlib import Path
 
 import requests
 
-from . import ingest, relevance, sources, summarise
+from . import ingest, relevance, sources, summarise, summary_rules
 from .run import truthy
 from .sources import Item, Source
 
@@ -171,6 +171,7 @@ def main() -> int:
     backends = summarise.backends_from_env(os.environ, ledger={})
     summariser = summarise.Summariser(backends) if backends and not dry_run else summarise.DryRunSummariser()
     gate = relevance.Gate.from_site(None if dry_run else summariser, client, dry_run=dry_run)
+    summary_rules.use(client)
     papers = collect(floor, today)
     log.info("research: %d India papers since %s", len(papers), floor)
     src = Source(id="research", name="Research", kind="api", type="research", url="")
@@ -187,6 +188,8 @@ def main() -> int:
             summary = summariser.summarise(item)
             cats = summarise.pick_categories(summariser, item, summary, sources.allowed_categories("research"))
             payload = dict(ingest.build_payload(item, summary, cats), backfill=True)
+            if getattr(summariser, "last_short", False):
+                payload["summary_short"] = True  # not published at once: held for review
             if verdict is not None:
                 payload["relevance"] = verdict.to_json()
             result = client.post(payload) if client else "dry-run"

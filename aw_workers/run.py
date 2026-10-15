@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from datetime import date, timedelta
 from pathlib import Path
 
-from . import documents, enrich, ingest, merge, policy as policy_mod, press, relevance, sources, summarise
+from . import documents, enrich, ingest, merge, policy as policy_mod, press, relevance, sources, summarise, summary_rules
 
 # How far back Google News searches look (AW_WINDOW, e.g. "4d" to catch up after an outage).
 WINDOW = os.environ.get("AW_WINDOW") or "2d"
@@ -225,6 +225,8 @@ def run(
                 cats = (None if item.source.type == "opportunity"
                           else summarise.pick_categories(summariser, item, summary, sources.allowed_categories(item.source.type)))
                 payload = ingest.build_payload(item, summary, cats)
+                if getattr(summariser, "last_short", False):
+                    payload["summary_short"] = True  # below the minimum and the source gave no more: held for review
                 if verdict is not None:
                     payload["relevance"] = verdict.to_json()
                 if dry_run:
@@ -377,6 +379,7 @@ def main() -> int:
     if not truthy(os.environ.get("AW_FETCH_OPPORTUNITIES"), default=False):
         source_list = [s for s in source_list if s.type != "opportunity"]
     gate = relevance.Gate.from_site(summariser, client or policy_client, dry_run=dry_run)
+    summary_rules.use(client or policy_client)  # Settings → Sourcing → Summary rules; the defaults when unreachable
 
     def checkpoint():  # live runs keep their progress item by item (a run cut short no longer starts over)
         save_seen(SEEN_FILE, seen)

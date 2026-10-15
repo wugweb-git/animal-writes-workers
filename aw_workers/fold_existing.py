@@ -12,7 +12,7 @@ import logging
 import os
 import sys
 
-from . import ingest, merge, summarise
+from . import ingest, merge, summarise, summary_rules
 
 log = logging.getLogger("aw_workers.fold_existing")
 
@@ -32,6 +32,7 @@ def main(env=os.environ) -> int:
     redo = env.get("AW_REDO", "false").lower() == "true"
     client = ingest.Client(env["WP_BASE_URL"], env["WP_INGEST_USER"], env["WP_INGEST_APP_PASSWORD"])
     summariser = summarise.Summariser(summarise.backends_from_env(env, ledger={}))
+    summary_rules.use(client)  # the rewrites follow Settings → Sourcing → Summary rules
     failed = 0
     for dup, keep in pairs(env.get("AW_PAIRS", "")):
         d = client.story(dup)

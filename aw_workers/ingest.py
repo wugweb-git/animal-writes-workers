@@ -124,6 +124,10 @@ class Client:
         """Categories (slug => name), each section's allowed categories and tags, and Directory organisation names, for the relevance gate."""
         return self._call("GET", "/relevance-config", timeout=90)
 
+    def summary_rules(self) -> dict:
+        """The summary rules (Settings → Sourcing → Summary rules): lengths per section, structure, wording."""
+        return self._call("GET", "/summary-rules")
+
     def reject(self, entry: dict) -> dict:
         """Add an item the relevance gate refused to the site's Rejected log (Inbox → To review)."""
         return self._call("POST", "/relevance-rejected", json=entry)

@@ -44,8 +44,8 @@ class Site:
 
 
 REWRITE = ("Police rescued 14 dogs from an illegal breeding unit in Kondhwa, Pune, on Monday and took them to a shelter. "
-           "The owner, Rakesh Jadhav, was booked under the Prevention of Cruelty to Animals Act, and the Pune Municipal "
-           "Corporation sealed the premises.")
+           "The owner, Rakesh Jadhav, was booked under the Prevention of Cruelty to Animals Act, 1960, and the Pune "
+           "Municipal Corporation sealed the premises.")
 FACTS = "The owner, Rakesh Jadhav, was booked and the Pune Municipal Corporation sealed the premises in Kondhwa."
 
 
@@ -84,22 +84,22 @@ def test_invented_facts_never_reach_the_site():
 
 def test_stock_phrasing_and_lost_facts_are_refused():
     stock = "In a significant development, police rescued 14 dogs in Kondhwa, Pune. Furthermore, the owner was booked."
-    assert any("stock phrases" in p for p in merge.check_summary(stock, STORY["summary"], REPORT_TITLE, REPORT_TEXT))
+    assert any("stock or praise phrases" in p for p in merge.check_summary(stock, STORY["summary"], REPORT_TITLE, REPORT_TEXT))
     praise = "Police rescued 14 dogs in Kondhwa, Pune. The rescue highlights the visionary work of the city on Monday."
-    assert "stock phrases: highlights, visionary" in merge.check_summary(praise, STORY["summary"], REPORT_TITLE, REPORT_TEXT)
+    assert "stock or praise phrases: highlights, visionary" in merge.check_summary(praise, STORY["summary"], REPORT_TITLE, REPORT_TEXT)
     lost = "Police rescued dogs from an illegal breeding unit in Kondhwa, Pune. The owner, Rakesh Jadhav, was booked."
     assert any("left out: 14" in p for p in merge.check_summary(lost, STORY["summary"], REPORT_TITLE, REPORT_TEXT))
     heading = "**Update**\nPolice rescued 14 dogs in Pune. The owner was booked."
     assert any("plain text" in p for p in merge.check_summary(heading, STORY["summary"], REPORT_TITLE, REPORT_TEXT))
     named = "Police rescued 14 dogs in Pune, The Second Paper said. The owner was booked on Monday."
-    assert "names the publisher" in merge.check_summary(named, STORY["summary"], REPORT_TITLE, REPORT_TEXT, "The Second Paper")
+    assert any("names the publisher" in p for p in merge.check_summary(named, STORY["summary"], REPORT_TITLE, REPORT_TEXT, "The Second Paper"))
     assert merge.check_summary(REWRITE, STORY["summary"], REPORT_TITLE, REPORT_TEXT, "The Second Paper") == []
 
 
 def test_a_corrected_answer_is_used():
     b = Backend([adds(FACTS, "Furthermore, 14 dogs were rescued in Pune. The owner was booked."), adds(FACTS, REWRITE)])
     body, _ = fold(b)
-    assert body["summary"] == REWRITE and "stock phrases: furthermore" in b.prompts[1]
+    assert body["summary"] == REWRITE and "stock or praise phrases: furthermore" in b.prompts[1]
 
 
 def test_the_prompt_allows_only_the_two_reports_as_sources():
@@ -107,7 +107,7 @@ def test_the_prompt_allows_only_the_two_reports_as_sources():
     fold(b)
     p = b.prompts[0]
     assert "Use only facts written in OUR SUMMARY and in the NEW REPORT" in p and "Never add anything from memory" in p
-    assert REPORT_TEXT in p and STORY["summary"] in p and "no heading" in p and "Vary sentence length" in p
+    assert REPORT_TEXT in p and STORY["summary"] in p and "no heading" in p and "Structure: Sentence 1, the lead" in p
 
 
 def test_check_rules():
@@ -214,3 +214,17 @@ def test_fold_existing_pairs():
     from aw_workers import fold_existing
 
     assert fold_existing.pairs("9637:146, 10673:10665") == [(9637, 146), (10673, 10665)]
+
+
+def test_rewrites_follow_the_summary_rules_of_the_story_section():
+    # Below the minimum is accepted only when the rewrite is longer than ours (never padded); a Library story is
+    # checked against the Library rules.
+    short = "Police rescued 14 dogs in Kondhwa, Pune, on Monday."
+    assert any(p.startswith("short:") for p in merge.check_summary(short, REWRITE, REPORT_TITLE, REPORT_TEXT))
+    assert not any(p.startswith("short:") for p in merge.check_summary(REWRITE, STORY["summary"], REPORT_TITLE, REPORT_TEXT))
+    b = Backend([adds(FACTS, REWRITE)])
+    fold(b, Site(dict(STORY, type="aw_legal")))
+    assert "for citizens and feeders" in b.prompts[0] and "60 to 130 words" in b.prompts[0]
+    alias = REWRITE.replace("Animals Act, 1960", "Animals Act").replace("Prevention of Cruelty to Animals Act", "PCA Act")
+    assert any("write 'Prevention of Cruelty to Animals Act, 1960'" in p
+               for p in merge.check_summary(alias, STORY["summary"], REPORT_TITLE, REPORT_TEXT))

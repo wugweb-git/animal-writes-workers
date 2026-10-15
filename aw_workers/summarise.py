@@ -383,6 +383,13 @@ def _readable_url(url: str) -> bool:
     return bool(re.match(r"https?://[^/]+\.[^/]+/", url or "")) and not url.lower().split("?")[0].endswith(".pdf")
 
 
+def thin_source(item: Item, rules: dict | None = None) -> bool:
+    """The feed gave fewer words than twice the section's minimum: a longer summary would have to be padded."""
+    rules = rules or summary_rules.current()
+    sec = rules["sections"].get(section_of(item)) or rules["sections"]["news"]
+    return len(summary_rules.words(f"{item.title} {item.text}")) < 2 * int(sec["min_words"])
+
+
 def prompt_for(item: Item, rules: dict | None = None) -> str:
     rules = rules or summary_rules.current()
     section = section_of(item)
@@ -416,6 +423,8 @@ class Summariser:
     def _try(self, backend, prompt: str, item: Item) -> str:
         summary = backend.ask(prompt)
         problems = check_summary(summary, item) + date_problems(summary, item)
+        if summary_rules.only_short(problems) and thin_source(item):
+            raise ShortSummary(summary, "; ".join(problems))  # asking again would only pad: read the page instead
         if problems:
             summary = backend.ask(
                 prompt + "\n\nYour previous attempt broke these rules: " + "; ".join(problems)
