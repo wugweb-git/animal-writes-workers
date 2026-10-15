@@ -73,6 +73,14 @@ jobs:
           key: seen-${{ github.run_id }}
           restore-keys: seen-
       - run: python -m aw_workers.run
+      # New items get their Rank Math focus keyword in the same run, not up to a day later at the daily job (owner,
+      # 15 Oct 2026: 14 News items published after the 04:00 run had none). Writes only empty fields.
+      - name: Focus keywords for new items
+        if: env.DRY_RUN == 'false'
+        continue-on-error: true
+        env:
+          AW_SEO_TYPES: aw_news,aw_legal,post
+        run: python -m aw_workers.focus_keywords
       - name: Save seen-items state
         if: always() && hashFiles('.state/**') != ''
         uses: actions/cache/save@v4
