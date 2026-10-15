@@ -93,3 +93,26 @@ def test_google_news_publisher_split(fixture_text):
     first = items[0]
     assert first.publisher == "BollySpice.com"
     assert not first.title.endswith("BollySpice.com") and first.title.startswith("World Animal Day")
+
+
+def test_section_lists_limit_categories_and_tags():
+    from aw_workers import ingest
+
+    sources.CATEGORIES.clear()
+    sources.CATEGORIES.update({"community-dogs": ["stray dog"], "laws-rules": ["rules"], "wildlife": ["leopard"]})
+    sources.SECTIONS.clear()
+    try:
+        assert sources.allowed_categories("opportunity") == ["community-dogs", "laws-rules", "wildlife"]  # no lists yet: all
+        assert sources.allowed_tags("opportunity") is None
+        sources.set_sections({"aw_opportunity": {"categories": {"wildlife": "Wildlife", "community-dogs": "Community Dogs"},
+                                                 "tags": {"job": "Job", "volunteer": "Volunteer"}}})
+        assert sources.allowed_categories("opportunity") == ["wildlife", "community-dogs"]
+        opp = Source(id="o", name="Org", kind="sjm", type="opportunity", url="https://example.com/", org="Org", opportunity_type="job")
+        item = sources.Item(source=opp, title="Stray dog and leopard rules officer", url="https://example.com/1", date=TODAY)
+        p = ingest.build_payload(item, "x")
+        assert p["categories"] == ["community-dogs", "wildlife"]  # laws-rules is not an Opportunities category
+        assert p["tags"] == ["job"] and "opportunity_type" not in p
+        opp.opportunity_type = "grant"  # not in the Opportunities tags
+        assert "tags" not in ingest.build_payload(item, "x")
+    finally:
+        sources.SECTIONS.clear()

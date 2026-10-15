@@ -223,7 +223,7 @@ def run(
                 summary = (ingest.opportunity_summary(item) if item.source.type == "opportunity"
                            else summariser.summarise(item))
                 cats = (None if item.source.type == "opportunity"
-                          else summarise.pick_categories(summariser, item, summary, list(sources.CATEGORIES)))
+                          else summarise.pick_categories(summariser, item, summary, sources.allowed_categories(item.source.type)))
                 payload = ingest.build_payload(item, summary, cats)
                 if verdict is not None:
                     payload["relevance"] = verdict.to_json()

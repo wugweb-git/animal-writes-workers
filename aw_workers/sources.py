@@ -61,6 +61,35 @@ class Item:
 
 
 CATEGORIES: dict[str, list[str]] = {}
+# Each section's allowed categories and tags (the site's Settings → Sourcing → Sections): site type => {"categories",
+# "tags"} (slug lists or slug => name). Empty until the site sends them; then items are classified only within these.
+SECTIONS: dict[str, dict] = {}
+SITE_TYPES = {"news": "aw_news", "legal": "aw_legal", "opportunity": "aw_opportunity", "research": "post"}
+
+
+def set_sections(data) -> None:
+    if isinstance(data, dict) and data:
+        SECTIONS.clear()
+        SECTIONS.update({str(k): v for k, v in data.items() if isinstance(v, dict)})
+
+
+def _allowed(item_type: str, key: str) -> list[str] | None:
+    sec = SECTIONS.get(SITE_TYPES.get(item_type, item_type))
+    if not sec or key not in sec:
+        return None
+    vals = sec[key]
+    return list(vals.keys()) if isinstance(vals, dict) else [str(v) for v in (vals or [])]
+
+
+def allowed_categories(item_type: str) -> list[str]:
+    """Category slugs this kind of item may get (every known category until the site sends its lists)."""
+    allowed = _allowed(item_type, "categories")
+    return allowed if allowed else list(CATEGORIES)
+
+
+def allowed_tags(item_type: str) -> list[str] | None:
+    """Tag slugs this kind of item may get, or None when the site has not sent its lists."""
+    return _allowed(item_type, "tags")
 
 
 def categories_for(item: "Item", extra: str = "") -> list[str]:
@@ -84,6 +113,7 @@ def load_sources_data(data: dict) -> tuple[list[Source], dict]:
     """Sources from the lists' dict: sources.yaml, or the site's copy (Settings → Sourcing), which has the same shape."""
     CATEGORIES.clear()
     CATEGORIES.update({k: [str(w) for w in v] for k, v in (data.get("categories") or {}).items()})
+    set_sections(data.get("sections"))
     sources = []
     for s in data.get("sources", []):
         if s["type"] not in ("news", "legal", "opportunity"):

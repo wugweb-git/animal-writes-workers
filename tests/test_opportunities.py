@@ -55,7 +55,7 @@ def test_opportunity_payload_and_factual_summary():
     payload = ingest.build_payload(item, ingest.opportunity_summary(item))
     assert payload["type"] == "opportunity"
     assert payload["org_name"] == "WWF-India"
-    assert payload["opportunity_type"] == "job"
+    assert payload["tags"] == ["job"]
     assert payload["place"] == item.place
     assert payload["summary"].startswith("WWF-India: ")
 

@@ -185,7 +185,7 @@ def main() -> int:
             continue
         try:
             summary = summariser.summarise(item)
-            cats = summarise.pick_categories(summariser, item, summary, list(sources.CATEGORIES))
+            cats = summarise.pick_categories(summariser, item, summary, sources.allowed_categories("research"))
             payload = dict(ingest.build_payload(item, summary, cats), backfill=True)
             if verdict is not None:
                 payload["relevance"] = verdict.to_json()

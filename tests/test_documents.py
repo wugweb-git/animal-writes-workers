@@ -30,7 +30,7 @@ def test_supreme_court_rows():
     assert it.date == date(2026, 8, 22) and it.title.endswith("(2026INSC900)")
     assert it.url == it.document_url == "https://indian-supreme-court-judgments.s3.ap-south-1.amazonaws.com/data/pdf/year=2026/english/2026_8_1_20_EN.pdf"
     p = ingest.build_payload(it, "summary", [])
-    assert p["kind"] == "judgment" and p["court"] == "supreme-court" and p["source_type"] == "supreme-court"
+    assert p["tags"] == ["judgment"] and p["court"] == "supreme-court" and p["source_type"] == "supreme-court"
 
 
 def test_high_court_rows_skip_bail_and_interim():

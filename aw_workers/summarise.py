@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import logging
 import re
 import time
@@ -9,7 +10,7 @@ import time
 import requests
 from datetime import datetime, timezone
 
-from . import event_dates
+from . import event_dates, summary_rules
 from .sources import Item
 
 log = logging.getLogger(__name__)
@@ -17,22 +18,15 @@ log = logging.getLogger(__name__)
 MAX_RETRY_WAIT = 15.0  # seconds; longer waits skip to the next key
 
 MODEL = "claude-haiku-4-5"
-MAX_QUOTE_WORDS = 15
-MAX_WORDS = 80
+MAX_QUOTE_WORDS = summary_rules.DEFAULTS["max_quote_words"]  # kept for older callers; the rules decide
 LEGAL_NOTE = "[Needs legal review]"
 
-PROMPT = """You write short factual summaries for Animal Writes, an Indian animal-welfare site.
+# The rules themselves (length per section, structure, attribution, quotes, wording) come from Settings → Sourcing →
+# Summary rules on the site (summary_rules.py); this is only the frame around them.
+PROMPT = """You write factual summaries for Animal Writes, an Indian animal-welfare site. This one is for its {section_label}.
 
-Summarise the item below in 2 to 3 sentences of plain English, in your own words.
-Rules:
-- Plain facts only: who, what, where, when. No opinion, praise, advice or calls to action.
-- Do not copy phrases from the source. Never quote more than {max_quote} words.
-- If the source is not in English, write the summary in English.
-- If the item gives too little to summarise, state only what it says.
-- Do not say which outlets reported it or name any publication; describe only what happened.
-- Give a date only when the title or details say the event happened on that date ("on 8 December", or "on Monday"
-  or "yesterday" worked out from the report's own date). Never give the publication date below as the date of the
-  event, and never say when the report was published. If the source gives no event date, give no date.
+Summarise the item below in English. Follow every rule:
+{rules}
 - Output only the summary text, nothing else.
 
 Source: {source}
@@ -75,18 +69,14 @@ def longest_copied_run(summary: str, source_text: str) -> int:
     return best
 
 
-def check_summary(summary: str, item: Item) -> list[str]:
-    problems = []
-    n = sentence_count(summary)
-    if not 2 <= n <= 3:
-        problems.append(f"needs 2-3 sentences, got {n}")
-    if len(_words(summary)) > MAX_WORDS:
-        problems.append(f"over {MAX_WORDS} words")
-    if longest_quote_words(summary) > MAX_QUOTE_WORDS:
-        problems.append(f"quote longer than {MAX_QUOTE_WORDS} words")
-    if longest_copied_run(summary, f"{item.title} {item.text}") > MAX_QUOTE_WORDS:
-        problems.append(f"copies more than {MAX_QUOTE_WORDS} consecutive words from the source")
-    return problems
+def section_of(item: Item) -> str:
+    return summary_rules.section_for(item.source.type)
+
+
+def check_summary(summary: str, item: Item, rules: dict | None = None) -> list[str]:
+    """Why the summary breaks the summary rules ([] = it follows them)."""
+    return summary_rules.problems(summary, section_of(item), f"{item.title}. {item.text}", rules,
+                                  publisher=item.publisher or "")
 
 
 def date_problems(summary: str, item: Item) -> list[str]:
@@ -381,16 +371,47 @@ def wait_for_cooldown(owner, sleep=None) -> bool:
     return True
 
 
-class Summariser:
-    """Tries each provider in order. A provider is used only if its summary passes every check."""
+class ShortSummary(SummaryError):
+    """A summary that follows every rule but is below the section's minimum: the source gave too little."""
 
-    def __init__(self, backends: list):
+    def __init__(self, summary: str, why: str):
+        super().__init__(why)
+        self.summary = summary
+
+
+def _readable_url(url: str) -> bool:
+    return bool(re.match(r"https?://[^/]+\.[^/]+/", url or "")) and not url.lower().split("?")[0].endswith(".pdf")
+
+
+def prompt_for(item: Item, rules: dict | None = None) -> str:
+    rules = rules or summary_rules.current()
+    section = section_of(item)
+    return PROMPT.format(
+        section_label=rules["sections"].get(section, {}).get("label", section),
+        rules=summary_rules.rules_block(section, rules, f"{item.title}. {item.text}"),
+        source=item.publisher or item.source.name,
+        title=item.title,
+        date=item.date.isoformat() if item.date else "unknown",
+        text=item.text[:4000] or "(no further details)",
+    )
+
+
+class Summariser:
+    """Tries each provider in order. A provider is used only if its summary passes every check.
+
+    The short fallback (owner, 15 Oct 2026): a summary below the section's minimum is never padded. The source page is
+    read again when the feed gave too little and the summary written from it; when the page cannot be read either, the
+    short summary is kept (`last_short` is set) and the site holds the item in Inbox → To review."""
+
+    def __init__(self, backends: list, fetch=None):
         if not backends:
             raise ValueError("no summary provider configured")
         self.backends = backends
         self.used: dict[str, int] = {}
         self.dead: set[int] = set()  # indexes of keys that failed hard this run
         self.cool: dict[int, float] = {}  # rate-limited keys resting until (monotonic), shared with the relevance gate
+        self.fetch = fetch  # url -> the page's own text ('' when unreadable); default: merge.page_text
+        self.last_short = False
 
     def _try(self, backend, prompt: str, item: Item) -> str:
         summary = backend.ask(prompt)
@@ -402,18 +423,14 @@ class Summariser:
             )
             summary = drop_pub_dates(summary, item)  # still the publication date: the date phrase goes
             problems = check_summary(summary, item) + date_problems(summary, item)
+        if summary_rules.only_short(problems):
+            raise ShortSummary(summary, "; ".join(problems))
         if problems:
             raise SummaryError("; ".join(problems))
         return summary
 
-    def summarise(self, item: Item) -> str:
-        prompt = PROMPT.format(
-            max_quote=MAX_QUOTE_WORDS,
-            source=item.publisher or item.source.name,
-            title=item.title,
-            date=item.date.isoformat() if item.date else "unknown",
-            text=item.text[:4000] or "(no further details)",
-        )
+    def _summarise(self, item: Item) -> str:
+        prompt = prompt_for(item)
         reasons = []
         for _ in range(2):  # a second pass once a rate-limited key has rested
             for i, backend in enumerate(self.backends):
@@ -421,16 +438,39 @@ class Summariser:
                     continue
                 try:
                     summary = self._try(backend, prompt, item)
+                except ShortSummary:
+                    note_success(self, i)
+                    self.used[backend.name] = self.used.get(backend.name, 0) + 1
+                    raise  # the source gave too little: another model would not find more in it
                 except Exception as exc:  # API error or failed checks: fall through to the next key/provider
                     note_failure(self, i, exc)
                     reasons.append(f"{backend.name}: {str(exc)[:150]}")
                     continue
                 note_success(self, i)
                 self.used[backend.name] = self.used.get(backend.name, 0) + 1
-                return finalise(summary, item)
+                return summary
             if not wait_for_cooldown(self):
                 break
         raise SummaryError(" | ".join(reasons))
+
+    def summarise(self, item: Item) -> str:
+        self.last_short = False
+        try:
+            return finalise(self._summarise(item), item)
+        except ShortSummary as short:
+            kept = short
+        fetch = self.fetch
+        if fetch is None:
+            from .merge import page_text as fetch
+        more = fetch(item.url) if _readable_url(item.url) else ""
+        if len((more or "").strip()) > len(item.text or "") + 200:
+            try:
+                return finalise(self._summarise(dataclasses.replace(item, text=more)), item)
+            except ShortSummary as again:
+                kept = again
+        self.last_short = True
+        log.info("summary below the minimum, source too thin; held for review: %s (%s)", item.url, kept)
+        return finalise(kept.summary, item)
 
 
 CATEGORY_PROMPT = """Choose the categories of an Indian animal-welfare news item.
@@ -445,7 +485,7 @@ def pick_categories(summariser, item: Item, summary: str, allowed: list[str]) ->
     """Every item gets a category: keyword matches first; when none match, the summary model picks from the list."""
     from .sources import categories_for
 
-    found = categories_for(item, summary)
+    found = [c for c in categories_for(item, summary) if not allowed or c in allowed]
     if found or not allowed or not hasattr(summariser, "backends"):
         return found
     prompt = CATEGORY_PROMPT.format(slugs=", ".join(allowed), title=item.title, summary=summary)

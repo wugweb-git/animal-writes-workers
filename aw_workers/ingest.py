@@ -8,7 +8,7 @@ import re
 
 import requests
 
-from .sources import Item, categories_for
+from .sources import Item, allowed_categories, allowed_tags, categories_for
 
 TIMEOUT = 30
 
@@ -59,13 +59,16 @@ def build_payload(item: Item, summary: str, categories: list[str] | None = None)
         "categories": (categories if categories is not None else categories_for(item)) + (["courts-judgments"] if item.source.source_type == "auto-court" else []),
         "feed": item.source.id,
     }
+    allowed = allowed_categories(item.source.type)  # only the section's categories (Settings → Sourcing → Sections)
+    payload["categories"] = [c for c in dict.fromkeys(payload["categories"]) if c in allowed]
+    tags: list[str] = []
     source_type = court_type(item.title) if item.source.source_type == "auto-court" else item.source.source_type
     if source_type:
         payload["source_type"] = source_type
     if item.image:
         payload["image_url"] = item.image
-    if item.doc_kind:  # Library documents: what it is, the court, and the PDF the site may keep a copy of
-        payload["kind"] = item.doc_kind
+    if item.doc_kind:  # Library documents: what it is (a tag), the court, and the PDF the site may keep a copy of
+        tags.append(item.doc_kind)
         payload["document_url"] = item.document_url
         if item.court:
             payload["court"] = item.court
@@ -74,7 +77,12 @@ def build_payload(item: Item, summary: str, categories: list[str] | None = None)
         payload["org_name"] = item.source.org or item.source.name
         payload["place"] = item.place
         payload["deadline"] = item.deadline.isoformat() if item.deadline else ""
-        payload["opportunity_type"] = item.source.opportunity_type
+        if item.source.opportunity_type:
+            tags.append(item.source.opportunity_type)
+    known = allowed_tags(item.source.type)
+    tags = [t for t in dict.fromkeys(tags) if t and (known is None or t in known)]
+    if tags:
+        payload["tags"] = tags  # WordPress tags (Library type, Opportunity type ...), from the section's list
     return payload
 
 
@@ -113,7 +121,7 @@ class Client:
         return resp.json()
 
     def relevance_config(self) -> dict:
-        """Categories (slug => name) and Directory organisation names, for the relevance gate."""
+        """Categories (slug => name), each section's allowed categories and tags, and Directory organisation names, for the relevance gate."""
         return self._call("GET", "/relevance-config", timeout=90)
 
     def reject(self, entry: dict) -> dict:

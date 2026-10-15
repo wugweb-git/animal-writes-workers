@@ -23,6 +23,7 @@ from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
+from . import sources
 from .summarise import MODEL as HAIKU_MODEL, _is_dead_key_error, note_failure, note_success, usable, wait_for_cooldown  # noqa: F401
 
 log = logging.getLogger("aw_workers.relevance")
@@ -212,6 +213,7 @@ class Gate:
             try:
                 cfg = client.relevance_config()
                 cats = cfg.get("categories") or None
+                sources.set_sections(cfg.get("sections"))  # each section's allowed categories and tags
                 directory = cfg.get("directory") or None
                 recent = [t for t in cfg.get("recent") or [] if isinstance(t, str)]
                 ids = {str(r.get("title")): int(r.get("id") or 0) for r in cfg.get("recent_items") or []
