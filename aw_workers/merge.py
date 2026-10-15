@@ -51,13 +51,14 @@ Rules for both:
 - summary: {min_s} to {max_s} sentences, at most {max_words} words, plain text with no heading, list or bold.
   Vary sentence length. Never quote more than {max_quote} words. No filler and no stock phrases such as
   "in a significant development", "it is worth noting", "furthermore", "moreover", "additionally", "underscores",
-  "amid", "highlighting", "pivotal" or "a testament to".
+  "amid", "highlights", "pivotal", "visionary" or "a testament to". No praise words.
 Answer with JSON only: {{"adds": "<the new facts, or empty>", "summary": "<the rewritten summary, or empty>"}}"""
 
 # Stock phrasing that reads as generated text (owner, 15 Oct 2026: no AI content label).
 STOCK = re.compile(
     r"\b(?:in a (?:significant|major|notable) development|(?:it is )?worth noting|it should be noted|furthermore|moreover|"
-    r"additionally|underscor\w*|amid(?:st)?|notably|in conclusion|highlighting|highlights the|crucial role|pivotal|"
+    r"additionally|underscor\w*|amid(?:st)?|notably|in conclusion|highlight(?:s|ed|ing)?|crucial role|pivotal|visionary|renowned|"
+    r"remarkable|innovative|cutting-edge|world-class|state-of-the-art|landmark|"
     r"testament|delv\w*|landscape|paving the way|paves the way|shed(?:s|ding)? light|in a bid to|a move that|"
     r"this comes as|groundbreaking|commendable|robust|comprehensive|boasts?|serves as a reminder|in today's)\b",
     re.I,

@@ -85,6 +85,8 @@ def test_invented_facts_never_reach_the_site():
 def test_stock_phrasing_and_lost_facts_are_refused():
     stock = "In a significant development, police rescued 14 dogs in Kondhwa, Pune. Furthermore, the owner was booked."
     assert any("stock phrases" in p for p in merge.check_summary(stock, STORY["summary"], REPORT_TITLE, REPORT_TEXT))
+    praise = "Police rescued 14 dogs in Kondhwa, Pune. The rescue highlights the visionary work of the city on Monday."
+    assert "stock phrases: highlights, visionary" in merge.check_summary(praise, STORY["summary"], REPORT_TITLE, REPORT_TEXT)
     lost = "Police rescued dogs from an illegal breeding unit in Kondhwa, Pune. The owner, Rakesh Jadhav, was booked."
     assert any("left out: 14" in p for p in merge.check_summary(lost, STORY["summary"], REPORT_TITLE, REPORT_TEXT))
     heading = "**Update**\nPolice rescued 14 dogs in Pune. The owner was booked."
