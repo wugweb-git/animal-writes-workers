@@ -8,7 +8,7 @@ import re
 
 import requests
 
-from .sources import Item, topics_for
+from .sources import Item, categories_for
 
 TIMEOUT = 30
 
@@ -48,7 +48,7 @@ def court_type(title: str) -> str:
     return ""
 
 
-def build_payload(item: Item, summary: str, topics: list[str] | None = None) -> dict:
+def build_payload(item: Item, summary: str, categories: list[str] | None = None) -> dict:
     payload = {
         "type": item.source.type,
         "title": item.title,
@@ -56,7 +56,7 @@ def build_payload(item: Item, summary: str, topics: list[str] | None = None) -> 
         "source_url": item.url,
         "source_name": item.publisher or item.source.name,
         "source_date": item.date.isoformat() if item.date else "",
-        "topics": (topics if topics is not None else topics_for(item)) + (["courts-judgments"] if item.source.source_type == "auto-court" else []),
+        "categories": (categories if categories is not None else categories_for(item)) + (["courts-judgments"] if item.source.source_type == "auto-court" else []),
         "feed": item.source.id,
     }
     source_type = court_type(item.title) if item.source.source_type == "auto-court" else item.source.source_type
@@ -113,7 +113,7 @@ class Client:
         return resp.json()
 
     def relevance_config(self) -> dict:
-        """Categories (aw_topic slug => name) and Directory organisation names, for the relevance gate."""
+        """Categories (slug => name) and Directory organisation names, for the relevance gate."""
         return self._call("GET", "/relevance-config", timeout=90)
 
     def reject(self, entry: dict) -> dict:

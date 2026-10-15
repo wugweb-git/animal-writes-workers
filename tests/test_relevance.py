@@ -53,7 +53,7 @@ def test_pass_and_reject_and_log():
 
 
 def test_not_india_and_unknown_category():
-    # A missing/unknown category no longer rejects (the site assigns topics); India is double-checked (12 Oct 2026).
+    # A missing/unknown category no longer rejects (the site assigns categories); India is double-checked (12 Oct 2026).
     g = Gate(Summ(Backend([reply(india="no"), reply(category="sports"), reply(india="no")])))
     assert g.admit(Candidate("news", "x", "https://a/1"))[0] == "reject"
     assert g.admit(Candidate("news", "y", "https://a/2"))[0] == "pass"
@@ -116,9 +116,9 @@ def test_parse_tolerates_fences():
 
 def test_existing_kinds():
     from aw_workers.relevance_existing import kind_of
-    assert kind_of({"type": "post", "categories": ["research"]}) == "research"
-    assert kind_of({"type": "post", "categories": ["guide"]}) == "guide"
-    assert kind_of({"type": "post", "categories": []}) == "resource"
+    assert kind_of({"type": "post", "resource_types": ["research"]}) == "research"
+    assert kind_of({"type": "post", "resource_types": ["guide"]}) == "guide"
+    assert kind_of({"type": "post", "resource_types": []}) == "resource"
     assert kind_of({"type": "aw_legal"}) == "legal"
 
 

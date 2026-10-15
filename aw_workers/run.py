@@ -221,9 +221,9 @@ def run(
             try:
                 summary = (ingest.opportunity_summary(item) if item.source.type == "opportunity"
                            else summariser.summarise(item))
-                topics = (None if item.source.type == "opportunity"
-                          else summarise.pick_topics(summariser, item, summary, list(sources.TOPICS)))
-                payload = ingest.build_payload(item, summary, topics)
+                cats = (None if item.source.type == "opportunity"
+                          else summarise.pick_categories(summariser, item, summary, list(sources.CATEGORIES)))
+                payload = ingest.build_payload(item, summary, cats)
                 if verdict is not None:
                     payload["relevance"] = verdict.to_json()
                 if dry_run:
@@ -357,7 +357,7 @@ def main() -> int:
             raw = policy_client.policy()
             policy = policy_mod.Policy.from_json(raw)
             log.info("policy: %d blocked publisher(s), relevance filter %s", len(policy.blocked), "on" if policy.relevance_on else "off")
-            # The lists (feeds, Library and opportunity sources, topics, press queries) come from Settings → Sourcing
+            # The lists (feeds, Library and opportunity sources, categories, press queries) come from Settings → Sourcing
             # once "Workers use these lists" is on there; otherwise, or if the site is unreachable, from sources.yaml.
             if isinstance(raw.get("config"), dict) and raw["config"].get("sources"):
                 lists = raw["config"]

@@ -32,7 +32,7 @@ MODEL = os.environ.get("AW_PRESS_GEMINI_MODEL", "gemini-2.5-flash")
 URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 BROWSER = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36"}
 OWN = re.compile(r"animalwrites\.in|facebook\.com/AnimalWritesIndia|instagram\.com/animalwrites_india|x\.com/AnimalWrites|twitter\.com/AnimalWrites", re.I)
-TOPIC = ('"Animal Writes" (animalwrites.in, #animalwrites), the citizen campaign in which people across India posted '
+SUBJECT = ('"Animal Writes" (animalwrites.in, #animalwrites), the citizen campaign in which people across India posted '
          'handwritten letters to the Supreme Court on 29 November 2025 about the stray dogs order')
 WHERE = [
     ("news articles", ""), ("Hindi news coverage", ""), ("Tamil, Telugu, Kannada or Malayalam news coverage", ""),
@@ -103,7 +103,7 @@ def collect(client, dry_run: bool, floor: str, periods: list[str], keys: list[st
     found: dict[str, str] = {}
     for what, site in WHERE:
         for period in periods:
-            prompt = f"Search Google for {what} published {period} about {TOPIC}." + (f" Search site:{site} only." if site else "") + \
+            prompt = f"Search Google for {what} published {period} about {SUBJECT}." + (f" Search site:{site} only." if site else "") + \
                      " List every URL you find."
             for key in list(keys):
                 try:

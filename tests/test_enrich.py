@@ -69,17 +69,17 @@ def test_resolve_google_news_keeps_query_string():
         "https://www.pib.gov.in/PressReleaseDetail.aspx?PRID=2318504&lang=1"
 
 
-def test_pick_topics_keywords_then_model():
+def test_pick_categories_keywords_then_model():
     from aw_workers import summarise, sources
-    sources.TOPICS.clear(); sources.TOPICS.update({"community-dogs": ["stray dog"], "adoption": ["adopt"], "policy-government": ["ministry"]})
+    sources.CATEGORIES.clear(); sources.CATEGORIES.update({"community-dogs": ["stray dog"], "adoption": ["adopt"], "policy-government": ["ministry"]})
     src = sources.Source(id="x", name="X", kind="rss", type="news", url="u")
     item = sources.Item(src, "Stray dog census begins", "https://e/1", None)
-    assert summarise.pick_topics(None, item, "", list(sources.TOPICS)) == ["community-dogs"]
+    assert summarise.pick_categories(None, item, "", list(sources.CATEGORIES)) == ["community-dogs"]
 
     class B:
         name = "fake"
         def ask(self, prompt):
-            return "policy-government, made-up-topic"
+            return "policy-government, made-up-category"
     s = summarise.Summariser([B()])
     item2 = sources.Item(src, "Businessman launches national initiative", "https://e/2", None)
-    assert summarise.pick_topics(s, item2, "A national programme was announced.", list(sources.TOPICS)) == ["policy-government"]
+    assert summarise.pick_categories(s, item2, "A national programme was announced.", list(sources.CATEGORIES)) == ["policy-government"]

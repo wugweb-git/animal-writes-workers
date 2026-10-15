@@ -150,8 +150,8 @@ sources:
   #   url: "https://indian-high-court-judgments.s3.ap-south-1.amazonaws.com/"
   #   lookback_days: 60
 
-# Topic tagging: an item gets every topic whose keywords appear in its title or summary
-# (case-insensitive). Keys are topic slugs on the site; unknown slugs are ignored by the site.
+# Categories: an item gets every category whose keywords appear in its title or summary
+# (case-insensitive). Keys are category slugs on the site; unknown slugs are ignored by the site.
 
   # --- Opportunities (approved 7 Oct 2026). Drafts for review; only metadata + a factual line. ---
   - id: opp-wwf-india
@@ -178,7 +178,7 @@ sources:
   # Wildlife SOS careers is fetched by the site itself (animal-writes-core/includes/opportunities-site.php):
   # Cloudflare there refuses GitHub's servers but answers the website's host.
 
-topics:
+categories:
   community-dogs: [stray dog, street dog, community dog, stray dogs, street dogs, community animals, कुत्त]
   animal-birth-control: [animal birth control, abc rules, abc programme, abc program, sterilis, steriliz, neuter]
   rabies-public-health: [rabies, रेबीज, dog bite, anti-rabies, vaccination drive]

@@ -3,7 +3,7 @@
 Papers about animals in India from two open databases (no key): Europe PMC (health and veterinary research) and
 Crossref (journal papers). Only papers published on or after the floor (AW_RESEARCH_FLOOR, default 2025-11-01) whose
 title or abstract (or, on Europe PMC, an author affiliation) names India or an Indian state, and whose title or abstract
-names the topic. Each paper becomes a Resources item of type Research: a short summary written from its abstract, a
+names the subject. Each paper becomes a Resources item of type Research: a short summary written from its abstract, a
 link to the paper (DOI), and its own publication date. Sent as backfill, so it publishes with that date.
 
 Run: python -m aw_workers.research   (DRY_RUN=true by default)
@@ -30,8 +30,8 @@ from .sources import Item, Source
 log = logging.getLogger("aw_workers.research")
 UA = {"User-Agent": "AnimalWritesWorkers/1.0 (https://animalwrites.in; mailto:contact@animalwrites.in)"}
 
-# Topic → words that must appear in the title or abstract (the query itself is broader).
-TOPICS = {
+# Subject → words that must appear in the title or abstract (the query itself is broader).
+SUBJECTS = {
     "community dogs": ["stray dog", "street dog", "free-roaming dog", "free roaming dog", "community dog", "dog population"],
     "rabies and dog bites": ["rabies", "dog bite", "animal bite"],
     "animal birth control": ["animal birth control", "sterilisation", "sterilization", "neuter", "abc programme", "abc program"],
@@ -79,7 +79,7 @@ def relevant(title: str, abstract: str, affiliation: str = "") -> bool:
     else:
         about_india = bool(INDIA.search(abstract)) and not ELSEWHERE.search(title)
     low = title.lower()
-    hits = [w for words in TOPICS.values() for w in words if w in low]  # the topic in the title itself
+    hits = [w for words in SUBJECTS.values() for w in words if w in low]  # the subject in the title itself
     if not about_india or not hits:
         return False
     if HUMAN_MED.search(title) or HUMAN_MED.search(abstract[:600]) and not ANIMAL.search(title):
@@ -132,7 +132,7 @@ def crossref(term: str, floor: date, get=requests.get) -> list[dict]:
 
 def collect(floor: date, today: date) -> list[dict]:
     seen, keep = set(), []
-    for words in TOPICS.values():
+    for words in SUBJECTS.values():
         for term in words[:3]:
             for fetch in (lambda t=term: europepmc(t, floor, today), lambda t=term: crossref(t, floor)):
                 try:
@@ -162,7 +162,7 @@ def main() -> int:
     client = None
     if not dry_run:
         client = ingest.Client(os.environ["WP_BASE_URL"], os.environ["WP_INGEST_USER"], os.environ["WP_INGEST_APP_PASSWORD"])
-        try:  # the site's topic list, so each paper gets topics like News does
+        try:  # the site's category list, so each paper gets categories like News does
             raw = client.policy()
             if isinstance(raw.get("config"), dict) and raw["config"].get("sources"):
                 sources.load_sources_data(raw["config"])
@@ -185,8 +185,8 @@ def main() -> int:
             continue
         try:
             summary = summariser.summarise(item)
-            topics = summarise.pick_topics(summariser, item, summary, list(sources.TOPICS))
-            payload = dict(ingest.build_payload(item, summary, topics), backfill=True)
+            cats = summarise.pick_categories(summariser, item, summary, list(sources.CATEGORIES))
+            payload = dict(ingest.build_payload(item, summary, cats), backfill=True)
             if verdict is not None:
                 payload["relevance"] = verdict.to_json()
             result = client.post(payload) if client else "dry-run"

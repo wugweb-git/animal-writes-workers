@@ -332,7 +332,7 @@ COOLDOWN_S = 60.0  # free tiers limit per minute: a rate-limited key rests this 
 
 
 def note_failure(owner, i: int, exc: Exception) -> None:
-    """Shared by summaries, topics and the relevance gate (`owner` has .dead): a dead key is dropped for the run;
+    """Shared by summaries, categories and the relevance gate (`owner` has .dead): a dead key is dropped for the run;
     a key still rate-limited after its retry rests COOLDOWN_S and is then used again (12 Oct 2026: dropping it for
     the whole run left 199 items unchecked while Groq's per-minute limit had long reset)."""
     if _is_dead_key_error(exc):
@@ -409,7 +409,7 @@ class Summariser:
         raise SummaryError(" | ".join(reasons))
 
 
-TOPIC_PROMPT = """Choose the topics of an Indian animal-welfare news item.
+CATEGORY_PROMPT = """Choose the categories of an Indian animal-welfare news item.
 Pick 1 to 3 from this list and output only their slugs, comma-separated, nothing else:
 {slugs}
 
@@ -417,14 +417,14 @@ Title: {title}
 Summary: {summary}"""
 
 
-def pick_topics(summariser, item: Item, summary: str, allowed: list[str]) -> list[str]:
-    """Every item gets a topic: keyword matches first; when none match, the summary model picks from the list."""
-    from .sources import topics_for
+def pick_categories(summariser, item: Item, summary: str, allowed: list[str]) -> list[str]:
+    """Every item gets a category: keyword matches first; when none match, the summary model picks from the list."""
+    from .sources import categories_for
 
-    found = topics_for(item, summary)
+    found = categories_for(item, summary)
     if found or not allowed or not hasattr(summariser, "backends"):
         return found
-    prompt = TOPIC_PROMPT.format(slugs=", ".join(allowed), title=item.title, summary=summary)
+    prompt = CATEGORY_PROMPT.format(slugs=", ".join(allowed), title=item.title, summary=summary)
     for i, backend in enumerate(summariser.backends):
         if not usable(summariser, i):
             continue

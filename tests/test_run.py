@@ -46,7 +46,7 @@ def test_dry_run_end_to_end(fixture_text, caplog):
     assert stats.new + stats.duplicate + stats.skipped == stats.fetched
     assert "DRY_RUN would POST" in caplog.text
     assert '"type": "legal"' in caplog.text and '"type": "news"' in caplog.text
-    assert '"topics": [' in caplog.text
+    assert '"categories": [' in caplog.text
 
 
 def test_broken_source_is_counted_not_fatal(fixture_text):
@@ -87,7 +87,7 @@ def test_live_counts_created_and_duplicate(fixture_text):
                     fetch=fake_fetch(fixture_text), today=TODAY, seen=seen)
     assert (stats.new, stats.duplicate, stats.failed) == (1, 1, 0)
     assert len(seen) == 2
-    assert set(session.sent[0]) == {"type", "title", "summary", "source_url", "source_name", "source_date", "topics", "source_type", "feed"}
+    assert set(session.sent[0]) == {"type", "title", "summary", "source_url", "source_name", "source_date", "categories", "source_type", "feed"}
     assert session.sent[0]["source_type"] == "pib"
     assert session.sent[0]["type"] == "legal" and session.sent[0]["source_date"] == "2026-10-05"
     # second run: both already seen, nothing POSTed
@@ -131,7 +131,7 @@ def _item(title, text, when, src_type="news", url=None):
     return sources.Item(source=src, title=title, url=url or f"https://example.com/{abs(hash(title + str(when)))}", date=when, text=text)
 
 
-def test_off_topic_and_repeat_titles_are_not_posted(monkeypatch):
+def test_unrelated_and_repeat_titles_are_not_posted(monkeypatch):
     from datetime import timedelta
     items = [
         _item("Dog rescued from drain in Pune", "A dog was rescued.", TODAY),

@@ -60,14 +60,14 @@ class Item:
     document_url: str = ""  # the PDF, when there is one
 
 
-TOPICS: dict[str, list[str]] = {}
+CATEGORIES: dict[str, list[str]] = {}
 
 
-def topics_for(item: "Item", extra: str = "") -> list[str]:
-    """Topic slugs whose keywords occur in the item's title, feed text or `extra` (e.g. our summary)."""
+def categories_for(item: "Item", extra: str = "") -> list[str]:
+    """Category slugs whose keywords occur in the item's title, feed text or `extra` (e.g. our summary)."""
     hay = f" {item.title} {item.text} {extra} ".lower()
     found = []
-    for slug, words in TOPICS.items():
+    for slug, words in CATEGORIES.items():
         for w in words:
             w = w.lower()
             if (re.search(rf"\b{re.escape(w)}\b", hay) if w.isascii() and len(w) <= 4 else w in hay):
@@ -82,8 +82,8 @@ def load_sources(path: str | Path = "sources.yaml") -> tuple[list[Source], dict]
 
 def load_sources_data(data: dict) -> tuple[list[Source], dict]:
     """Sources from the lists' dict: sources.yaml, or the site's copy (Settings → Sourcing), which has the same shape."""
-    TOPICS.clear()
-    TOPICS.update({k: [str(w) for w in v] for k, v in (data.get("topics") or {}).items()})
+    CATEGORIES.clear()
+    CATEGORIES.update({k: [str(w) for w in v] for k, v in (data.get("categories") or {}).items()})
     sources = []
     for s in data.get("sources", []):
         if s["type"] not in ("news", "legal", "opportunity"):

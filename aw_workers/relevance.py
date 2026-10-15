@@ -2,8 +2,8 @@
 
 An item reaches the gate only after the cheap filters (sourcing policy, animal words, duplicates). A cheap model,
 through the same providers and keys as the summaries, reads it and answers in JSON:
-    {"relevant": "yes|no", "category": "<topic slug>", "india": "yes|no", "issuer": "...", "reason": "..."}
-It passes when it is relevant, fits one of the site's Categories (aw_topic), concerns India, and — for Library and
+    {"relevant": "yes|no", "category": "<category slug>", "india": "yes|no", "issuer": "...", "reason": "..."}
+It passes when it is relevant, fits one of the site's Categories (WordPress categories), concerns India, and — for Library and
 Resources documents — was issued by a known body (courts, AWBI, ministries and departments, Gazette, PIB, NGOs in the
 Directory). Library items issued by an Indian body count as India.
 
@@ -30,7 +30,7 @@ log = logging.getLogger("aw_workers.relevance")
 CACHE_FILE = Path(os.environ.get("AW_RELEVANCE_CACHE", ".state/relevance.json"))
 UNAVAILABLE = "classifier unavailable"
 
-# The site's Categories (wp term list aw_topic, 10 Oct 2026); the site's own list replaces this when it is reachable.
+# The site's Categories (wp term list category, 15 Oct 2026); the site's own list replaces this when it is reachable.
 CATEGORIES = {
     "adoption": "Adoption",
     "animal-birth-control": "Animal Birth Control",
@@ -307,7 +307,7 @@ class Gate:
     def decide(self, c: Candidate, v: Verdict) -> tuple[bool, str]:
         """(passes, reason). Documents (Library; Resources other than research papers and own guides) need a known
         issuer; a Library item issued by an Indian body counts as India. A category is not required: the site assigns
-        topics itself, and opportunities/press have none (false rejections, 12 Oct 2026)."""
+        categories itself, and opportunities/press have none (false rejections, 12 Oct 2026)."""
         if not v.relevant:
             return False, v.reason or "not about animal welfare"
         if v.same_as:

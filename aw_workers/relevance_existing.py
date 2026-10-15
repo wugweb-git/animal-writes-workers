@@ -26,16 +26,16 @@ log = logging.getLogger("aw_workers.relevance_existing")
 # USD per million tokens (input, output) for the usual cheap models; an estimate from text length (4 chars ≈ 1 token).
 PRICES = {"openai/gpt-4o-mini": (0.15, 0.60), "gpt-4o-mini": (0.15, 0.60), "deepseek-chat": (0.27, 1.10),
           "claude-haiku-4-5": (1.00, 5.00)}
-DOC_CATEGORIES = {"guide", "faq", "how-to"}  # our own guides: no outside issuer
+DOC_TYPES = {"guide", "faq", "how-to"}  # our own guides: no outside issuer
 
 
 def kind_of(row: dict) -> str:
     t = row.get("type")
     if t == "post":
-        cats = set(row.get("categories") or [])
+        cats = set(row.get("resource_types") or [])
         if "research" in cats:
             return "research"
-        return "guide" if cats & DOC_CATEGORIES else "resource"
+        return "guide" if cats & DOC_TYPES else "resource"
     return {"aw_news": "news", "aw_legal": "legal", "aw_opportunity": "opportunity", "aw_press": "press"}.get(t, "news")
 
 

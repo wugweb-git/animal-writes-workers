@@ -68,22 +68,22 @@ def test_awbi_undated_rows_use_upload_timestamp():
     assert sources.collect(s, html, TODAY, 14, 15) == []  # old notice is not "new"
 
 
-def test_topic_tagging():
+def test_category_tagging():
     loaded, _ = sources.load_sources("sources.yaml")
     src_ = loaded[0]
     item = sources.Item(src_, "High Court orders ABC programme for street dogs after rabies cases", "https://x", TODAY)
-    tags = sources.topics_for(item)
+    tags = sources.categories_for(item)
     for t in ["community-dogs", "animal-birth-control", "rabies-public-health", "courts-judgments"]:
         assert t in tags
     assert "birds" not in tags and "wildlife" not in tags
     plain = sources.Item(src_, "Pune zoo welcomes visitors", "https://y", TODAY)
-    assert "pets-breeding" not in sources.topics_for(plain)  # no false match on short keys
+    assert "pets-breeding" not in sources.categories_for(plain)  # no false match on short keys
 
 
 def test_short_keywords_match_whole_words_only():
     loaded, _ = sources.load_sources("sources.yaml")
     item = sources.Item(loaded[0], "First action taken at the impact assessment", "https://z", TODAY)
-    tags = sources.topics_for(item)
+    tags = sources.categories_for(item)
     assert "cruelty-prosecution" not in tags  # "fir" must not match "first"
     assert "laws-rules" not in tags           # "act" must not match "action"/"impact"
 

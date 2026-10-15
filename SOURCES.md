@@ -33,11 +33,11 @@ Google News queries, decoded:
 
 An item is kept if its title or summary contains any of: `animal welfare`, `animal cruelty`, `cruelty to animals`, `stray`, `street dog`, `community dog`, `cattle`, `cow shelter`, `gaushala`, `wildlife`, `veterinary`, `rabies`, `animal birth control`, `ABC Rules`, `PCA Act`, `Prevention of Cruelty`, `AWBI`, `Animal Welfare Board`, `पशु`, `जानवर`, `पशुपालन`, `रेबीज`.
 
-## Topic tagging
+## Categories
 
-Topics label items; they do not filter anything.
+Categories label items; they do not filter anything.
 
-| Topic | Keywords |
+| Category | Keywords |
 |---|---|
 | `community-dogs` | stray dog, street dog, community dog, stray dogs, street dogs, community animals, कुत्त |
 | `animal-birth-control` | animal birth control, abc rules, abc programme, abc program, sterilis, steriliz, neuter |
@@ -74,7 +74,7 @@ Change one or many at once, add a host by hand, or use **Block {host}** on any r
 
 - **Strong**: one is enough to keep an item.
 - **Animal** + **Context**: an item with one of each is kept.
-- **Exclude**: always dropped (figurative or off-topic uses).
+- **Exclude**: always dropped (figurative or unrelated uses).
 
 Switches (both off by default):
 
