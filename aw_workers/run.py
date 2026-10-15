@@ -226,7 +226,7 @@ def run(
                           else summarise.pick_categories(summariser, item, summary, sources.allowed_categories(item.source.type)))
                 payload = ingest.build_payload(item, summary, cats)
                 if getattr(summariser, "last_short", False):
-                    payload["summary_short"] = True  # below the minimum and the source gave no more: held for review
+                    payload["summary_short"] = True  # still below the minimum after the fallback: published, marked
                 if verdict is not None:
                     payload["relevance"] = verdict.to_json()
                 if dry_run:
@@ -248,6 +248,8 @@ def run(
             if result not in ("blocked", "filtered"):
                 remember_title(titles, item.title, item.date)
             last = getattr(client, "last", None) or {}
+            if result == "created" and last.get("id"):
+                credit_coverage(client, int(last["id"]), getattr(summariser, "last_coverage", None))
             if result == "created" and gate is not None and last.get("id") and item.source.type in ("news", "legal"):
                 gate.recent_ids[item.title] = int(last["id"])  # later reports this run can be folded into it
             if last.get("review") == "merged" and last.get("merged_into"):  # the site found the same event by title
@@ -263,6 +265,21 @@ def run(
                     stats.published += 1
             save()
     return stats
+
+
+def credit_coverage(client, item_id: int, reports) -> int:
+    """The other reports a summary was written from (summarise.py's short fallback) are credited on the item as
+    publisher logos in its source row (aw/v1/same-story, credit only). Returns how many were credited."""
+    n = 0
+    for r in reports or []:
+        if not hasattr(client, "same_story"):
+            break
+        try:
+            client.same_story(merge.payload(item_id, url=r.url, publisher=r.publisher, adds="", summary="", model=""))
+            n += 1
+        except Exception as exc:  # noqa: BLE001
+            log.warning("coverage credit not added to #%s: %s", item_id, exc)
+    return n
 
 
 def default_enricher(url: str) -> tuple[str, str]:

@@ -106,14 +106,16 @@ def test_gives_up_after_retry():
         summarise.Summariser([summarise.ClaudeBackend("k", client=client)]).summarise(item())
 
 
-def test_short_fallback_reads_the_page_again_then_holds_for_review():
+def test_short_fallback_reads_the_page_again_then_publishes_the_short_summary():
     thin = item(text="Pune opened a shelter for 200 street dogs in Hadapsar.")
-    pages = []
+    pages, searched = [], []
     b = Fixed("haiku", SHORT)
-    s = summarise.Summariser([b], fetch=lambda url: pages.append(url) or "")
+    s = summarise.Summariser([b], fetch=lambda url: pages.append(url) or "",
+                             coverage=lambda *a: searched.append(a) or [])
     thin.url = "https://news.example/pune-shelter"
     out = s.summarise(thin)
     assert out == SHORT and s.last_short and pages == [thin.url] and b.calls == 1  # never padded, no second ask
+    assert searched and searched[0][0] == thin.title and not s.last_coverage  # other coverage was looked for
     b2 = Fixed("haiku", SHORT)
     b2.ask = lambda prompt, _b=b2: (setattr(_b, "calls", _b.calls + 1), GOOD if SOURCE_TEXT[:60] in prompt else SHORT)[1]
     s = summarise.Summariser([b2], fetch=lambda url: SOURCE_TEXT)
@@ -345,3 +347,65 @@ def test_bad_summary_does_not_kill_key():
     s.summarise(item())
     s.summarise(item())
     assert flaky.calls == 4  # tried (with retry) on both items
+
+
+# ---- the short fallback's other coverage (owner, 15 Oct 2026: fix, never hold for review) ----
+
+from aw_workers import coverage  # noqa: E402
+
+THIN = "Pune opened a shelter for 200 street dogs in Hadapsar."
+OTHER = coverage.Report(publisher="Other Daily", url="https://other.example/pune-shelter",
+                        title="Pune opens animal shelter in Hadapsar", text=SOURCE_TEXT)
+
+
+def thin_item():
+    return Item(NEWS, "Pune opens new animal shelter", "https://news.example/pune-shelter", date(2026, 10, 1), THIN)
+
+
+def wider_backend(good=GOOD):
+    b = Fixed("haiku", SHORT)
+    b.ask = lambda prompt, _b=b: (setattr(_b, "calls", _b.calls + 1),
+                                  good if "Another report of the same event (Other Daily)" in prompt else SHORT)[1]
+    return b
+
+
+def test_other_coverage_fills_a_thin_source():
+    s = summarise.Summariser([wider_backend()], fetch=lambda url: "", coverage=lambda *a: [OTHER])
+    assert s.summarise(thin_item()) == GOOD
+    assert not s.last_short and s.last_coverage == [OTHER]  # credited by the caller, never named in the text
+    assert "Other Daily" not in GOOD
+
+
+def test_still_short_after_other_coverage_is_published_with_the_longer_summary():
+    longer = "Pune has opened a shelter for 200 street dogs in Hadapsar. It has a veterinary clinic. Three NGOs help."
+    s = summarise.Summariser([wider_backend(longer)], fetch=lambda url: "", coverage=lambda *a: [OTHER])
+    assert s.summarise(thin_item()) == longer and s.last_short and s.last_coverage == [OTHER]
+
+
+def test_other_coverage_cannot_bring_invented_facts():
+    made_up = GOOD.replace("three local NGOs", "Blue Cross and three local NGOs")
+    s = summarise.Summariser([wider_backend(made_up)], fetch=lambda url: "", coverage=lambda *a: [OTHER])
+    assert s.summarise(thin_item()) == SHORT and s.last_short and not s.last_coverage
+
+
+def test_coverage_failure_keeps_the_short_summary():
+    def boom(*a):
+        raise RuntimeError("search down")
+
+    s = summarise.Summariser([Fixed("haiku", SHORT)], fetch=lambda url: "", coverage=boom)
+    assert s.summarise(thin_item()) == SHORT and s.last_short
+
+
+def test_default_coverage_search_is_offline_in_tests():
+    s = summarise.Summariser([Fixed("haiku", SHORT)], fetch=lambda url: "")
+    assert s.summarise(thin_item()) == SHORT and s.last_short and not s.last_coverage
+
+
+def test_prompt_allows_other_reports_without_naming_them():
+    assert "other reports of the same event" in summarise.prompt_for(item())
+
+
+def test_rules_say_short_is_published_not_reviewed():
+    rules = summary_rules.DEFAULTS
+    assert "never sent to To review" in rules["fallback"] and "other coverage" in rules["fallback"]
+    assert not any("goes to review" in g for g in rules["general"])

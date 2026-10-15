@@ -189,7 +189,7 @@ def main() -> int:
             cats = summarise.pick_categories(summariser, item, summary, sources.allowed_categories("research"))
             payload = dict(ingest.build_payload(item, summary, cats), backfill=True)
             if getattr(summariser, "last_short", False):
-                payload["summary_short"] = True  # not published at once: held for review
+                payload["summary_short"] = True  # still below the minimum after the fallback: published, marked
             if verdict is not None:
                 payload["relevance"] = verdict.to_json()
             result = client.post(payload) if client else "dry-run"

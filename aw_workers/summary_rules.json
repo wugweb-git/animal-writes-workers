@@ -39,7 +39,7 @@
     "Your own words, in plain English for a general Indian reader. Exact names of laws, cases, bodies and documents stay exact.",
     "Quotes: at most one direct quote, in double quotation marks, of words a named person, court or body said or wrote, attributed to them.",
     "Dates: give a date only when the source says the event happened on it. The publication date of the report is never the date of the event, and never say when a report was published.",
-    "Length: never pad to reach the minimum. If the source gives too little, write only what it says; the item then goes to review.",
+    "Length: never pad to reach the minimum. If the source gives too little, write only what it says, from the source and other reports of the same event; a short accurate summary is published.",
     "Plain text only: no heading, list, bold, link, URL or line break. Never write 'click here', 'read more' or 'here'.",
     "Actions (read the PDF, download it, read at the source, apply) are buttons on the page. The summary may say what a reader can do (for example 'feeders can cite the rules to the resident welfare association'), never as a link.",
     "No AI marker: no 'here is a summary', 'this article', 'as an AI', disclaimer or label.",
@@ -51,7 +51,7 @@
   "description": "The search description (Rank Math, at most 160 characters) is the summary condensed, never a separate text: the lead sentence, or the first sentences that fit whole. Only when the lead alone is longer is it cut at a word with an ellipsis. So the lead should answer what happened in about 30 words or fewer.",
   "card": "Cards show the summary itself, cut to a few lines: the lead sentence must make sense on its own.",
   "merge": "Same story: a later report's new facts are woven into the first story's summary, which stays one summary in these rules (new facts only from the new report, every number of ours kept). The story's date never changes; the summary before each rewrite is kept in its history.",
-  "fallback": "A summary that fails the minimum or the structure after any edit is written again from the source (the page is read again when the feed gave too little). If the source cannot be read, the short summary stays, unpadded, and the item waits in Inbox → To review.",
+  "fallback": "Short fallback: a summary below the section's minimum is never padded and never sent to To review. The source page is read again; if it is still thin or cannot be read, other coverage of the same event is found (a Google News search with its key names, place and date) and the facts of reputable reports of that same event are merged; the summary is written again from them. The extra publishers are credited as logos in the source row, not in the text. If it is still below the minimum, the best summary that follows the rules is published (accurate and complete beats long). To review is only for critical flags (legitimacy, legal, safety).",
   "stock_phrases": [
     "in a significant development",
     "in a major development",

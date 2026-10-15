@@ -27,6 +27,7 @@ PROMPT = """You write factual summaries for Animal Writes, an Indian animal-welf
 
 Summarise the item below in English. Follow every rule:
 {rules}
+- The details may include other reports of the same event: use their facts too, never the names of their publishers.
 - Output only the summary text, nothing else.
 
 Source: {source}
@@ -399,18 +400,24 @@ def prompt_for(item: Item, rules: dict | None = None) -> str:
         source=item.publisher or item.source.name,
         title=item.title,
         date=item.date.isoformat() if item.date else "unknown",
-        text=item.text[:4000] or "(no further details)",
+        text=item.text[:6000] or "(no further details)",
     )
 
 
 class Summariser:
     """Tries each provider in order. A provider is used only if its summary passes every check.
 
-    The short fallback (owner, 15 Oct 2026): a summary below the section's minimum is never padded. The source page is
-    read again when the feed gave too little and the summary written from it; when the page cannot be read either, the
-    short summary is kept (`last_short` is set) and the site holds the item in Inbox → To review."""
+    The short fallback (owner, 15 Oct 2026: "fix the summaries instead of putting them under review"): a summary below
+    the section's minimum is never padded and never held for review.
+    1. The source page is read again when the feed gave too little, and the summary written from it.
+    2. Still short (or the page is thin or refuses us): other coverage of the same event is found (coverage.py: a
+       Google News search with the key names and the dates around the report) and the summary is written from the
+       facts of all of them. Every name and number must be in one of those texts. Their publishers are kept in
+       `last_coverage` so the caller credits them as logos in the source row (aw/v1/same-story), never in the text.
+    3. Still short: the best summary that follows every other rule is published (`last_short` is set so the site can
+       mark it for a later pass; it is not held). Accurate and complete beats long."""
 
-    def __init__(self, backends: list, fetch=None):
+    def __init__(self, backends: list, fetch=None, coverage=None):
         if not backends:
             raise ValueError("no summary provider configured")
         self.backends = backends
@@ -418,7 +425,9 @@ class Summariser:
         self.dead: set[int] = set()  # indexes of keys that failed hard this run
         self.cool: dict[int, float] = {}  # rate-limited keys resting until (monotonic), shared with the relevance gate
         self.fetch = fetch  # url -> the page's own text ('' when unreadable); default: merge.page_text
+        self.coverage = coverage  # (title, url, date, publisher) -> [coverage.Report]; default: coverage.find
         self.last_short = False
+        self.last_coverage: list = []
 
     def _try(self, backend, prompt: str, item: Item) -> str:
         summary = backend.ask(prompt)
@@ -463,7 +472,7 @@ class Summariser:
         raise SummaryError(" | ".join(reasons))
 
     def summarise(self, item: Item) -> str:
-        self.last_short = False
+        self.last_short, self.last_coverage = False, []
         try:
             return finalise(self._summarise(item), item)
         except ShortSummary as short:
@@ -472,14 +481,55 @@ class Summariser:
         if fetch is None:
             from .merge import page_text as fetch
         more = fetch(item.url) if _readable_url(item.url) else ""
+        base = item
         if len((more or "").strip()) > len(item.text or "") + 200:
+            base = dataclasses.replace(item, text=more)
             try:
-                return finalise(self._summarise(dataclasses.replace(item, text=more)), item)
+                return finalise(self._summarise(base), item)
             except ShortSummary as again:
                 kept = again
+        reports = self._other_coverage(item)
+        if reports:
+            from . import coverage
+
+            wider = dataclasses.replace(base, text=coverage.combined_text(base.text, reports))
+            try:
+                summary = self._summarise(wider)
+            except ShortSummary as again:
+                summary = again.summary if len(summary_rules.words(again.summary)) > len(summary_rules.words(kept.summary)) else ""
+                done = False
+            except SummaryError as exc:  # every provider failed on the wider text: the short summary stands
+                log.info("summary from other coverage failed: %s (%s)", item.url, str(exc)[:200])
+                summary, done = "", False
+            else:
+                done = True
+            if summary and not invented(summary, f"{item.title}. {wider.text}"):
+                self.last_coverage = reports
+                if done:
+                    return finalise(summary, item)
+                kept = ShortSummary(summary, "short after other coverage")
         self.last_short = True
-        log.info("summary below the minimum, source too thin; held for review: %s (%s)", item.url, kept)
+        log.info("summary below the minimum after the source and other coverage; published as it is: %s (%s)",
+                 item.url, kept)
         return finalise(kept.summary, item)
+
+    def _other_coverage(self, item: Item) -> list:
+        find = self.coverage
+        if find is None:
+            from .coverage import find
+        try:
+            return list(find(item.title, item.url, item.date, item.publisher or item.source.name) or [])
+        except Exception as exc:  # noqa: BLE001
+            log.info("other coverage not found for %s: %s", item.url, type(exc).__name__)
+            return []
+
+
+def invented(summary: str, source_text: str) -> list[str]:
+    """Numbers and names in a summary written from several reports that none of them contains (merge.py's check)."""
+    from .merge import _unsourced
+
+    names = " ".join(summary_rules.entities_in(source_text))
+    return _unsourced(summary, f"{source_text} {names}")
 
 
 CATEGORY_PROMPT = """Choose the categories of an Indian animal-welfare news item.
