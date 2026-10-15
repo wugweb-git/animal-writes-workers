@@ -1,6 +1,6 @@
 {
   "version": "2026-10-15",
-  "description_max_chars": 155,
+  "description_max_chars": 160,
   "lead_max_words": 30,
   "max_quotes": 1,
   "max_quote_words": 25,
@@ -48,7 +48,7 @@
     "The page's focus keyword (its main subject in searched words) belongs in the lead sentence, once, naturally. No keyword stuffing.",
     "Linkable names: name laws, bodies, organisations, places and types exactly as the site names them (see Linkable entities), one form per entity, so they can be linked later. At most a few such names per summary."
   ],
-  "description": "The search description (Rank Math, at most 155 characters) is the summary condensed, never a separate text: the lead sentence, or the first sentences that fit whole. Only when the lead alone is longer is it cut at a word with an ellipsis. So the lead should answer what happened in about 30 words or fewer.",
+  "description": "The search description (Rank Math, at most 160 characters) is the summary condensed, never a separate text: the lead sentence, or the first sentences that fit whole. Only when the lead alone is longer is it cut at a word with an ellipsis. So the lead should answer what happened in about 30 words or fewer.",
   "card": "Cards show the summary itself, cut to a few lines: the lead sentence must make sense on its own.",
   "merge": "Same story: a later report's new facts are woven into the first story's summary, which stays one summary in these rules (new facts only from the new report, every number of ours kept). The story's date never changes; the summary before each rewrite is kept in its history.",
   "fallback": "A summary that fails the minimum or the structure after any edit is written again from the source (the page is read again when the feed gave too little). If the source cannot be read, the short summary stays, unpadded, and the item waits in Inbox → To review.",

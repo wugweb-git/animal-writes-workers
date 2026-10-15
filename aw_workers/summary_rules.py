@@ -6,7 +6,7 @@ aw/v1/summary-rules. Every summary writer here builds its prompt and its checks 
 cannot be reached, the same defaults are used (summary_rules.json, a copy of the site's data/summary-rules-default.json).
 
 Sections: news (News), library (Library: court orders, Acts, Rules, circulars, releases), research (Resources research).
-A summary is never shorter than the page's search description: each section's minimum is well above the 155 characters
+A summary is never shorter than the page's search description: each section's minimum is well above the 160 characters
 of the description, which is the summary's lead sentence (titles.php in aw-seo-extras).
 """
 
