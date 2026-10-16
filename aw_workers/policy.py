@@ -123,6 +123,9 @@ class Policy:
             return "blocked"
         if self.aggregator_allow_only and AGGREGATOR.match(feed) and h not in self.allowed:
             return "blocked"
+        hay = text.lower()
+        if any(has_term(hay, t) for t in self.exclude):  # exclude terms always apply, filter on or off (owner, 16 Oct 2026)
+            return "filtered"
         if self.relevance_on and h not in self.allowed and not self.relevant(text)[0]:
             return "filtered"
         return ""
