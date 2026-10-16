@@ -8,7 +8,7 @@ import re
 
 import requests
 
-from .sources import Item, allowed_categories, allowed_tags, categories_for
+from .sources import Item, allowed_categories, allowed_tags, categories_for, topic_tags_for
 
 TIMEOUT = 30
 
@@ -79,6 +79,10 @@ def build_payload(item: Item, summary: str, categories: list[str] | None = None)
         payload["deadline"] = item.deadline.isoformat() if item.deadline else ""
         if item.source.opportunity_type:
             tags.append(item.source.opportunity_type)
+    topic, hold = topic_tags_for(f"{item.title} {item.text} {summary}")
+    tags += topic
+    if hold:
+        payload["hold"] = hold  # the site keeps it in To review whatever the other checks say
     known = allowed_tags(item.source.type)
     tags = [t for t in dict.fromkeys(tags) if t and (known is None or t in known)]
     if tags:

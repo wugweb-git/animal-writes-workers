@@ -42,6 +42,7 @@ class Source:
     match: str = "text"  # keywords looked for in "text" (title + feed text) or "title" only
     ministries: list[str] = field(default_factory=list)  # egazette: ministries we follow
     max_items: int | None = None  # overrides max_items_per_source (keyword searches: 40)
+    skip_urls: list[str] = field(default_factory=list)  # rows already on the page when we started watching it
 
 
 @dataclass
@@ -64,6 +65,10 @@ CATEGORIES: dict[str, list[str]] = {}
 # Each section's allowed categories and tags (the site's Settings → Sourcing → Sections): site type => {"categories",
 # "tags"} (slug lists or slug => name). Empty until the site sends them; then items are classified only within these.
 SECTIONS: dict[str, dict] = {}
+# Topic tags (e.g. a campaign): tag slug => {"any": [phrases], "hold": [regexes]}. An item whose title or text has one of
+# the phrases gets the tag (if the section allows it); one that also matches a "hold" pattern (and none of the "unless"
+# words) waits for a person.
+TOPIC_TAGS: dict[str, dict] = {}
 SITE_TYPES = {"news": "aw_news", "legal": "aw_legal", "opportunity": "aw_opportunity", "research": "post"}
 
 
@@ -114,6 +119,8 @@ def load_sources_data(data: dict) -> tuple[list[Source], dict]:
     CATEGORIES.clear()
     CATEGORIES.update({k: [str(w) for w in v] for k, v in (data.get("categories") or {}).items()})
     set_sections(data.get("sections"))
+    TOPIC_TAGS.clear()
+    TOPIC_TAGS.update({str(k): v for k, v in (data.get("topic_tags") or {}).items() if isinstance(v, dict)})
     sources = []
     for s in data.get("sources", []):
         if s["type"] not in ("news", "legal", "opportunity"):
@@ -135,6 +142,7 @@ def load_sources_data(data: dict) -> tuple[list[Source], dict]:
                 match=s.get("match", "text"),
                 ministries=list(s.get("ministries") or []),
                 max_items=s.get("max_items"),
+                skip_urls=list(s.get("skip_urls") or []),
             )
         )
     return sources, data.get("defaults", {})
@@ -334,7 +342,39 @@ def parse_sjm(source: Source, body: str) -> list[Item]:
     return items
 
 
-PARSERS = {"rss": parse_rss, "awbi": parse_awbi, "zoho": parse_zoho, "sjm": parse_sjm}
+def parse_ccsea(source: Source, body: str) -> list[Item]:
+    """CCSEA "What's New": a table of rows (number, title, PDF link) with no dates; rows in skip_urls are left out."""
+    soup = BeautifulSoup(body, "html.parser")
+    skip = {u.strip() for u in source.skip_urls}
+    items = []
+    for row in soup.select("tr"):
+        cells = row.find_all("td")
+        link = row.select_one("a[href]")
+        if len(cells) < 2 or link is None:
+            continue
+        title = _clean(cells[1].get_text(" "))
+        url = urljoin(source.url, link["href"].strip()).replace(" ", "%20")
+        if title and url not in skip:
+            kind = "rule" if re.search(r"\brules?\b", title, re.I) else "circular"
+            items.append(Item(source, title, url, None, doc_kind=kind, document_url=url))
+    return items
+
+
+def topic_tags_for(text: str) -> tuple[list[str], str]:
+    """Topic tags whose phrases occur in the text, and the first "hold" reason that matches (or "")."""
+    hay = f" {text} ".lower()
+    tags, hold = [], ""
+    for slug, rule in TOPIC_TAGS.items():
+        if any(str(w).lower() in hay for w in rule.get("any") or []):
+            tags.append(slug)
+            unless = [str(w).lower() for w in rule.get("unless") or []]
+            for pat in rule.get("hold") or []:
+                if not hold and re.search(str(pat), text, re.I) and not any(w in hay for w in unless):
+                    hold = f"{slug}: {rule.get('hold_reason') or pat}"
+    return tags, hold
+
+
+PARSERS = {"rss": parse_rss, "awbi": parse_awbi, "zoho": parse_zoho, "sjm": parse_sjm, "ccsea": parse_ccsea}
 
 
 def matches_keywords(item: Item, keywords: list[str]) -> bool:

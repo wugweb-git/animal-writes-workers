@@ -123,6 +123,56 @@ sources:
     url: "https://news.google.com/rss/search?q=site:pib.gov.in+(animal+OR+rabies+OR+veterinary+OR+livestock+OR+wildlife)&hl=en-IN&gl=IN&ceid=IN:en"
     keywords: *animal_keywords
 
+  # --- Campaign 2.0: draft lab animal rules 2026 (16 Oct 2026). Topic tag rule under topic_tags below. ---
+  - id: ccsea-whats-new
+    name: CCSEA – What's New
+    kind: ccsea
+    type: legal
+    source_type: ccsea
+    url: "https://ccsea.gov.in/CCSEAWhatsNews.aspx"
+    lookback_days: 30
+    # Rows already on the page on 16 Oct 2026 (the draft rules are in the Library already); only new rows come in.
+    skip_urls:
+      - "https://ccsea.gov.in/WriteReadData/LnPdf/DraftPreventionofCrueltytoAnimals(ControlandSupervisionofExperiment,BreedingandTradingofLaboratoryAnimals)Rules,2026.pdf"
+      - "https://ccsea.gov.in/WriteReadData/LnPdf/InspectionsofanimalhousefacilitiesandIAECmeetings.pdf"
+      - "https://ccsea.gov.in/WriteReadData/LnPdf/AdministrativeCCSEAAmendmentRules2026.pdf"
+      - "https://ccsea.gov.in/WriteReadData/LnPdf/ConveningIAECmeetingthroughphysicalmode.pdf"
+      - "https://ccsea.gov.in/WriteReadData/LnPdf/PublicNotice_LetterofPeTAIndia.pdf"
+      - "https://ccsea.gov.in/WriteReadData/LnPdf/IAECFunctioning-projectpresentationbyPrincipalInvestigator(PI).pdf"
+      - "https://ccsea.gov.in/WriteReadData/LnPdf/VaccinetrialsusingDogs(1).pdf"
+      - "https://ccsea.gov.in/WriteReadData/LnPdf/FeeStructureorder.pdf"
+
+  - id: gnews-lab-animal-rules
+    name: Google News – lab animal rules India
+    kind: rss
+    type: news
+    url: "https://news.google.com/rss/search?q=(%22CCSEA%22+OR+%22lab+animal+rules%22+OR+%22laboratory+animals+rules%22+OR+%22animal+experiments%22)+India+when:7d&hl=en-IN&gl=IN&ceid=IN:en"
+    keywords: &lab_keywords
+      - CCSEA
+      - CPCSEA
+      - laboratory animal
+      - lab animal
+      - animal experiment
+      - animal testing
+      - "G.S.R. 864"
+      - IAEC
+      - Palamur
+      - non-animal method
+
+  - id: pfa-substack
+    name: People For Animals (Substack)
+    kind: rss
+    type: news
+    url: "https://peopleforanimals.substack.com/feed"
+    keywords: *lab_keywords
+
+  - id: peta-india
+    name: PETA India
+    kind: rss
+    type: news
+    url: "https://www.petaindia.com/feed/"
+    keywords: *lab_keywords
+
   # --- Library documents (8 Oct 2026): the documents themselves, kept as copies on the site (s.52(1)(q)). ---
   - id: gazette-of-india
     name: Gazette of India
@@ -177,6 +227,16 @@ sources:
 
   # Wildlife SOS careers is fetched by the site itself (animal-writes-core/includes/opportunities-site.php):
   # Cloudflare there refuses GitHub's servers but answers the website's host.
+
+# Topic tags: an item whose title, feed text or summary has one of the phrases gets the tag (when the section allows it).
+# "hold": an item that also matches one of these (and has none of the "unless" words) waits in To review whatever the
+# other checks say.
+topic_tags:
+  campaign-lab-animals-2026:
+    any: [ccsea, cpcsea, laboratory animal, lab animal, animal experiment, animal testing, "g.s.r. 864", iaec, palamur, non-animal method]
+    hold: ['laboratory animals\)? rules,? 2026']
+    unless: [draft, objection, comments]
+    hold_reason: final lab animal rules may have been notified; check and update the campaign page
 
 categories:
   community-dogs: [stray dog, street dog, community dog, stray dogs, street dogs, community animals, कुत्त]
