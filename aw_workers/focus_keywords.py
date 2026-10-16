@@ -58,13 +58,16 @@ GENERIC = {"animal", "animals", "welfare", "india", "indian", "save", "help", "n
            "issue", "case", "story"}
 
 _WORD = re.compile(r"[^\W_]+", re.UNICODE)
-_APOS = re.compile(r"['’‘`]")
+_PHRASE_WORD = re.compile(r"[^\W_]+(?:['-][^\W_]+)*", re.UNICODE)
+_APOS = re.compile(r"[’‘`]")
 _BRAND = re.compile(r"\s*[–—|-]\s*animal writes\s*$", re.I)
 
 
 def phrase_words(text: str) -> list[str]:
-    """Words for phrase matching: lower case, apostrophes dropped ("India’s" → "indias"); the site's aw_seo_phrase_words."""
-    return _WORD.findall(_APOS.sub("", (text or "").lower()))
+    """Words for phrase matching, as Rank Math's analyzer reads them (the site's aw_seo_phrase_words): lower case; a
+    hyphen or apostrophe inside a word stays part of it ("animal-free", "taneja's"). Rank Math finds "animal free" or
+    "tanejas" nowhere in "Animal-free" or "Taneja’s". Curly apostrophes compare as straight ones."""
+    return _PHRASE_WORD.findall(_APOS.sub("'", (text or "").lower()))
 
 
 def in_title(keyword: str, seo_title: str) -> bool:
@@ -119,7 +122,8 @@ def why_refused(keyword: str, title: str, text: str = "", seo_title: str = "") -
 
 
 def _normalise(keyword: str) -> str:
-    kw = re.sub(r"[\"“”‘’`#]+", "", str(keyword or "")).lower()
+    kw = re.sub(r"[\"“”`#]+", "", str(keyword or "")).lower()
+    kw = re.sub(r"['‘’](?![^\W_])|(?<![^\W_])['‘’]", "", kw)  # quote marks go; an apostrophe inside a word stays
     return re.sub(r"\s+", " ", kw).strip(" \t\n.,;:'-")
 
 

@@ -102,11 +102,21 @@ def test_keyword_must_stand_together_in_the_seo_title():
     assert fk.clean("Pune bans fodder transport", "Pune bans fodder", "", seo) == "pune bans fodder transport"
 
 
-def test_in_title_ignores_case_apostrophes_hyphens_and_the_site_name():
+def test_in_title_reads_words_as_rank_math_does():
     assert fk.in_title("india's declining birdlife", "India’s declining birdlife affects more than biodiversity")
-    assert fk.in_title("human wildlife conflict", "Coimbatore human-wildlife conflict centre – Animal Writes")
+    assert fk.in_title("human-wildlife conflict", "Coimbatore human-wildlife conflict centre – Animal Writes")
+    # Rank Math keeps a hyphen or apostrophe inside a word: these fail its "keyword in title" test (36 points)
+    assert not fk.in_title("human wildlife conflict", "Coimbatore human-wildlife conflict centre – Animal Writes")
+    assert not fk.in_title("indias declining birdlife", "India’s declining birdlife affects more than biodiversity")
     assert not fk.in_title("animal writes", "Strangulation suspected in puppy’s death – Animal Writes")
     assert not fk.in_title("dog bite", "Dog bites rise")  # whole words only
+
+
+def test_clean_keeps_hyphens_and_inner_apostrophes():
+    seo = "Why India Must Champion Animal-free Drug Testing"
+    assert fk.clean("“Animal-free drug testing”", seo, "", seo) == "animal-free drug testing"
+    assert fk.clean("gaurav taneja’s dog", "Gaurav Taneja’s Dog Mau Dies", "", "Gaurav Taneja’s Dog Mau Dies") == "gaurav taneja’s dog"
+    assert fk.from_title("Human-elephant Conflict a Major Challenge").startswith("human-elephant")
 
 
 def test_from_title_picks_specific_words_of_the_seo_title():
