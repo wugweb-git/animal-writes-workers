@@ -101,7 +101,9 @@ def main() -> int:
         if not title:
             log.error("no title for %s: add one to the line", row["url"])
             continue
-        src = sources.Source(id=f"submit-{i}", name=row["publisher"] or "Submitted", kind="rss", type="news",
+        pib = "pib.gov.in" in row["url"]  # PIB releases are Library items (official release), as from the pib-releases source
+        src = sources.Source(id=f"submit-{i}", name=row["publisher"] or "Submitted", kind="rss",
+                             type="legal" if pib else "news", source_type="pib" if pib else "",
                              url=f"submit://{i}", lookback_days=100_000)
         feeds[src.url] = feed_for(row, title, text or title)
         source_list.append(src)
