@@ -148,6 +148,22 @@ def load_sources_data(data: dict) -> tuple[list[Source], dict]:
     return sources, data.get("defaults", {})
 
 
+# A list page, not one story: a tag, category, topic, author or search page (a "peta-india" title came from
+# telanganatoday.com/tag/peta-india on 15 Oct 2026). Its "title" is then only the address name.
+LISTING_PATH = re.compile(r"/(?:tags?|topics?|category|categories|author|authors|search|section)/", re.I)
+SLUG_TITLE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)+$")
+
+
+def not_an_article(url: str, title: str) -> str:
+    """Why this link is not a single story ("" when it is)."""
+    path = urlsplit(url or "").path
+    if LISTING_PATH.search(path + "/"):
+        return "list page (tag, category, topic, author or search)"
+    if SLUG_TITLE.match((title or "").strip().strip("\"'‘’“”").lower()) and " " not in (title or "").strip():
+        return "title is only an address name"
+    return ""
+
+
 def is_search(url: str) -> bool:
     return (urlsplit(url).hostname or "").lower() in SEARCH_HOSTS
 

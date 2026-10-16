@@ -193,6 +193,13 @@ def run(
                     seen.add(original)
                     stats.duplicate += 1
                     continue
+            why = "" if item.doc_kind else sources.not_an_article(item.url, item.title)
+            if why:
+                seen.add(item.url)
+                stats.skipped += 1
+                log.info("%s: skipped (%s) %s", src.id, why, item.url)
+                save()
+                continue
             if policy is not None:
                 why = policy.verdict(item.url, src.id, f"{item.title} {item.text}")
                 if why:
