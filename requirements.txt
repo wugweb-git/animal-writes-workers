@@ -4,3 +4,4 @@ feedparser>=6.0
 PyYAML>=6.0
 requests>=2.32
 pyarrow>=15.0
+pypdf>=4.0

@@ -101,6 +101,8 @@ def drop_pub_dates(summary: str, item: Item) -> str:
 
 def finalise(summary: str, item: Item) -> str:
     summary = re.sub(r"\s+", " ", summary).strip()
+    if getattr(item, "draft", False) and "draft" not in summary.lower():  # a draft is never written up as rules in force
+        summary = f"Draft, open for objections: {summary}"
     if item.source.type == "legal":
         summary = f"{summary}\n{LEGAL_NOTE}"
     return summary

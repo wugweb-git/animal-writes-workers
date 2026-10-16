@@ -70,6 +70,10 @@ def build_payload(item: Item, summary: str, categories: list[str] | None = None)
     if item.doc_kind:  # Library documents: what it is (a tag), the court, and the PDF the site may keep a copy of
         tags.append(item.doc_kind)
         payload["document_url"] = item.document_url
+        if item.legal_number:  # the site refuses a notification it already holds under the same number
+            payload["legal_number"] = item.legal_number
+        if item.draft:
+            payload["draft"] = True
         if item.court:
             payload["court"] = item.court
             payload.setdefault("source_type", item.court)

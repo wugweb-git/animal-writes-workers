@@ -229,6 +229,57 @@ def gazette_items(source: Source, rows: list[dict], ministries: list[str]) -> li
     return items
 
 
+_NUMBER = re.compile(r"\b(G\.\s?S\.\s?R\.|S\.\s?O\.)\s*(\d+)\s*\(E\)\s*\.?\s*[\u2014\u2013-]")
+_DRAFT = re.compile(r"\bdraft\s+(?:rules|regulations|notification|amendment|scheme|order)\b|objections\s+(?:and|or)\s+suggestions[^.]{0,200}(?:may be|shall be|will be|within)", re.I)
+_FINAL = re.compile(r"hereby\s+makes\s+the\s+following|(?:have|has|had)\s+been\s+(?:duly\s+)?considered|were\s+considered", re.I)
+
+
+def notification_details(text: str) -> tuple[str, bool, str]:
+    """(number, draft?, English opening) from a Gazette notification's text. The English part starts at the number
+    ("G.S.R. 864(E).—In exercise of ..."); the Hindi part before it is skipped. A draft invites objections and
+    suggestions; final rules say the objections "have been considered" and that the Government "hereby makes" them."""
+    m = _NUMBER.search(text)
+    if not m:
+        return "", False, ""
+    number = f"{'G.S.R.' if m.group(1).startswith('G') else 'S.O.'} {m.group(2)}(E)"
+    opening = re.sub(r"\s+", " ", text[m.start(): m.start() + 3000]).strip()
+    draft = bool(_DRAFT.search(opening)) and not _FINAL.search(opening)
+    return number, draft, opening
+
+
+def pdf_text(content: bytes, max_pages: int = 120) -> str:
+    """Text of a PDF (pypdf); '' when it cannot be read."""
+    try:
+        from pypdf import PdfReader
+
+        reader = PdfReader(io.BytesIO(content))
+        return "\n".join(page.extract_text() or "" for page in reader.pages[:max_pages])
+    except Exception:  # a broken or scanned PDF: the listing is all we have
+        return ""
+
+
+def add_gazette_details(item: Item, session: requests.Session) -> Item:
+    """Number, draft flag and the English opening from the notification itself (the listing says neither)."""
+    try:
+        resp = session.get(item.url, timeout=TIMEOUT * 4)
+        resp.raise_for_status()
+    except requests.RequestException:
+        return item
+    number, draft, opening = notification_details(pdf_text(resp.content))
+    item.legal_number = number
+    item.draft = draft
+    if number:
+        item.text += f" Notification {number}."
+    if draft:
+        if "draft" not in item.title.lower():
+            item.title = f"Draft {item.title}"
+        item.text += (" This is a DRAFT published for objections and suggestions, not rules in force: say it is proposed"
+                      " and open for objections; never say the rules were issued, notified or made.")
+    if opening:
+        item.text += f" Text: {opening[:1500]}"
+    return item
+
+
 def _ca_bundle() -> str:
     """The usual CA bundle plus Let's Encrypt's YR2 intermediate and Root YR (cross-signed by ISRG Root X1): egazette.gov.in sends neither."""
     import certifi
@@ -264,4 +315,4 @@ def parse_egazette(source: Source, body: str = "", session: requests.Session | N
             resp = s.post(url, data=form, headers={"Referer": url}, timeout=TIMEOUT * 2)
             resp.raise_for_status()
             rows += gazette_rows(resp.text)
-    return gazette_items(source, rows, source.ministries)
+    return [add_gazette_details(i, s) for i in gazette_items(source, rows, source.ministries)]

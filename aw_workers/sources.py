@@ -59,6 +59,8 @@ class Item:
     doc_kind: str = ""  # Library documents: judgment | order | notification | rule | act
     court: str = ""  # judgments: supreme-court | high-court
     document_url: str = ""  # the PDF, when there is one
+    legal_number: str = ""  # Gazette notifications: G.S.R. / S.O. number, e.g. "G.S.R. 864(E)"
+    draft: bool = False  # Gazette notifications: a draft published for objections, not rules in force
 
 
 CATEGORIES: dict[str, list[str]] = {}

@@ -73,3 +73,56 @@ def test_gazette_rows_and_filter():
     it = items[0]
     assert it.url == "https://egazette.gov.in/WriteReadData/2026/276913.pdf" and it.date == date(2026, 10, 7)
     assert it.doc_kind == "notification" and "CG-DL-E-07102026-276913" in it.text
+
+
+# Draft or final, and the number, from a Gazette notification's own text (owner, 16 Oct 2026: a draft we already held was
+# imported again and summarised as rules issued).
+DRAFT_TEXT = ("सा.का.वन. 864(अ).— हिंदी पाठ ... G.S.R. 864(E).—In exercise of the powers conferred by sub-section (1) of "
+              "Section 17 ... hereby decided to amend the aforementioned rules; Objections and suggestions, if any, may be "
+              "communicated to the Member Secretary (CCSEA) within a period of thirty days. DRAFT RULES 1. Short title.")
+FINAL_TEXT = ("G.S.R. 552(E).– Whereas the draft of the Administrative Amendment Rules, 2026, was published ... inviting "
+              "objections and suggestions ... And whereas the objections and suggestions received in respect of the said "
+              "draft rules have been considered by the Central Government; Now, therefore, ... the Central Government "
+              "hereby makes the following rules")
+STANDARD_DRAFT = ("S.O. 1496(E).—The following draft of certain rules, which the Central Government proposes to make, is "
+                  "hereby published for the information of all persons likely to be affected thereby; and notice is hereby "
+                  "given that the said draft rules shall be taken into consideration after the expiry of thirty days.")
+
+
+def test_notification_details_tells_draft_from_final():
+    assert documents.notification_details(DRAFT_TEXT)[:2] == ("G.S.R. 864(E)", True)
+    assert documents.notification_details(FINAL_TEXT)[:2] == ("G.S.R. 552(E)", False)
+    assert documents.notification_details(STANDARD_DRAFT)[:2] == ("S.O. 1496(E)", True)
+    assert documents.notification_details("no number here")[:2] == ("", False)
+
+
+def test_draft_gets_title_text_and_payload(monkeypatch):
+    from aw_workers import ingest
+    from aw_workers.sources import Item
+
+    class Resp:
+        content = b"%PDF"
+        def raise_for_status(self):
+            pass
+
+    class Session:
+        def get(self, url, timeout=None):
+            return Resp()
+
+    monkeypatch.setattr(documents, "pdf_text", lambda content: DRAFT_TEXT)
+    it = Item(src("egazette"), "The Prevention of Cruelty to Animals Rules, 2026", "https://egazette.gov.in/x.pdf",
+              date(2026, 10, 7), "Gazette of India.", "Gazette of India", doc_kind="notification", document_url="https://egazette.gov.in/x.pdf")
+    documents.add_gazette_details(it, Session())
+    assert it.title.startswith("Draft ") and it.draft and it.legal_number == "G.S.R. 864(E)"
+    assert "not rules in force" in it.text
+    payload = ingest.build_payload(it, "A summary.")
+    assert payload["legal_number"] == "G.S.R. 864(E)" and payload["draft"] is True
+
+
+def test_draft_summary_always_says_draft():
+    from aw_workers import summarise
+    from aw_workers.sources import Item
+
+    it = Item(src("egazette"), "Draft rules", "https://x", date(2026, 10, 7), draft=True)
+    assert summarise.finalise("The ministry issued rules on lab animals.", it).startswith("Draft, open for objections:")
+    assert summarise.finalise("The draft rules propose changes.", it).startswith("The draft rules")
