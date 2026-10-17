@@ -184,6 +184,8 @@ def process(rw: Rewriter, row: dict) -> dict:
     text = page.get("text") or ""
     pubs = _pubs(row, page.get("published") or [])
     cands: list[tuple[str, list[str], list[str], list]] = []
+    info = {"src": f"{page.get('status')}:{len(text)}", "cov": 0}
+    rw.info = info
     first = rw.candidate(row, section, text, pubs, why) if (text or ours) else None
     if first:
         cands.append((*first, []))
@@ -195,12 +197,14 @@ def process(rw: Rewriter, row: dict) -> dict:
         except Exception as exc:  # noqa: BLE001
             log.info("coverage failed: %s", type(exc).__name__)
             reports = []
+        info["cov"] = len(reports)
         if reports:
             wider = coverage.combined_text(text, reports)
             second = rw.candidate(row, section, wider, pubs, why)
             if second:
                 cands.append((*second, [{"name": r.publisher, "url": r.url} for r in reports]))
     ok = [c for c in cands if not c[1]]
+    rw.info = info
     if not ok:
         reason = "; ".join(cands[0][1])[:280] if cands else "no provider answered"
         return {"action": "failed", "reason": reason}
@@ -255,6 +259,7 @@ def main(env=os.environ) -> int:
     client = ingest.Client(env["WP_BASE_URL"], env["WP_INGEST_USER"], env["WP_INGEST_APP_PASSWORD"])
     summary_rules.use(client)
     backends = summarise.backends_from_env(env, ledger={})
+    log.info("providers: %s", ", ".join(f"{b.name}:{getattr(b, 'model', '')}" for b in backends))
     rw = Rewriter(summarise.Summariser(backends), pause)
     rows = candidates(client, batch, only, dry, log)
     stats = {"done": 0, "short": 0, "settled": 0, "failed": 0, "error": 0}
@@ -267,7 +272,7 @@ def main(env=os.environ) -> int:
             time.sleep(pause)
         try:
             res = process(rw, row)
-            line = {"id": row["id"], "section": row.get("section"), "action": res["action"]}
+            line = {"id": row["id"], "section": row.get("section"), "action": res["action"], **getattr(rw, "info", {})}
             if res["action"] == "write":
                 line.update(state=res["state"], before=row["summary"], after=res["summary"], model=res["model"],
                             words=[res["before_words"], res["after_words"]], also=[a["url"] for a in res["also"]], reason=res["reason"])
