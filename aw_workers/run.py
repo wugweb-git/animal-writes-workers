@@ -427,6 +427,7 @@ def main() -> int:
         raise
     except Exception as exc:
         log.error("press discovery failed: %s", exc)
+    gate.flush()  # the Rejected log, in one request
     if not dry_run:
         checkpoint()
         documents.save_state()  # High Court file versions: only remembered when items were really sent

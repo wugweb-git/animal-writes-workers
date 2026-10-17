@@ -14,6 +14,7 @@ Verdicts are cached by URL (.state/relevance.json).
 
 from __future__ import annotations
 
+import atexit
 import json
 import logging
 import os
@@ -28,6 +29,7 @@ from .summarise import MODEL as HAIKU_MODEL, _is_dead_key_error, note_failure, n
 
 log = logging.getLogger("aw_workers.relevance")
 
+BATCH = 50  # rejections per request to the Rejected log
 CACHE_FILE = Path(os.environ.get("AW_RELEVANCE_CACHE", ".state/relevance.json"))
 UNAVAILABLE = "classifier unavailable"
 
@@ -204,6 +206,9 @@ class Gate:
         self.cache = cache if cache is not None else {}
         self.dry_run = dry_run
         self.counts = {"pass": 0, "reject": 0, "unavailable": 0, "cached": 0}
+        self.pending: list[dict] = []  # rejections waiting to be sent to the site's Rejected log in one request
+        self._cached = False  # the last verdict came from the cache (already judged, and logged, on an earlier run)
+        atexit.register(self.flush)  # every pipeline (run, backfill, submit, research, press) sends what is left at exit
 
     @classmethod
     def from_site(cls, summariser, client, *, dry_run: bool = False, cache_file: Path = CACHE_FILE) -> "Gate":
@@ -231,8 +236,10 @@ class Gate:
     # ---- the model ----
 
     def classify(self, c: Candidate) -> Verdict | None:
+        self._cached = False
         if c.url and c.url in self.cache:
             self.counts["cached"] += 1
+            self._cached = True
             return Verdict(**self.cache[c.url])
         prompt = PROMPT.format(
             categories="\n".join(f"{k}: {v}" for k, v in self.categories.items()),
@@ -351,13 +358,30 @@ class Gate:
         return "reject", v
 
     def _log_rejected(self, c: Candidate, reason: str, v: Verdict | None = None) -> None:
+        """Queue a rejection for the site's Rejected log. A verdict from the cache was logged when it was first made, so
+        it is not sent again (17 Oct 2026: re-sending every run was ~450 uncached requests a week)."""
         if self.dry_run or self.client is None or not hasattr(self.client, "reject"):
             return
+        if v is not None and self._cached:
+            return
+        self.pending.append({"title": c.title[:300], "source_url": c.url, "reason": reason[:300], "type": c.kind,
+                             "feed": c.feed, "model": v.model if v else ""})
+        if len(self.pending) >= BATCH:
+            self.flush()
+
+    def flush(self) -> None:
+        """Send the queued rejections: one request for all of them (reject_many), else one each."""
+        entries, self.pending = self.pending, []
+        if not entries:
+            return
         try:
-            self.client.reject({"title": c.title[:300], "source_url": c.url, "reason": reason[:300], "type": c.kind,
-                                "feed": c.feed, "model": v.model if v else ""})
+            if hasattr(self.client, "reject_many"):
+                self.client.reject_many(entries)
+            else:
+                for e in entries:
+                    self.client.reject(e)
         except Exception as exc:  # the log is a convenience; never stop the run for it
-            log.warning("relevance: could not log rejection of %s: %s", c.url, exc)
+            log.warning("relevance: could not log %d rejections: %s", len(entries), exc)
 
     def save(self, path: Path = CACHE_FILE) -> None:
         save_cache(path, self.cache)

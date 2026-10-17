@@ -48,6 +48,8 @@ def test_pass_and_reject_and_log():
     assert g.admit(Candidate("news", "Dog rescued in Pune", "https://a/1"))[0] == "pass"
     out, v = g.admit(Candidate("news", "Bulls beat Tigers", "https://a/2"))
     assert out == "reject" and not v.relevant
+    assert log.rejected == []  # queued, sent in one go
+    g.flush()
     assert log.rejected == [{"title": "Bulls beat Tigers", "source_url": "https://a/2", "reason": "IPL team Royal Challengers",
                              "type": "news", "feed": "", "model": "fake:m"}]
 
@@ -128,7 +130,26 @@ def test_same_story_with_a_different_headline_is_rejected():
     g = Gate(Summ(b), client=log, recent=["Security guard arrested for shooting dog in Lucknow"])
     out, v = g.admit(Candidate("news", "Lucknow security guard held for shooting street dog dead", "https://a/1"))
     assert out == "reject" and v.same_as.startswith("Security guard arrested")
+    g.flush()
     assert "Stories already on the site" in b.prompts[0] and log.rejected[0]["reason"].startswith("same story as")
     # unrelated story: no recent block, passes, and is then known for later items in the run
     assert g.admit(Candidate("news", "Blackbuck herd rescued in Shajapur", "https://a/2"))[0] == "pass"
     assert "Stories already on the site" not in b.prompts[1] and g.recent[-1] == "Blackbuck herd rescued in Shajapur"
+
+
+def test_rejections_go_in_one_request_and_cached_ones_are_not_resent():
+    class Many(Log):
+        def __init__(self):
+            super().__init__()
+            self.batches = []
+
+        def reject_many(self, entries):
+            self.batches.append(entries)
+
+    log = Many()
+    g = Gate(Summ(Backend([reply(relevant="no", reason="cricket"), reply(relevant="no", reason="football")])), client=log)
+    g.admit(Candidate("news", "a", "https://a/1"))
+    g.admit(Candidate("news", "b", "https://a/2"))
+    g.admit(Candidate("news", "a", "https://a/1"))  # judged already (cache): not logged again
+    g.flush()
+    assert [len(b) for b in log.batches] == [2] and log.rejected == []

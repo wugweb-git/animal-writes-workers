@@ -160,6 +160,10 @@ class Client:
         """Add an item the relevance gate refused to the site's Rejected log (Inbox → To review)."""
         return self._call("POST", "/relevance-rejected", json=entry)
 
+    def reject_many(self, entries: list[dict]) -> dict:
+        """Several rejections in one request (the site takes {"entries": [...]})."""
+        return self._call("POST", "/relevance-rejected", json={"entries": entries})
+
     def story(self, story_id: int) -> dict:
         """A story already on the site, for the same-event merge: title, summary, credits and added facts."""
         return self._call("GET", "/same-story", params={"id": int(story_id)})
