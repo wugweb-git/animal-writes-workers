@@ -100,6 +100,11 @@ def evaluate(summary: str, ours: str, row: dict, text: str, section: str, pubs) 
         hard.append("numbers from the current summary left out: " + ", ".join(lost))
     found = summary_rules.problems(summary, section, f"{title}. {text}", rules, publisher=row.get("publisher") or "")
     hard += [p for p in found if not p.startswith(summary_rules.SHORT)]
+    have = merge._tokens(f"{ours} {title} {text}")
+    lost_apos = sorted({w for w in merge._tokens(summary) if w.endswith("s") and w not in have
+                        and (w[:-1] + "’s" in have or w[:-1] + "'s" in have)})
+    if lost_apos:
+        hard.append("apostrophe lost in: " + ", ".join(lost_apos))
     return hard, [p for p in found if p.startswith(summary_rules.SHORT)]
 
 
@@ -168,9 +173,20 @@ class Rewriter:
             label=rules["sections"][section]["label"], ours=ours or "(none: the summary is empty)", why=why or "check against the rules",
             publisher=row.get("publisher") or "the publisher", title=row.get("title") or "",
             pub=", ".join(sorted({d.isoformat() for d in pubs})) or "unknown",
-            text=re.sub(r"\s+", " ", text)[:6000] or "(the source could not be read; use the current summary's facts only)",
+            text=re.sub(r"\s+", " ", text)[:9000] or "(the source could not be read; use the current summary's facts only)",
             rules=summary_rules.rules_block(section, rules, f"{ours} {row.get('title') or ''} {text}"))
-        return self._ask(prompt, lambda c: evaluate(c, ours, row, text, section, pubs))
+        check = lambda c: evaluate(c, ours, row, text, section, pubs)  # noqa: E731
+        res = self._ask(prompt, check)
+        sec = rules["sections"][section]
+        if res and not res[1] and res[2] and len(summary_rules.words(text)) >= 2.5 * int(sec["min_words"]):
+            # the source holds more than the answer used: ask once for the further facts it states (never padding)
+            more = self._ask(prompt + f"\n\nYour previous answer was too short ({len(summary_rules.words(res[0]))} words; "
+                             f"{sec['min_words']} to {sec['max_words']} are expected) but the source text holds more facts. Add the "
+                             "further facts it states (who, where, when, numbers, what the court or body directed, what happens next). "
+                             f"Never pad.\nPrevious answer: {res[0]}", check)
+            if more and not more[1] and len(summary_rules.words(more[0])) > len(summary_rules.words(res[0])):
+                res = more
+        return res
 
 
 def process(rw: Rewriter, row: dict) -> dict:
@@ -206,7 +222,8 @@ def process(rw: Rewriter, row: dict) -> dict:
     ok = [c for c in cands if not c[1]]
     rw.info = info
     if not ok:
-        reason = "; ".join(cands[0][1])[:280] if cands else "no provider answered"
+        reason = "; ".join(cands[0][1])[:280] if cands else (
+            "source unreadable, no other coverage found" if not (text or ours) else "no provider answered")
         return {"action": "failed", "reason": reason}
     meets = [c for c in ok if not c[2]]
     best = meets[0] if meets else max(ok, key=lambda c: len(summary_rules.words(c[0])))
