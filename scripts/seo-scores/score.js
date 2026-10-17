@@ -21,7 +21,9 @@ async function api(path, init = {}) {
 function loadAnalyzer(src, rankMath) {
   const dom = new JSDOM('<!doctype html><html><body></body></html>', { url: `${base}/wp-admin/` });
   const w = dom.window;
-  Object.assign(global, { window: w, document: w.document, navigator: w.navigator, DOMParser: w.DOMParser, Node: w.Node, HTMLElement: w.HTMLElement });
+  for (const [k, v] of Object.entries({ window: w, document: w.document, navigator: w.navigator, DOMParser: w.DOMParser, Node: w.Node, HTMLElement: w.HTMLElement })) {
+    Object.defineProperty(global, k, { value: v, configurable: true, writable: true }); // Node 21+ has a read-only global navigator
+  }
   w.lodash = global.lodash = require('lodash');
   w.jQuery = global.jQuery = require('jquery')(w);
   w.wp = global.wp = { hooks: require('@wordpress/hooks'), i18n: require('@wordpress/i18n'), autop: require('@wordpress/autop'), wordcount: require('@wordpress/wordcount'), url: require('@wordpress/url') };
