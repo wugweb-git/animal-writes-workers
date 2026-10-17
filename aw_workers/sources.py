@@ -57,6 +57,7 @@ class Item:
     image: str = ""  # preview image URL (linked, never downloaded)
     place: str = ""  # opportunities: city/state as published
     deadline: date | None = None  # opportunities: last date, when published
+    employment_type: str = ""  # opportunities: hours as published ("Type: Full time"), in Google's JobPosting values
     doc_kind: str = ""  # Library documents: judgment | order | notification | rule | act
     court: str = ""  # judgments: supreme-court | high-court
     document_url: str = ""  # the PDF, when there is one
@@ -291,6 +292,16 @@ _MONTHS = {m: i for i, m in enumerate(["jan", "feb", "mar", "apr", "may", "jun",
 _DEADLINE_WORDS = re.compile(r"(?:last date|deadline|apply by|on or before)[^0-9]{0,30}(\d{1,2})(?:st|nd|rd|th)?\s+([A-Za-z]{3,9})\.?,?\s+(\d{4})", re.I)
 
 
+_EMPLOYMENT = {"fulltime": "FULL_TIME", "parttime": "PART_TIME", "contract": "CONTRACTOR", "contractual": "CONTRACTOR",
+               "temporary": "TEMPORARY", "internship": "INTERN", "intern": "INTERN", "volunteer": "VOLUNTEER"}
+
+
+def employment_type(text: str) -> str:
+    """The employment type a posting states ("Type: Fulltime", "Full time"), as Google's value; "" when not stated."""
+    value = re.sub(r"[^a-z]", "", (text or "").lower())
+    return _EMPLOYMENT.get(value, "")
+
+
 def deadline_in(text: str) -> date | None:
     """A last date written in the text: 'Last date to apply - 31.10.2026' or 'Last date for application - 5 September 2026'."""
     m = _DEADLINE.search(text or "")
@@ -338,7 +349,7 @@ def parse_zoho(source: Source, body: str) -> list[Item]:
                 place = ", ".join(x for x in (j.get("City"), j.get("State")) if x)
                 desc = _clean(j.get("Job_Description") or "")
                 items.append(Item(source, _clean(j["Posting_Title"]), base + str(j["id"]), when, desc[:1500],
-                                  place=place, deadline=deadline_in(desc)))
+                                  place=place, deadline=deadline_in(desc), employment_type=employment_type(j.get("Job_Type") or "")))
             return items
         start = text.find('[{"', start + 2)
     return items
@@ -357,8 +368,10 @@ def parse_sjm(source: Source, body: str) -> list[Item]:
         body_el = it.select_one(".sjm-content")
         text = _clean(body_el.get_text(" ")) if body_el else ""
         anchor = re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")
+        stated = re.search(r"\bType:\s*([A-Za-z -]{3,20}?)(?:\s+Experience:|$)", _clean(it.get_text(" ")))
         items.append(Item(source, title, f"{source.url.split('#')[0]}#{anchor}", None, text[:1500],
-                          place=_clean(place_el.get_text(" ")) if place_el else "", deadline=deadline_in(text)))
+                          place=_clean(place_el.get_text(" ")) if place_el else "", deadline=deadline_in(text),
+                          employment_type=employment_type(stated.group(1)) if stated else ""))
     return items
 
 

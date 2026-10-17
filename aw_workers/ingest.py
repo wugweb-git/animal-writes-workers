@@ -81,6 +81,8 @@ def build_payload(item: Item, summary: str, categories: list[str] | None = None)
         payload["org_name"] = item.source.org or item.source.name
         payload["place"] = item.place
         payload["deadline"] = item.deadline.isoformat() if item.deadline else ""
+        if item.employment_type:
+            payload["employment_type"] = item.employment_type  # only when the posting states it
         if item.source.opportunity_type:
             tags.append(item.source.opportunity_type)
     topic, hold = topic_tags_for(f"{item.title} {item.text} {summary}")

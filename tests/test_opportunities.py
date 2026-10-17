@@ -36,6 +36,7 @@ def test_sjm_reads_roles_with_place_and_unique_urls():
     vet = next(i for i in items if i.title == "Veterinary Officer")
     assert vet.place
     assert vet.url.endswith("#veterinary-officer")
+    assert {i.employment_type for i in items} == {"FULL_TIME"}  # every role says "Type: Fulltime"
     assert len({i.url for i in items}) == len(items)
 
 
@@ -57,6 +58,7 @@ def test_opportunity_payload_and_factual_summary():
     assert payload["org_name"] == "WWF-India"
     assert payload["tags"] == ["job"]
     assert payload["place"] == item.place
+    assert payload["employment_type"] == "FULL_TIME"  # Zoho's Job_Type "Full time"
     assert payload["summary"].startswith("WWF-India: ")
 
 
@@ -67,3 +69,11 @@ def test_deadline_in_written_month():
     assert deadline_in("Apply by 2nd Oct, 2026") == date(2026, 10, 2)
     assert deadline_in("Last date to apply - 31.10.2026") == date(2026, 10, 31)
     assert deadline_in("no date here") is None
+
+
+def test_employment_type_only_when_stated():
+    assert sources.employment_type("Fulltime") == "FULL_TIME"
+    assert sources.employment_type("Part-time") == "PART_TIME"
+    assert sources.employment_type("Contract") == "CONTRACTOR"
+    assert sources.employment_type("") == ""
+    assert sources.employment_type("Flexible") == ""
