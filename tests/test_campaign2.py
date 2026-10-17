@@ -58,3 +58,15 @@ def test_payload_carries_tag_and_hold():
 def test_new_sources_load():
     ids = {s.id for s in S.load_sources_data(_lists())[0]}
     assert {"ccsea-whats-new", "gnews-lab-animal-rules", "pfa-substack", "peta-india"} <= ids
+
+
+def test_lab_rules_coverage_goes_to_media_and_pr():
+    srcs, _ = S.load_sources_data(_lists())
+    src = next(s for s in srcs if s.id == "gnews-lab-animal-rules")
+    assert src.file_as == "press"
+    item = S.Item(src, "Centre proposes CCSEA draft rules on animal experiments", "https://example.com/story", date(2026, 10, 14),
+                  publisher="Example Times", image="https://example.com/a.jpg")
+    p = build_payload(item, "")
+    assert p["type"] == "press" and p["source_name"] == "Example Times" and p["image_url"] == "https://example.com/a.jpg"
+    assert p["tags"] == ["campaign-lab-animals-2026"] and p["source_date"] == "2026-10-14" and p["feed"] == src.id
+    assert "summary" not in p and "categories" not in p

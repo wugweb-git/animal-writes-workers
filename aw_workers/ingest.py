@@ -91,7 +91,25 @@ def build_payload(item: Item, summary: str, categories: list[str] | None = None)
     tags = [t for t in dict.fromkeys(tags) if t and (known is None or t in known)]
     if tags:
         payload["tags"] = tags  # WordPress tags (Library type, Opportunity type ...), from the section's list
+    if item.source.file_as == "press":
+        return press_payload(payload)
     return payload
+
+
+def press_payload(payload: dict) -> dict:
+    """Coverage of a campaign topic goes to Media & PR (owner, 17 Oct 2026): the site's press ingest keeps it as a press
+    item to review, with its campaign-* tags, so it shows under Media & PR and on the campaign page once approved."""
+    from . import press
+
+    platform = press.platform_of(payload["source_url"])
+    out = {
+        "type": "press", "title": payload["title"][:200], "source_url": payload["source_url"],
+        "source_name": payload["source_name"], "source_date": payload["source_date"], "platform": platform,
+        "format": press.format_of(payload["source_url"], platform), "account_handle": "",
+        "image_url": payload.get("image_url", ""), "query": payload["feed"], "feed": payload["feed"],
+        "tags": [t for t in payload.get("tags", []) if t.startswith("campaign-")],
+    }
+    return out
 
 
 def opportunity_summary(item: Item) -> str:

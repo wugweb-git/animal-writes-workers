@@ -145,6 +145,7 @@ sources:
     name: Google News – lab animal rules India
     kind: rss
     type: news
+    file_as: press  # coverage of the lab-rules campaign topic goes to Media & PR, tagged campaign-lab-animals-2026 (owner, 17 Oct 2026)
     url: "https://news.google.com/rss/search?q=(%22CCSEA%22+OR+%22lab+animal+rules%22+OR+%22laboratory+animals+rules%22+OR+%22animal+experiments%22)+India+when:7d&hl=en-IN&gl=IN&ceid=IN:en"
     keywords: &lab_keywords
       - CCSEA

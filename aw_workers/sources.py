@@ -43,6 +43,7 @@ class Source:
     ministries: list[str] = field(default_factory=list)  # egazette: ministries we follow
     max_items: int | None = None  # overrides max_items_per_source (keyword searches: 40)
     skip_urls: list[str] = field(default_factory=list)  # rows already on the page when we started watching it
+    file_as: str = ""  # "press": items go to Media & PR (coverage of a campaign topic) instead of the section
 
 
 @dataclass
@@ -145,6 +146,7 @@ def load_sources_data(data: dict) -> tuple[list[Source], dict]:
                 ministries=list(s.get("ministries") or []),
                 max_items=s.get("max_items"),
                 skip_urls=list(s.get("skip_urls") or []),
+                file_as=str(s.get("file_as") or ""),
             )
         )
     return sources, data.get("defaults", {})

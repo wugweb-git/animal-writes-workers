@@ -227,12 +227,13 @@ def run(
             else:
                 verdict = None
             try:
-                summary = (ingest.opportunity_summary(item) if item.source.type == "opportunity"
+                as_press = item.source.file_as == "press"  # Media & PR coverage: no summary or categories
+                summary = ("" if as_press else ingest.opportunity_summary(item) if item.source.type == "opportunity"
                            else summariser.summarise(item))
-                cats = (None if item.source.type == "opportunity"
+                cats = ([] if as_press else None if item.source.type == "opportunity"
                           else summarise.pick_categories(summariser, item, summary, sources.allowed_categories(item.source.type)))
                 payload = ingest.build_payload(item, summary, cats)
-                if getattr(summariser, "last_short", False):
+                if getattr(summariser, "last_short", False) and not as_press:
                     payload["summary_short"] = True  # still below the minimum after the fallback: published, marked
                 if verdict is not None:
                     payload["relevance"] = verdict.to_json()
@@ -255,11 +256,11 @@ def run(
             if result not in ("blocked", "filtered"):
                 remember_title(titles, item.title, item.date)
             last = getattr(client, "last", None) or {}
-            if result == "created" and last.get("id"):
+            if result == "created" and last.get("id") and not as_press:
                 credit_coverage(client, int(last["id"]), getattr(summariser, "last_coverage", None))
-            if result == "created" and gate is not None and last.get("id") and item.source.type in ("news", "legal"):
+            if result == "created" and gate is not None and last.get("id") and item.source.type in ("news", "legal") and not as_press:
                 gate.recent_ids[item.title] = int(last["id"])  # later reports this run can be folded into it
-            if last.get("review") == "merged" and last.get("merged_into"):  # the site found the same event by title
+            if not as_press and last.get("review") == "merged" and last.get("merged_into"):  # the site found the same event by title
                 merge.fold(summariser, client, last["merged_into"], title=item.title, url=item.url,
                            publisher=item.publisher or item.source.name, text=item.text, date=item.date)
             if result == "duplicate":
