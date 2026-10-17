@@ -14,7 +14,7 @@ on:
       batch:
         description: "Items per run"
         type: string
-        default: "25"
+        default: "50"
       dry_run:
         description: "Only show what would be written"
         type: boolean
@@ -61,7 +61,7 @@ jobs:
       - name: Batch size (heavier off-peak, 22:30-06:00 IST)
         run: |
           h=$(date -u +%H)
-          if [ -n "${{ inputs.batch }}" ]; then b="${{ inputs.batch }}"; elif [ "$h" -ge 17 ] || [ "$h" -lt 1 ]; then b=40; else b=25; fi
+          if [ -n "${{ inputs.batch }}" ]; then b="${{ inputs.batch }}"; elif [ "$h" -ge 17 ] || [ "$h" -lt 1 ]; then b=80; else b=50; fi
           echo "BATCH=$b" >> "$GITHUB_ENV"
           echo "PAUSE_S=4" >> "$GITHUB_ENV"
           echo "MAX_MINUTES=40" >> "$GITHUB_ENV"
