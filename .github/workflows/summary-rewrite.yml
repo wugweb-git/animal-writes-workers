@@ -1,0 +1,68 @@
+name: "Summaries: rewrite those that break the current rules"
+
+# Owner, 18 Oct 2026: every published summary that breaks the current Summary rules is rewritten (source re-read; thin
+# or unreadable: other coverage of the same event; never padded, never held). A batch per run, newest first. The site
+# keeps which items are settled (aw/v1/summary-rewrite), so every run continues where the last stopped. Progress:
+# GET /wp-json/aw/v1/summary-rewrite?progress=1 (logged at the end of each run).
+on:
+  workflow_dispatch:
+    inputs:
+      ids:
+        description: "Only these post IDs (comma-separated); empty = the next batch"
+        type: string
+        default: ""
+      batch:
+        description: "Items per run"
+        type: string
+        default: "25"
+      dry_run:
+        description: "Only show what would be written"
+        type: boolean
+        default: false
+  schedule:
+    - cron: "7,37 * * * *"
+
+concurrency:
+  group: summary-rewrite
+  cancel-in-progress: false
+
+jobs:
+  rewrite:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    env:
+      AW_IDS: ${{ inputs.ids }}
+      DRY_RUN: ${{ inputs.dry_run && 'true' || 'false' }}
+      WP_BASE_URL: ${{ secrets.WP_BASE_URL }}
+      WP_INGEST_USER: ${{ secrets.WP_INGEST_USER }}
+      WP_INGEST_APP_PASSWORD: ${{ secrets.WP_INGEST_APP_PASSWORD }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      GEMINI_API_KEY_2: ${{ secrets.GEMINI_API_KEY_2 }}
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      GROQ_API_KEY_2: ${{ secrets.GROQ_API_KEY_2 }}
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+      DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      XAI_API_KEY: ${{ secrets.XAI_API_KEY }}
+      MOONSHOT_API_KEY: ${{ secrets.MOONSHOT_API_KEY }}
+      MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
+      LLM_PROVIDERS: ${{ vars.LLM_PROVIDERS }}
+      HAIKU_MONTHLY_BUDGET_USD: ${{ vars.HAIKU_MONTHLY_BUDGET_USD || '4' }}
+      GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+      GROQ_MODEL: ${{ vars.GROQ_MODEL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Batch size (heavier off-peak, 22:30-06:00 IST)
+        run: |
+          h=$(date -u +%H)
+          if [ -n "${{ inputs.batch }}" ]; then b="${{ inputs.batch }}"; elif [ "$h" -ge 17 ] || [ "$h" -lt 1 ]; then b=40; else b=25; fi
+          echo "BATCH=$b" >> "$GITHUB_ENV"
+          echo "PAUSE_S=4" >> "$GITHUB_ENV"
+          echo "MAX_MINUTES=40" >> "$GITHUB_ENV"
+      - run: python -m aw_workers.summary_rewrite
