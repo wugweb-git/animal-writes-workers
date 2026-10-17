@@ -314,7 +314,8 @@ def main(env=os.environ) -> int:
             raise
         except Exception as exc:  # noqa: BLE001
             stats["error"] += 1
-            log.warning("#%s: %s: %s", row["id"], type(exc).__name__, str(exc)[:200])
+            body = getattr(getattr(exc, "response", None), "text", "")[:300]
+            log.warning("#%s: %s: %s %s", row["id"], type(exc).__name__, str(exc)[:120], body)
     print("RUN", json.dumps(stats))
     if not dry:
         try:
