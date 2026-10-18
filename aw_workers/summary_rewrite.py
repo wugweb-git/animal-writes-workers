@@ -100,6 +100,8 @@ def evaluate(summary: str, ours: str, row: dict, text: str, section: str, pubs) 
         hard.append("numbers from the current summary left out: " + ", ".join(lost))
     found = summary_rules.problems(summary, section, f"{title}. {text}", rules, publisher=row.get("publisher") or "")
     hard += [p for p in found if not p.startswith(summary_rules.SHORT)]
+    if len(summary_rules.words(summary)) < 8:
+        hard.append("no usable summary in the answer")
     have = merge._tokens(f"{ours} {title} {text}")
     lost_apos = sorted({w for w in merge._tokens(summary) if w.endswith("s") and w not in have
                         and (w[:-1] + "’s" in have or w[:-1] + "'s" in have)})
