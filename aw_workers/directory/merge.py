@@ -13,6 +13,7 @@ MULTI = {"phone": 2, "whatsapp": 1, "emergency": 1}  # how many different number
 AI_FIELDS = {"services", "animals", "areas_served", "description", "reg_type", "head"}
 PRIORITY = ["claim", "website", "darpan", "wikidata", "osm", "social", "awbi", "google_places"]
 INVITE_FIELDS = ("phone", "hours", "address", "website")
+OFFICIAL_AWBI = {"address", "pincode"}  # the AWBI list is the official record of these: high on its own
 
 
 def _groups(facts, field):
@@ -47,8 +48,8 @@ def proposals(ctx) -> tuple[list[dict], list[str]]:
         for g in keep:
             keys = {f.source_key for f in g}
             confirmed = any(same_value(field, c.value, g[0].value) for c in check)
-            if "claim" in keys:
-                conf = "high"
+            if "claim" in keys or (keys == {"awbi"} and field in OFFICIAL_AWBI):
+                conf = "high"  # the organisation itself, or the AWBI list's own address (owner, 18 Oct 2026)
             elif field in ("place_id", "maps_url"):
                 conf = "high" if getattr(ctx, "google_match", 0) >= 0.85 else "medium"
             elif len(keys) >= 2 or confirmed:

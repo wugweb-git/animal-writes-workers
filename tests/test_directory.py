@@ -136,3 +136,10 @@ def test_ai_output_is_checked_against_the_text():
     assert out["services"] == ["rescue"] and out["animals"] == "dogs, cats" and out["areas_served"] == "Guntur"
     assert "description" not in out  # 500 is not in the text
     assert out["head"] == "Ravi Kumar, President"
+
+
+def test_awbi_address_is_high_on_its_own():
+    c = ctx_with(Fact("address", "Indira Nagar, Guntur 522003", "awbi", "A"), Fact("pincode", "522003", "awbi", "A"),
+                 Fact("email", "a@x.org", "awbi", "A"))
+    props = {p["field"]: p["confidence"] for p in merge.proposals(c)[0]}
+    assert props == {"address": "high", "pincode": "high", "email": "medium"}
