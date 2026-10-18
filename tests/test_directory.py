@@ -107,7 +107,7 @@ def test_website_extracts_contacts():
     <p>Peela Ramakrishna Memorial Jeevraksha Sangham was established in 1964. Registered as a public charitable trust.</p>
     <a href="https://www.instagram.com/jeevraksha/">Instagram</a></body></html>"""
     contact = """<html><body><a href="mailto:info@jeevraksha.org">Email</a><a href="tel:+919876543210">Call</a>
-    <p>Emergency ambulance: 98490 12345</p><p>80G No: AAATP1234QF20214 · UPI: jeevraksha@okhdfcbank</p>
+    <p>Emergency ambulance: 98490 12345</p><p>Bank A/c No: 0102578397, IFSC SBIN0001</p><p>80G No: AAATP1234QF20214 · UPI: jeevraksha@okhdfcbank</p>
     <a href="https://wa.me/919812345678">WhatsApp</a></body></html>"""
     c = ctx_with()
     c.leads["website"] = "https://jeevraksha.org"
@@ -118,6 +118,7 @@ def test_website_extracts_contacts():
                  ("upi", "jeevraksha@okhdfcbank"), ("donate_url", "https://rzp.io/l/abc"), ("logo", "https://jeevraksha.org/logo.png"),
                  ("instagram", "https://www.instagram.com/jeevraksha/"), ("reg_80g", "AAATP1234QF20214")]:
         assert want in got, want
+    assert not any(v == "0102578397" for _, v in got)  # an account number is never a phone
 
 
 def test_website_must_name_the_organisation():

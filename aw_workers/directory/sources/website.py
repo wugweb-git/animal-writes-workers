@@ -35,6 +35,8 @@ FOUNDED = re.compile(r"\b(?:established|founded|started|formed|set up|since)\s+(
 REG_TYPE = re.compile(r"\bregistered\s+(?:as\s+an?\s+|under\s+the\s+)?(public charitable trust|charitable trust|trust|society|section\s?8 (?:company|not[- ]for[- ]profit company))\b", re.I)
 LINK_FIELD = [("donate_url", re.compile(r"donat|contribut|razorpay|instamojo|ketto|milaap|give\.do|payu", re.I)),
               ("volunteer_url", re.compile(r"volunteer", re.I)), ("adopt_url", re.compile(r"\badopt", re.I))]
+PHONE_WORD = re.compile(r"phone|call|mobile|mob\b|tel\b|telephone|contact|helpline|whats\s?app|ph\b|ph\.|cell|emergency|ambulance|☎|📞", re.I)
+BANK_WORD = re.compile(r"a/c|account|acc\.?\s?no|ifsc|bank|branch|pan\b|gst|cin\b|reg(?:istration|d)?\.?\s?no", re.I)
 EMERGENCY = re.compile(r"emergency|ambulance|rescue (?:helpline|line|number)|24\s?[x×/]\s?7", re.I)
 
 
@@ -254,8 +256,9 @@ def _extract(ctx, url: str, raw: str, home: str) -> bool:
             _add(ctx, "email", e.lower(), url)
     for m in PHONE.finditer(text):
         p = norm_phone(m.group(0))
-        if p:
-            near = text[max(0, m.start() - 60): m.start()]
+        near = text[max(0, m.start() - 60): m.start()]
+        # a number in plain text counts only when the words before it call it a phone (never an account number)
+        if p and PHONE_WORD.search(near[-40:]) and not BANK_WORD.search(near) and not re.match(r"^0[01]", p):
             _add(ctx, "whatsapp" if re.search(r"whats\s?app", near, re.I) else "emergency" if EMERGENCY.search(near) else "phone", p, url)
     for u in UPI.findall(text):
         _add(ctx, "upi", u, url)
