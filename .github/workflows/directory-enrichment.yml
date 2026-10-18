@@ -1,0 +1,81 @@
+name: "Directory enrichment"
+
+# Owner's brief, 18 Oct 2026: fill empty Directory listing details from named public sources (Google Places as locator
+# and check only, the organisation's website and social pages, OpenStreetMap, Wikidata, AWBI, claims; Darpan needs a
+# CAPTCHA and is not read), with where each value came from. The site applies its rules (aw/v1/enrich/results) and
+# keeps which listings are done, so each run continues where the last stopped.
+# Dry run until the repository variable ENRICH_LIVE is "true" (after the owner's OK on the dry-run report).
+# Google stops at GOOGLE_PLACES_MONTHLY_BUDGET_USD (variable; unset or 0 = Google off) and resumes next month.
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run: send nothing, report what would happen"
+        type: boolean
+        default: true
+      batch:
+        description: "Listings this run (empty = 300; dry run: 50)"
+        type: string
+        default: ""
+      group:
+        description: "awbi-bare = only AWBI listings with no phone, email or website; empty = the normal order"
+        type: string
+        default: ""
+      ids:
+        description: "Only these listing IDs (comma-separated)"
+        type: string
+        default: ""
+  workflow_run:
+    workflows: ["SEO scores (Rank Math)"]
+    types: [completed]
+
+concurrency:
+  group: directory-enrichment
+  cancel-in-progress: false
+
+jobs:
+  enrich:
+    runs-on: ubuntu-latest
+    timeout-minutes: 170
+    env:
+      DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && (inputs.dry_run && 'true' || 'false') || (vars.ENRICH_LIVE == 'true' && 'false' || 'true') }}
+      BATCH: ${{ inputs.batch || (github.event_name == 'workflow_dispatch' && inputs.dry_run && '50') || vars.ENRICH_BATCH || '300' }}
+      GROUP: ${{ inputs.group }}
+      AW_IDS: ${{ inputs.ids }}
+      MAX_MINUTES: "150"
+      REPORT_DIR: enrich-report
+      WP_BASE_URL: ${{ secrets.WP_BASE_URL }}
+      WP_INGEST_USER: ${{ secrets.WP_INGEST_USER }}
+      WP_INGEST_APP_PASSWORD: ${{ secrets.WP_INGEST_APP_PASSWORD }}
+      GOOGLE_PLACES_KEY: ${{ secrets.GOOGLE_PLACES_KEY }}
+      GOOGLE_PLACES_MONTHLY_BUDGET_USD: ${{ vars.GOOGLE_PLACES_MONTHLY_BUDGET_USD }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      GEMINI_API_KEY_2: ${{ secrets.GEMINI_API_KEY_2 }}
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      GROQ_API_KEY_2: ${{ secrets.GROQ_API_KEY_2 }}
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+      DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      XAI_API_KEY: ${{ secrets.XAI_API_KEY }}
+      MOONSHOT_API_KEY: ${{ secrets.MOONSHOT_API_KEY }}
+      MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
+      LLM_PROVIDERS: ${{ vars.LLM_PROVIDERS }}
+      HAIKU_MONTHLY_BUDGET_USD: ${{ vars.HAIKU_MONTHLY_BUDGET_USD || '4' }}
+      GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+      GROQ_MODEL: ${{ vars.GROQ_MODEL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements-dev.txt
+      - run: pytest -q tests/test_directory.py
+      - run: python -m aw_workers.directory.run
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: enrich-report-${{ github.run_id }}
+          path: enrich-report/
+          retention-days: 90
