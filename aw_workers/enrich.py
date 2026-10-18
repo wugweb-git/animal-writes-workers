@@ -53,6 +53,8 @@ _OG = [re.compile(r'<meta[^>]+property=["\']og:image(?::secure_url)?["\'][^>]+co
 UAS = ["facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)", "Twitterbot/1.0", UA["User-Agent"]]
 PLATFORM_IMAGE = re.compile(r"static\.cdninstagram\.com|static\.xx\.fbcdn\.net|/rsrc\.php/|(instagram|facebook|threads|meta)[^/]*logo"
                             r"|/logo[^/]*\.(png|svg|webp|jpe?g)|-logo\.(png|webp|jpe?g)", re.I)
+_PIB = re.compile(r"^https?://(www\.)?pib\.gov\.in/", re.I)
+_PIB_IMG = re.compile(r'<img[^>]+src=["\'](https://static\.pib\.gov\.in/WriteReadData/userfiles/image/[^"\']+)', re.I)
 _YT = re.compile(r"(?:youtube\.com/(?:watch\?(?:.*&)?v=|shorts/|embed/|live/)|youtu\.be/)([A-Za-z0-9_-]{11})")
 
 
@@ -63,6 +65,12 @@ def og_image(url: str, session=requests) -> str:
     yt = _YT.search(url)
     if yt:
         return f"https://i.ytimg.com/vi/{yt.group(1)}/hqdefault.jpg"
+    if _PIB.match(url):  # every PIB release declares the same site picture: the release's own first photo instead
+        try:
+            m = _PIB_IMG.search(session.get(url, headers={"User-Agent": UAS[-1]}, timeout=TIMEOUT).text)
+            return m.group(1) if m else ""
+        except Exception:
+            return ""
     for ua in UAS:
         try:
             resp = session.get(url, headers={"User-Agent": ua}, timeout=TIMEOUT)
