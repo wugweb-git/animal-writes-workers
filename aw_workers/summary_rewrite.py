@@ -320,7 +320,8 @@ def main(env=os.environ) -> int:
                     client._call("POST", "/summary-rewrite", json={"id": row["id"], "before_md5": row["md5"], "failed": "site check: " + body})
                 except Exception:  # noqa: BLE001
                     pass
-            log.warning("#%s: %s: %s %s", row["id"], type(exc).__name__, str(exc)[:120], body)
+            log.warning("#%s: %s: %s %s | summary sent: %r", row["id"], type(exc).__name__, str(exc)[:120], body,
+                        (locals().get("res") or {}).get("summary", "")[:400])
     print("RUN", json.dumps(stats))
     if not dry:
         try:
