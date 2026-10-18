@@ -56,18 +56,25 @@ def query(name: str, state: str) -> str:
     iso = ISO.get(state.lower().strip())
     area = f'area["ISO3166-2"="IN-{iso}"]->.a;' if iso else 'area["ISO3166-1"="IN"]->.a;'
     flt = "".join(f'["name"~"{re.escape(t)}",i]' for t in toks)
-    return f"[out:json][timeout:40];{area}nwr{flt}(area.a);out center tags 10;"
+    return f"[out:json][timeout:25];{area}nwr{flt}(area.a);out center tags 10;"
+
+
+FAILS = {"n": 0}  # Overpass busy for several listings in a row: OSM rests for the rest of the run
+MAX_FAILS = 3
 
 
 def run(ctx, env, http) -> None:
+    if FAILS["n"] >= MAX_FAILS:
+        ctx.status[KEY] = "skipped: Overpass busy this run"
+        return
     q = query(ctx.name, ctx.listing.get("state", ""))
     if not q:
         ctx.status[KEY] = "skipped: no usable name"
         return
     data, err = None, ""
-    for attempt, ep in enumerate(ENDPOINTS * 2):
+    for attempt, ep in enumerate(ENDPOINTS):
         try:
-            r = http.post(ep, gap=2.0, data={"data": q}, timeout=60,
+            r = http.post(ep, gap=2.0, data={"data": q}, timeout=35,
                           headers={"User-Agent": "AnimalWritesWorkers/1.0 (+https://animalwrites.in; admin@wugweb.com)"})
             if r.status_code == 200 and r.headers.get("content-type", "").startswith("application/json"):
                 data = r.json()
@@ -75,10 +82,12 @@ def run(ctx, env, http) -> None:
             err = f"HTTP {r.status_code}"
         except Exception as exc:  # noqa: BLE001
             err = type(exc).__name__
-        http.sleep(min(30, 3 * 2 ** attempt))
+        http.sleep(2 * (attempt + 1))
     if data is None:
+        FAILS["n"] += 1
         ctx.status[KEY] = f"error: {err}"
         return
+    FAILS["n"] = 0
     best = max(((name_similarity(ctx.name, e.get("tags", {}).get("name", "")), e) for e in data.get("elements", [])),
                key=lambda x: x[0], default=(0, None))
     if best[0] < 0.8:
