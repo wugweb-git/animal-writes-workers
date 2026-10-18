@@ -12,9 +12,9 @@ on:
         type: string
         default: ""
       batch:
-        description: "Items per run"
+        description: "Items per run (empty = 100 by day, 150 off-peak)"
         type: string
-        default: "50"
+        default: ""
       dry_run:
         description: "Only show what would be written"
         type: boolean
@@ -26,11 +26,17 @@ concurrency:
   group: summary-rewrite
   cancel-in-progress: false
 
+permissions:
+  actions: write
+  contents: read
+
 jobs:
   rewrite:
     runs-on: ubuntu-latest
     timeout-minutes: 50
     env:
+      AW_CHAIN_FILE: ${{ github.workspace }}/chain.txt
+      GH_TOKEN: ${{ github.token }}
       AW_IDS: ${{ inputs.ids }}
       DRY_RUN: ${{ inputs.dry_run && 'true' || 'false' }}
       WP_BASE_URL: ${{ secrets.WP_BASE_URL }}
@@ -61,8 +67,14 @@ jobs:
       - name: Batch size (heavier off-peak, 22:30-06:00 IST)
         run: |
           h=$(date -u +%H)
-          if [ -n "${{ inputs.batch }}" ]; then b="${{ inputs.batch }}"; elif [ "$h" -ge 17 ] || [ "$h" -lt 1 ]; then b=80; else b=50; fi
+          if [ -n "${{ inputs.batch }}" ]; then b="${{ inputs.batch }}"; elif [ "$h" -ge 17 ] || [ "$h" -lt 1 ]; then b=150; else b=100; fi
           echo "BATCH=$b" >> "$GITHUB_ENV"
           echo "PAUSE_S=4" >> "$GITHUB_ENV"
           echo "MAX_MINUTES=40" >> "$GITHUB_ENV"
       - run: python -m aw_workers.summary_rewrite
+      - name: More to do? Start the next run
+        if: ${{ always() && inputs.ids == '' && !inputs.dry_run }}
+        run: |
+          n=$(cat chain.txt 2>/dev/null || echo 0)
+          echo "items taken this run: $n"
+          if [ "$n" -gt 0 ]; then gh workflow run summary-rewrite.yml; fi

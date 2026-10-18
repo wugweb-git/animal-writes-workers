@@ -328,6 +328,9 @@ def main(env=os.environ) -> int:
             print("PROGRESS", json.dumps(prog.get("counts")))
         except Exception as exc:  # noqa: BLE001
             log.info("progress not read: %s", type(exc).__name__)
+    if env.get("AW_CHAIN_FILE"):  # how many items this run took: the workflow starts the next run while there are more
+        with open(env["AW_CHAIN_FILE"], "w") as f:
+            f.write(str(sum(stats.values()) - stats["error"]))
     out = env.get("GITHUB_STEP_SUMMARY")
     if out:
         with open(out, "a", encoding="utf-8") as f:
