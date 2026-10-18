@@ -243,8 +243,28 @@ def parse_rss(source: Source, body: str) -> list[Item]:
         publisher = _clean((e.get("source") or {}).get("title", "") or e.get("news_source", ""))
         if publisher and title.endswith(f" - {publisher}"):
             title = title[: -len(publisher) - 3].strip()
-        items.append(Item(source, title, link, when, _clean(e.get("summary", "")), publisher))
+        item = Item(source, title, link, when, _clean(e.get("summary", "")), publisher)
+        item.image = feed_image(e)
+        items.append(item)
     return items
+
+
+def feed_image(e) -> str:
+    """The story's picture as the feed gives it (owner, 18 Oct 2026): media:content, media:thumbnail, an image
+    enclosure, else the first picture in the post. Feeds reach sites that block page reads (PETA India, NDTV)."""
+    for m in list(e.get("media_content") or []) + list(e.get("media_thumbnail") or []):
+        url = (m.get("url") or "").strip()
+        if url.startswith("https://") and (m.get("medium") in (None, "", "image") or "image" in (m.get("type") or "image")):
+            return url
+    for enc in e.get("enclosures") or []:
+        url = (enc.get("href") or enc.get("url") or "").strip()
+        if url.startswith("https://") and (enc.get("type") or "").startswith("image/"):
+            return url
+    for c in [*(x.get("value", "") for x in (e.get("content") or [])), e.get("summary", "")]:
+        m = re.search(r'<img[^>]+src=["\']([^"\']+)', c or "", re.I)
+        if m and m.group(1).startswith("https://"):
+            return html.unescape(m.group(1))
+    return ""
 
 
 _DMY = re.compile(r"^(\d{2})-(\d{2})-(\d{4})$")

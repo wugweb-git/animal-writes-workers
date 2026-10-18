@@ -1,6 +1,6 @@
 """Resolve aggregator links to the publisher and find the article's preview image (og:image).
 
-Only the image URL is stored; the image itself is never downloaded or re-hosted.
+Only the image URL is sent; the site keeps its own copy (cc0-images.php, no hotlinking, owner 17–18 Oct 2026).
 """
 
 from __future__ import annotations
@@ -49,10 +49,34 @@ _OG = [re.compile(r'<meta[^>]+property=["\']og:image(?::secure_url)?["\'][^>]+co
        re.compile(r'<meta[^>]+name=["\']twitter:image["\'][^>]+content=["\']([^"\']+)', re.I)]
 
 
+# Link-preview crawlers first: social sites and many publishers give them the real picture (owner, 18 Oct 2026).
+UAS = ["facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)", "Twitterbot/1.0", UA["User-Agent"]]
+PLATFORM_IMAGE = re.compile(r"static\.cdninstagram\.com|static\.xx\.fbcdn\.net|/rsrc\.php/|(instagram|facebook|threads|meta)[^/]*logo"
+                            r"|/logo[^/]*\.(png|svg|webp|jpe?g)|-logo\.(png|webp|jpe?g)", re.I)
+_YT = re.compile(r"(?:youtube\.com/(?:watch\?(?:.*&)?v=|shorts/|embed/|live/)|youtu\.be/)([A-Za-z0-9_-]{11})")
+
+
 def og_image(url: str, session=requests) -> str:
-    """The page's declared preview image (https only), or ''."""
+    """The page's declared preview image (https only, never a platform logo), or ''. YouTube: the video's cover."""
     if url.lower().endswith(".pdf"):
         return ""
+    yt = _YT.search(url)
+    if yt:
+        return f"https://i.ytimg.com/vi/{yt.group(1)}/hqdefault.jpg"
+    for ua in UAS:
+        try:
+            resp = session.get(url, headers={"User-Agent": ua}, timeout=TIMEOUT)
+            html = resp.text[:400_000]
+        except Exception:
+            continue
+        for pat in _OG:
+            m = pat.search(html)
+            if m:
+                img = urljoin(url, m.group(1).strip().replace("&amp;", "&"))
+                if img.startswith("https://") and not PLATFORM_IMAGE.search(img):
+                    return img
+                break
+    return ""
     try:
         resp = session.get(url, headers=UA, timeout=TIMEOUT)
         html = resp.text[:400_000]

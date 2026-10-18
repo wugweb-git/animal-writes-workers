@@ -188,7 +188,8 @@ def run(
                 continue
             original = item.url
             if enricher and not item.doc_kind:  # documents are PDFs: nothing to resolve or preview
-                item.url, item.image = enricher(item.url)
+                item.url, page_image = enricher(item.url)
+                item.image = page_image or item.image  # the page's picture, else the one the feed gave
                 if item.url != original and item.url in seen:
                     seen.add(original)
                     stats.duplicate += 1
