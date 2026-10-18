@@ -50,7 +50,8 @@ _OG = [re.compile(r'<meta[^>]+property=["\']og:image(?::secure_url)?["\'][^>]+co
 
 
 # Link-preview crawlers first: social sites and many publishers give them the real picture (owner, 18 Oct 2026).
-UAS = ["facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)", "Twitterbot/1.0", UA["User-Agent"]]
+BROWSER_UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0 Safari/537.36"
+UAS = ["facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)", "Twitterbot/1.0", BROWSER_UA]  # then a browser (PIB refuses bot-style agents)
 PLATFORM_IMAGE = re.compile(r"static\.cdninstagram\.com|static\.xx\.fbcdn\.net|/rsrc\.php/|(instagram|facebook|threads|meta)[^/]*logo"
                             r"|/logo[^/]*\.(png|svg|webp|jpe?g)|-logo\.(png|webp|jpe?g)", re.I)
 _PIB = re.compile(r"^https?://(www\.)?pib\.gov\.in/", re.I)
