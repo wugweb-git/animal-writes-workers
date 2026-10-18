@@ -27,6 +27,7 @@ import re
 from collections import Counter
 
 from . import ingest, summarise
+from .titles import no_hyphens
 
 log = logging.getLogger("aw_workers.focus_keywords")
 
@@ -122,7 +123,7 @@ def why_refused(keyword: str, title: str, text: str = "", seo_title: str = "") -
 
 
 def _normalise(keyword: str) -> str:
-    kw = re.sub(r"[\"“”`#]+", "", str(keyword or "")).lower()
+    kw = no_hyphens(re.sub(r"[\"“”`#]+", "", str(keyword or "")).lower(), case=False)  # titles have no hyphens (owner, 18 Oct 2026)
     kw = re.sub(r"['‘’](?![^\W_])|(?<![^\W_])['‘’]", "", kw)  # quote marks go; an apostrophe inside a word stays
     return re.sub(r"\s+", " ", kw).strip(" \t\n.,;:'-")
 

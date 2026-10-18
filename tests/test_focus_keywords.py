@@ -112,11 +112,11 @@ def test_in_title_reads_words_as_rank_math_does():
     assert not fk.in_title("dog bite", "Dog bites rise")  # whole words only
 
 
-def test_clean_keeps_hyphens_and_inner_apostrophes():
-    seo = "Why India Must Champion Animal-free Drug Testing"
-    assert fk.clean("“Animal-free drug testing”", seo, "", seo) == "animal-free drug testing"
+def test_clean_has_no_hyphens_and_keeps_inner_apostrophes():
+    seo = "Why India Must Champion Animal Free Drug Testing"  # titles have no hyphens (owner, 18 Oct 2026)
+    assert fk.clean("“Animal-free drug testing”", seo, "", seo) == "animal free drug testing"
     assert fk.clean("gaurav taneja’s dog", "Gaurav Taneja’s Dog Mau Dies", "", "Gaurav Taneja’s Dog Mau Dies") == "gaurav taneja’s dog"
-    assert fk.from_title("Human-elephant Conflict a Major Challenge").startswith("human-elephant")
+    assert fk.from_title("Human Elephant Conflict a Major Challenge").startswith("human elephant")
 
 
 def test_from_title_picks_specific_words_of_the_seo_title():
