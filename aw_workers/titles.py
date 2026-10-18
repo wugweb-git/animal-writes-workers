@@ -39,3 +39,26 @@ def no_hyphens(text: str, case: bool | None = None) -> str:
         t = re.sub(rf"(?<=[^\W_]){_D}([^\W\d_][^\W_]*)", lambda m: up(m) if m[1][0].islower() else m[0], t)
     t = re.sub(rf"(?<=[^\W_]){_D}\s*(?=[^\W_])|(?<=[^\W\d_]){_D}\s+(?=[^\W\d_])", " ", t)
     return re.sub(r"\s+", " ", t).strip()
+
+
+_SEP = re.compile(r"\s+[|\-\u2013\u2014]\s+(?=[^|\-\u2013\u2014]+$)")
+
+
+def _key(name: str) -> str:
+    n = re.sub(r"^https?://|^www\.|\.(com|in|org|net|co\.in|gov\.in)(/.*)?$", "", (name or "").strip().lower())
+    return re.sub(r"[^a-z0-9]", "", n)
+
+
+def no_publisher(title: str, *names: str) -> str:
+    """`title` without the publisher a feed appends after a separator ("... | Hindustan Times", "... - The Hindu",
+    "... \u2014 TOI"). Only a trailing part that is one of `names` (publisher, source name or host) goes; a colon tail
+    ("...: Delhi High Court") and other trailing words stay (owner, 18 Oct 2026)."""
+    t = (title or "").strip()
+    bare = lambda k: k[3:] if k.startswith("the") and len(k) > 6 else k  # "The Hindu" = "thehindu.com"
+    keys = {bare(k) for k in (_key(n) for n in names) if len(k) >= 3}
+    while keys:
+        m = _SEP.search(t)
+        if not m or bare(_key(t[m.end():])) not in keys:
+            break
+        t = t[: m.start()].rstrip()
+    return t

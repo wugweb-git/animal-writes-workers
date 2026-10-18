@@ -8,7 +8,7 @@ import re
 
 import requests
 
-from .titles import no_hyphens
+from .titles import no_hyphens, no_publisher
 from .sources import Item, allowed_categories, allowed_tags, categories_for, topic_tags_for
 
 TIMEOUT = 30
@@ -52,7 +52,7 @@ def court_type(title: str) -> str:
 def build_payload(item: Item, summary: str, categories: list[str] | None = None) -> dict:
     payload = {
         "type": item.source.type,
-        "title": no_hyphens(item.title),  # no hyphens joining words in a title (owner, 18 Oct 2026)
+        "title": no_hyphens(no_publisher(item.title, item.publisher, item.source.name, item.url.split("/")[2] if "//" in item.url else "")),  # no publisher suffix, no hyphens joining words (owner, 18 Oct 2026)
         "summary": summary,
         "source_url": item.url,
         "source_name": item.publisher or item.source.name,

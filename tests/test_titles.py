@@ -32,3 +32,17 @@ def test_payload_title_has_no_hyphen():
     src = sources.Source(id="x", name="X", kind="rss", type="news", url="https://x/feed")
     item = sources.Item(source=src, title="Man Pushes Cat Off 12th-floor Ledge", url="https://x/y", date=None)
     assert ingest.build_payload(item, "Summary.", categories=[])["title"] == "Man Pushes Cat Off 12th Floor Ledge"
+
+
+def test_publisher_suffix_is_removed():
+    from aw_workers.titles import no_publisher
+    assert no_publisher("Two female leopards released into the wild after immunocontraceptive treatment | Hindustan Times", "Hindustan Times") == "Two female leopards released into the wild after immunocontraceptive treatment"
+    assert no_publisher("Dogs rescued in Pune - The Hindu", "", "The Hindu feed", "www.thehindu.com") == "Dogs rescued in Pune"
+    assert no_publisher("Rescue in Goa \u2014 Times of India | TOI", "Times of India", "TOI") == "Rescue in Goa"
+
+
+def test_other_trailing_words_stay():
+    from aw_workers.titles import no_publisher
+    assert no_publisher("Stray dog orders: Delhi High Court", "LiveLaw") == "Stray dog orders: Delhi High Court"
+    assert no_publisher("Cats and dogs - a guide", "The Hindu") == "Cats and dogs - a guide"
+    assert no_publisher("Plain title", "") == "Plain title"
