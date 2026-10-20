@@ -1,7 +1,10 @@
 name: WordPress cron
 
-# Real cron for animalwrites.in: runs WordPress's scheduled tasks every 15 minutes,
-# so they no longer depend on visitors (DISABLE_WP_CRON is set by animal-writes-core).
+# Backup trigger for animalwrites.in's scheduled tasks (DISABLE_WP_CRON is set by animal-writes-core). The main
+# trigger is Hostinger's server cron, every 5 minutes; an outside monitor (UptimeRobot) is the second backup. WordPress
+# locks the run, so the first to arrive does the work. The site records each trigger (dashboard: Scheduled tasks) and
+# emails the owner when none has run for 30 minutes. Kept on every 15 minutes (owner, 20 Oct 2026); GitHub often runs
+# it late, which is why it is not the main trigger.
 on:
   schedule:
     - cron: "*/15 * * * *"

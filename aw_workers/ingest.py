@@ -181,7 +181,7 @@ class Client:
         return self._call("POST", "/relevance-alert", json={"held": int(held), "run": run, "link": link})
 
     def ingest_heartbeat(self, new: int, *, published: int | None = None, sources: int = 0, sources_failed: int = 0,
-                         errors: list[str] | None = None) -> dict:
+                         errors: list[str] | None = None, lists: str = "") -> dict:
         """Report this run: items created and published, sources tried and failed. The site emails the owner when half
         the sources fail; its own hourly check emails when nothing has been published for 12 hours or no run has
         reported for 8 hours (owner, 12 Oct 2026)."""
@@ -191,6 +191,8 @@ class Client:
                 "errors": [str(e)[:200] for e in (errors or [])][:10]}
         if published is not None:
             body["published"] = int(published)
+        if lists:
+            body["lists"] = lists  # site or yaml: which lists the run used
         return self._call("POST", "/ingest-heartbeat", json=body)
 
     def relevance_items(self, page: int, per_page: int = 100, missing_only: bool = False) -> dict:

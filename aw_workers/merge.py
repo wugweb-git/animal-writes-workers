@@ -249,10 +249,15 @@ def page_text(url: str, session=None, limit: int = 4000) -> str:
 
     from .enrich import TIMEOUT, UA
 
+    from . import relay
+
     try:
         resp = (session or requests).get(url, headers=UA, timeout=TIMEOUT)
-        resp.raise_for_status()
-        page = resp.text[:800_000]
+        if getattr(resp, "status_code", 200) == 403 and relay.allowed(url):  # refused from GitHub: the site reads it for us
+            page = (relay.fetch(url) or "")[:800_000]
+        else:
+            resp.raise_for_status()
+            page = resp.text[:800_000]
     except Exception:  # noqa: BLE001
         return ""
     page = re.sub(r"(?is)<(script|style|noscript|nav|header|footer|aside|form)\b.*?</\1>", " ", page)

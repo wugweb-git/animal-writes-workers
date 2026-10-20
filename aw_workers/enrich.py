@@ -72,12 +72,17 @@ def og_image(url: str, session=requests) -> str:
             return m.group(1) if m else ""
         except Exception:
             return ""
+    from . import relay
+
     for ua in UAS:
         try:
             resp = session.get(url, headers={"User-Agent": ua}, timeout=TIMEOUT)
             html = resp.text[:400_000]
         except Exception:
             continue
+        relayed = getattr(resp, "status_code", 200) == 403 and relay.allowed(url)
+        if relayed:  # refused from GitHub: the site reads the page for us (once)
+            html = (relay.fetch(url) or "")[:400_000]
         for pat in _OG:
             m = pat.search(html)
             if m:
@@ -85,6 +90,8 @@ def og_image(url: str, session=requests) -> str:
                 if img.startswith("https://") and not PLATFORM_IMAGE.search(img):
                     return img
                 break
+        if relayed:
+            break
     return ""
     try:
         resp = session.get(url, headers=UA, timeout=TIMEOUT)

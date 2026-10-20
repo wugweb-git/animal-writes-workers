@@ -17,6 +17,8 @@ import requests
 import yaml
 from bs4 import BeautifulSoup
 
+from . import relay as _relay
+
 USER_AGENT = "AnimalWritesWorkers/1.0 (+https://animalwrites.in)"
 # News search engines answer bots with 503 more often; they get a browser user agent, retries and a gap between calls.
 BROWSER_UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36"
@@ -144,7 +146,14 @@ def load_sources_data(data: dict) -> tuple[list[Source], dict]:
     TOPIC_TAGS.clear()
     TOPIC_TAGS.update({str(k): v for k, v in (data.get("topic_tags") or {}).items() if isinstance(v, dict)})
     sources = []
+    filter_words = list(data.get("filter_words") or data.get("keywords") or [])
     for s in data.get("sources", []):
+        # Settings → Sourcing switches (the site applies them too): a source switched off is not fetched; "Keyword
+        # check" gives it the keyword list. Lists without the switches (sources.yaml) are read as they are.
+        if s.get("on") is False:
+            continue
+        if s.get("filter"):
+            s = {**s, "keywords": filter_words}
         if s["type"] not in ("news", "legal", "opportunity"):
             raise ValueError(f"source {s['id']}: type must be news, legal or opportunity")
         if s["kind"] not in PARSERS and s["kind"] not in SELF_FETCH:
@@ -208,6 +217,10 @@ def fetch(url: str, get=requests.get, sleep=time.sleep) -> str:
         if resp.status_code == 403 and headers["User-Agent"] != BROWSER_UA:
             headers = {"User-Agent": BROWSER_UA}
             resp = get(url, headers=headers, timeout=TIMEOUT)
+        if resp.status_code == 403 and _relay.allowed(url):  # refused from GitHub: the site fetches it for us
+            text = _relay.fetch(url)
+            if text is not None:
+                return text
         if attempt < len(waits) and (resp.status_code == 429 or resp.status_code >= 500):
             sleep(waits[attempt])
             continue

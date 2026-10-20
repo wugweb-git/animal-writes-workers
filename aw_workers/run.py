@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from datetime import date, timedelta
 from pathlib import Path
 
-from . import documents, enrich, ingest, merge, policy as policy_mod, press, relevance, sources, summarise, summary_rules
+from . import documents, enrich, ingest, merge, policy as policy_mod, press, relay, relevance, sources, summarise, summary_rules
 
 # How far back Google News searches look (AW_WINDOW, e.g. "4d" to catch up after an outage).
 WINDOW = os.environ.get("AW_WINDOW") or "2d"
@@ -383,6 +383,7 @@ def main() -> int:
 
     # Sourcing policy from WP Admin. Live runs need it reachable; a dry run uses it when credentials exist.
     policy = None
+    lists_from = "yaml"
     policy_client = client
     if policy_client is None and all(os.environ.get(k) for k in ("WP_BASE_URL", "WP_INGEST_USER", "WP_INGEST_APP_PASSWORD")):
         policy_client = ingest.Client(os.environ["WP_BASE_URL"], os.environ["WP_INGEST_USER"], os.environ["WP_INGEST_APP_PASSWORD"])
@@ -395,9 +396,13 @@ def main() -> int:
             # once "Workers use these lists" is on there; otherwise, or if the site is unreachable, from sources.yaml.
             if isinstance(raw.get("config"), dict) and raw["config"].get("sources"):
                 lists = raw["config"]
+                lists_from = "site"
                 log.info("lists: from the site (%d sources)", len(lists["sources"]))
             else:
                 log.info("lists: from sources.yaml")
+            relay.configure(policy_client, raw.get("relay_hosts"))
+            if raw.get("relay_hosts"):
+                log.info("relay hosts (fetched through the site on 403): %s", ", ".join(raw["relay_hosts"]))
         except ingest.AuthError as exc:
             log.error("AUTH FAILURE, stopping: %s", exc)
             print(f"::error::Policy authentication failed: {exc}")
@@ -447,13 +452,14 @@ def main() -> int:
           f"skipped={stats.skipped} failed={stats.failed} rejected={stats.rejected} classifier_unavailable={stats.unavailable} "
           f"sources={stats.sources} sources_failed={stats.sources_failed}" + (" stopped_early=1" if stats.stopped_early else ""))
     print(f"relevance gate: {gate.counts}")
+    print(f"lists: {'the site (Settings → Sourcing)' if lists_from == 'site' else 'sources.yaml'}")
     sources_down = sources_failing(stats)
     if sources_down:
         print(f"::error::{stats.sources_failed} of {stats.sources} sources could not be fetched: " + "; ".join(stats.errors[:5])[:900])
     if client is not None and not dry_run:
         try:  # the site alerts the owner when nothing is published for 12 hours, or when half the sources fail
             client.ingest_heartbeat(stats.new, published=stats.published, sources=stats.sources,
-                                    sources_failed=stats.sources_failed, errors=stats.errors[:10])
+                                    sources_failed=stats.sources_failed, errors=stats.errors[:10], lists=lists_from)
         except Exception as exc:
             log.warning("heartbeat not sent: %s", exc)
         try:
@@ -466,7 +472,7 @@ def main() -> int:
     if summary_file:
         with open(summary_file, "a") as fh:
             fh.write(
-                f"### {'DRY_RUN' if dry_run else 'LIVE'} run\n\n| fetched | new | published | duplicate | skipped | rejected | classifier unavailable | failed | sources failed |\n|---|---|---|---|---|---|---|---|---|\n"
+                f"### {'DRY_RUN' if dry_run else 'LIVE'} run (lists: {lists_from})\n\n| fetched | new | published | duplicate | skipped | rejected | classifier unavailable | failed | sources failed |\n|---|---|---|---|---|---|---|---|---|\n"
                 f"| {stats.fetched} | {stats.new} | {stats.published} | {stats.duplicate} | {stats.skipped} | {stats.rejected} | {stats.unavailable} | {stats.failed} | {stats.sources_failed}/{stats.sources} |\n"
             )
     if sources_down:

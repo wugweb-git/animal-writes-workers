@@ -1,0 +1,43 @@
+name: Sources sync
+
+# The site's lists (Settings → Sourcing) copied into sources.yaml every hour while "Workers use these lists" is on,
+# so the fallback file is never stale (owner, 20 Oct 2026). Nothing is written while the switch is off.
+on:
+  schedule:
+    - cron: "23 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: sources-sync
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      WP_BASE_URL: ${{ secrets.WP_BASE_URL }}
+      WP_INGEST_USER: ${{ secrets.WP_INGEST_USER }}
+      WP_INGEST_APP_PASSWORD: ${{ secrets.WP_INGEST_APP_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Copy the site's lists
+        id: sync
+        run: echo "result=$(python scripts/sync_sources.py | tail -1)" >> "$GITHUB_OUTPUT"
+      - name: Commit sources.yaml
+        if: steps.sync.outputs.result == 'changed'
+        run: |
+          git config user.name "Wugweb"
+          git config user.email "admin@wugweb.com"
+          git add sources.yaml
+          git commit -m "Sources: copied from the site (Settings → Sourcing)" -m "Co-Authored-By: Wugweb <admin@wugweb.com>"
+          git pull --rebase -q origin "${GITHUB_REF_NAME}"
+          git push -q origin "HEAD:${GITHUB_REF_NAME}"
