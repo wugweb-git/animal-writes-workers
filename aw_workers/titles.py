@@ -62,3 +62,53 @@ def no_publisher(title: str, *names: str) -> str:
             break
         t = t[: m.start()].rstrip()
     return t
+
+
+# A section or channel label a publisher appends after " | " or " - " (owner, 20 Oct 2026): "| India News",
+# "| Mumbai news", "| Watch", "| Videos", "| Trending", "- Blog", "| SCC Times", "| Akashvani News". Only these labels
+# go, and only at the end; a real headline part ("- go vegan", "| World Farm Animals Day 2026") stays.
+_SECTION = re.compile(r"\s+[|\-\u2013\u2014]\s+(?:(?:India|World|City|Mumbai|Delhi|Bengaluru|Kolkata|Chennai|Hyderabad|Pune|"
+                      r"Lucknow|Latest|Breaking|Akashvani)\s+news|news|watch|videos?|trending|blogs?|photos?|scc times)\s*$", re.I)
+
+
+_PIPE = re.compile(r"\s+\|\s+(?=[^|]+$)")
+
+
+def no_section(title: str, *names: str) -> str:
+    """`title` without trailing section labels and publisher names, in any order ("... | Trending | Hindustan Times").
+    After " | ", a trailing part that starts with a publisher's name also goes ("| DIPR Nagaland Department of
+    Information ..."); after a dash it stays ("— PETA India campaign targets Gen Z" is part of the headline)."""
+    t = (title or "").strip()
+    keys = [k for k in (_key(n) for n in names) if len(k) >= 4]
+    while True:
+        before = t
+        t = no_publisher(_SECTION.sub("", t).rstrip(), *names)
+        m = _PIPE.search(t)
+        if m and keys and any(_key(t[m.end():]).startswith(k) for k in keys) and m.start() > 20:
+            t = t[: m.start()].rstrip()
+        if t == before:
+            return t
+
+
+_CUT = re.compile(r"(?:\u2026|\.\.\.)\s*$")
+
+
+def is_cut(title: str) -> bool:
+    """True when a feed cut the headline off with "…" or "..."."""
+    return bool(_CUT.search(title or ""))
+
+
+def _fold(text: str) -> str:
+    t = re.sub(r"[\u2018\u2019\u201c\u201d\"'`]", "", (text or "").lower())
+    t = re.sub(_D, " ", t)
+    return re.sub(r"[^\w&₹]+", " ", t).strip()
+
+
+def completes(cut: str, full: str) -> bool:
+    """True when `full` is the headline that `cut` ("Bombay High Court threatens ... stray dog, ...") was cut from:
+    it starts with the same words (ignoring case, quotes, hyphens), is longer, and has no "…" itself."""
+    head = _fold(_CUT.sub("", cut or "").rstrip(" ,;:-"))
+    head = head.rsplit(" ", 1)[0] if " " in head else head  # the last word may be cut mid-word ("offer c...")
+    body = _fold(full)
+    cut_too = "\u2026" in (full or "") or "..." in (full or "")  # "… | UNI India": the page cut it as well
+    return bool(head) and len(head) >= 12 and body.startswith(head) and len(body) > len(head) + 2 and not cut_too

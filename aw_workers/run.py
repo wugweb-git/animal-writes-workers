@@ -12,6 +12,7 @@ from datetime import date, timedelta
 from pathlib import Path
 
 from . import documents, enrich, headline_case, ingest, merge, policy as policy_mod, press, relay, relevance, sources, summarise, summary_rules
+from . import titles as titles_mod
 
 # How far back Google News searches look (AW_WINDOW, e.g. "4d" to catch up after an outage).
 WINDOW = os.environ.get("AW_WINDOW") or "2d"
@@ -197,7 +198,7 @@ def run(
                     seen.add(original)
                     stats.duplicate += 1
                     continue
-            why = "" if item.doc_kind else sources.not_an_article(item.url, item.title)
+            why = "" if item.doc_kind else sources.not_an_article(item.url, item.title, item.source.type)
             if why:
                 seen.add(item.url)
                 stats.skipped += 1
@@ -237,10 +238,20 @@ def run(
                 cats = ([] if as_press else None if item.source.type == "opportunity"
                           else summarise.pick_categories(summariser, item, summary, sources.allowed_categories(item.source.type)))
                 payload = ingest.build_payload(item, summary, cats)
+                cut_flag = ""
+                if item.source.type == "news" and not as_press and titles_mod.is_cut(payload["title"]):
+                    # Cut off with "…" in the feed: the page's own headline (og:title, <title>, h1), else kept and flagged
+                    # (owner, 20 Oct 2026).
+                    full = enrich.full_headline(item.url, payload["title"])
+                    if full:
+                        names = (item.publisher, item.source.name, item.url.split("/")[2] if "//" in item.url else "")
+                        payload["title"] = titles_mod.no_hyphens(titles_mod.no_section(full, *names))
+                    else:
+                        cut_flag = "headline cut off at the source; the full headline could not be read"
                 if item.source.type == "news" and not as_press:  # sentence case, letter case only (owner, 20 Oct 2026)
                     payload["title"], flag = headline_case.case_title(summariser, payload["title"])
-                    if flag:
-                        payload["title_flag"] = flag  # the original kept; the site notes why
+                    if flag or cut_flag:
+                        payload["title_flag"] = "; ".join(filter(None, [cut_flag, flag]))  # the site notes why
                 pr = "" if as_press or item.source.type != "news" else sources.press_release_headline(item.url, item.title)
                 if pr:  # a copied press-release headline: a person writes a plain one (owner, 20 Oct 2026)
                     payload["hold"] = "; ".join(filter(None, [payload.get("hold", ""), pr]))

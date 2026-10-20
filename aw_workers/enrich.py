@@ -59,6 +59,40 @@ _PIB_IMG = re.compile(r'<img[^>]+src=["\'](https://static\.pib\.gov\.in/WriteRea
 _YT = re.compile(r"(?:youtube\.com/(?:watch\?(?:.*&)?v=|shorts/|embed/|live/)|youtu\.be/)([A-Za-z0-9_-]{11})")
 
 
+_HEADLINES = [re.compile(r'<meta[^>]+property=["\']og:title["\'][^>]+content=(?:"([^"]*)"|\'([^\']*)\')', re.I),
+              re.compile(r'<meta[^>]+content=(?:"([^"]*)"|\'([^\']*)\')[^>]+property=["\']og:title', re.I),
+              re.compile(r"<title[^>]*>(.*?)</title>", re.I | re.S),
+              re.compile(r"<h1[^>]*>(.*?)</h1>", re.I | re.S)]
+
+
+def full_headline(url: str, cut: str, session=requests) -> str:
+    """The page's own headline for a headline a feed cut off with "…" (owner, 20 Oct 2026): og:title, then <title>,
+    then h1, the first that is the whole of `cut`; '' when none is (the title is then kept and flagged)."""
+    from html import unescape
+
+    from .titles import completes
+
+    for ua in (BROWSER_UA, UAS[0]):
+        try:
+            html = session.get(url, headers={"User-Agent": ua}, timeout=TIMEOUT).text[:600_000]
+        except Exception:
+            continue
+        for pat in _HEADLINES:
+            m = pat.search(html)
+            if not m:
+                continue
+            text = next((g for g in m.groups() if g is not None), "")
+            text = re.sub(r"\s+", " ", unescape(re.sub(r"<[^>]+>", " ", text))).strip()
+            halves = text.split(" | ")
+            if len(halves) == 2 and halves[0] == halves[1]:  # some sites print it twice
+                text = halves[0]
+            if completes(cut, text):
+                return text
+        if html:
+            break
+    return ""
+
+
 def og_image(url: str, session=requests) -> str:
     """The page's declared preview image (https only, never a platform logo), or ''. YouTube: the video's cover."""
     if url.lower().endswith(".pdf"):

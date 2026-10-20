@@ -198,11 +198,45 @@ LISTICLE_TITLE = re.compile(
 )
 
 
-def not_an_article(url: str, title: str) -> str:
-    """Why this link is not a single news story ("" when it is)."""
+# An archive or tag page by its headline (owner, 20 Oct 2026: Live Law's "Read all latest updates on and about Tamil
+# Nadu Forest And Wildlife Crime Control Bureau"): "Latest news on ...", "Latest News, Photos, Videos on ...".
+ARCHIVE_TITLE = re.compile(
+    r"^\s*(?:read\s+)?(?:all\s+)?(?:the\s+)?latest\s+(?:news|updates|stories|headlines|articles)\b(?:\s*(?:,|and|&)\s*\w+){0,3}"
+    r"\s+(?:on|about|from|for|of)\b|\blatest\s+news\s*,\s*(?:photos|videos|updates)\b|^\s*(?:all\s+)?(?:news|updates)\s+(?:on\s+and\s+)?about\b",
+    re.I,
+)
+
+# A job vacancy, which belongs in Opportunities (from the opportunity sources), never in News (owner, 20 Oct 2026:
+# "Legal officer (young professional II) vacancy at ...", "AWBI legal advisor recruitment 2026 - apply offline").
+# A news story about vacancies ("flags 63.81% vacancies in Bandipur Tiger Reserve", "recruitment scam") is not caught.
+JOB_PATH = re.compile(r"/(?:jobs?|job-updates?|careers?|recruitments?|vacanc(?:y|ies))(?:/|-)", re.I)
+JOB_HOSTS = re.compile(r"(?:^|\.)(?:freejobalert|sarkariresult|sarkarinaukri\w*|employmentnews|naukri|indeed|"
+                       r"freshersworld|jobsarkari|govtjobsalert\w*)\.(?:com|in|co\.in|gov\.in|org)$", re.I)
+JOB_TITLE = re.compile(
+    r"\bvacancy\s+(?:at|in|for|with)\b|\bvacancies\s+(?:at|in|for|with)\b.{0,80}\b(?:apply|recruitment|notification|last\s+date)\b"
+    r"|\brecruitment\s+20\d\d\b|\b(?:apply|applications?)\s+(?:online|offline|now|invited)\b|\bwalk[- ]in\s+interview\b"
+    r"|\b(?:job|career)\s+(?:opening|openings|alert|notification|vacancy)\b|\bnow\s+hiring\b|\bis\s+hiring\b",
+    re.I,
+)
+
+
+def job_vacancy(url: str, title: str) -> bool:
+    """True when the link is a job advertisement rather than a news report."""
+    parts = urlsplit(url or "")
+    return bool(JOB_HOSTS.search((parts.hostname or "").lower()) or JOB_PATH.search(parts.path + "/")
+                or JOB_TITLE.search(title or ""))
+
+
+def not_an_article(url: str, title: str, kind: str = "news") -> str:
+    """Why this link is not a single news story ("" when it is). `kind` is the source's type: a job advertisement is
+    only refused from sources that are not opportunity sources."""
     path = urlsplit(url or "").path
     if LISTING_PATH.search(path + "/"):
         return "list page (tag, category, topic, author or search)"
+    if ARCHIVE_TITLE.search(title or ""):
+        return "an archive or tag page of a news site, not a news report"
+    if kind != "opportunity" and job_vacancy(url, title):
+        return "a job vacancy, not a news report (jobs come from the opportunity sources)"
     if SLUG_TITLE.match((title or "").strip().strip("\"'‘’“”").lower()) and " " not in (title or "").strip():
         return "title is only an address name"
     if VIDEO_PATH.search(url or "") or VIDEO_TITLE.search(title or ""):

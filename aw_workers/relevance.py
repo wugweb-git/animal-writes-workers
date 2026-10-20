@@ -95,7 +95,9 @@ Rules:
   film, TV, music or entertainment; food, recipes or restaurants; livestock, meat, dairy or fish trade prices and markets;
   general politics or crime with no animal-welfare angle; generic documents not issued by an animal-welfare body,
   a court or a government body; lists or rankings of universities, colleges, institutes, courses or careers; a video
-  page, a "watch" clip or a viral post with no reported event; an event abroad with no Indian animal-welfare angle.
+  page, a "watch" clip or a viral post with no reported event; an event abroad with no Indian animal-welfare angle;
+  an archive, tag or "latest updates on ..." page of a news site; for item type news, a job vacancy or recruitment
+  notice (jobs belong to item type opportunity).
 - category: the one best slug from the list ("" when not relevant).
 - india is "yes" when the item concerns India, an Indian state, district or city, or an Indian body (court, ministry,
   board, department, Indian NGO). For a research paper, india is "yes" only when the study itself was done in India (its
