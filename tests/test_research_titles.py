@@ -39,3 +39,31 @@ def test_slug_from_headline_keeps_keyphrase_first_and_fits():
     s = rt.slug_from("Dog bites in Bidar, Karnataka, a study of injuries and treatment", "dog bites")
     assert s == "dog-bites-bidar-karnataka-study-injuries-treatment"
     assert len(rt.slug_from("word " * 40, "")) <= 60
+
+
+class _Fake:
+    name, model, api_key = "fake", "m", "k"
+
+    def __init__(self, reply):
+        self.reply = reply
+
+    def ask(self, prompt):
+        return self.reply
+
+
+def test_research_worker_sends_headline_fields():
+    import json
+
+    from aw_workers import research, summarise
+
+    reply = json.dumps([{"id": 1, "headline": "Stray dogs linked to lower house prices in Mumbai, study shows",
+                         "keyphrase": "stray dogs", "seo_title": "Stray Dogs and House Prices in Mumbai Study",
+                         "slug": "stray-dogs-house-prices-mumbai-study"}])
+    owner = summarise.Summariser([_Fake(reply)])
+    got = research.headline_fields(owner, {"title": "Stray dog density: a hedonic analysis", "url": "u",
+                                           "abstract": "Mumbai house prices"}, "Stray dogs and house prices in Mumbai.")
+    assert got == {"title": "Stray dogs linked to lower house prices in Mumbai, study shows",
+                   "seo_title": "Stray Dogs and House Prices in Mumbai Study – Animal Writes",
+                   "focus_keyword": "stray dogs", "slug": "stray-dogs-house-prices-mumbai-study"}
+    bad = summarise.Summariser([_Fake(reply.replace("study shows", "report"))])
+    assert research.headline_fields(bad, {"title": "x", "url": "u"}, "Mumbai") == {}

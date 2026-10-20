@@ -23,7 +23,7 @@ from pathlib import Path
 
 import requests
 
-from . import ingest, relevance, sources, summarise, summary_rules
+from . import ingest, relevance, research_titles, sources, summarise, summary_rules
 from .run import truthy
 from .sources import Item, Source
 
@@ -170,6 +170,19 @@ def collect(floor: date, today: date) -> list[dict]:
     return keep
 
 
+def headline_fields(summariser, p: dict, summary: str) -> dict:
+    """The item's headline (post title), SEO title, focus keyphrase and slug (research_titles.py, owner 20 Oct 2026);
+    the paper's own title goes as study_title. {} when no answer keeps every rule: the site then uses the paper's title."""
+    if not getattr(summariser, "backends", None):
+        return {}
+    paper = {"id": 1, "study_title": p["title"], "journal": p.get("journal", ""), "abstract": p.get("abstract", ""), "summary": summary}
+    t = research_titles.draft(summariser, [paper]).get(1)
+    if not t or t.get("problem"):
+        log.warning("no headline for %s: %s", p["url"], (t or {}).get("problem", "no answer"))
+        return {}
+    return {"title": t["headline"], "seo_title": t["seo_title"], "focus_keyword": t["keyphrase"], "slug": t["slug"]}
+
+
 def main() -> int:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     dry_run = truthy(os.environ.get("DRY_RUN"), default=True)
@@ -204,8 +217,9 @@ def main() -> int:
         try:
             summary = summariser.summarise(item)
             cats = summarise.pick_categories(summariser, item, summary, sources.allowed_categories("research"))
-            payload = dict(ingest.build_payload(item, summary, cats), backfill=True,
+            payload = dict(ingest.build_payload(item, summary, cats), backfill=True, study_title=p["title"],
                            authors=p.get("authors") or [], journal=p.get("journal") or "")  # the study's credit (Sources block)
+            payload.update(headline_fields(summariser, p, summary))
             if getattr(summariser, "last_short", False):
                 payload["summary_short"] = True  # still below the minimum after the fallback: published, marked
             if verdict is not None:
