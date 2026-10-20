@@ -430,6 +430,18 @@ categories:
   - letter
   - signature
   - awareness
+  animal-experimentation:
+  - animal testing
+  - animal experiment
+  - experiments on animals
+  - laboratory animal
+  - lab animal
+  - ccsea
+  - cpcsea
+  - iaec
+  - non-animal method
+  - vivisection
+  - animal research
 sections:
   aw_legal:
     tags:
@@ -442,8 +454,6 @@ sections:
     - order
     - rule
     - template
-    - campaign-lab-animals-2026
-    - campaign-india-writes-community-dogs
     categories:
     - adoption
     - animal-birth-control
@@ -463,13 +473,13 @@ sections:
     - rabies-public-health
     - veterinary-care
     - wildlife
+    - animal-experimentation
   post:
     tags:
     - faq
     - guide
     - how-to
     - research
-    - campaign-india-writes-community-dogs
     categories:
     - adoption
     - animal-birth-control
@@ -489,15 +499,16 @@ sections:
     - rabies-public-health
     - veterinary-care
     - wildlife
+    - animal-experimentation
   aw_opportunity:
     tags:
     - event
     - fellowship
-    - foster
     - grant
     - internship
     - job
     - volunteer
+    - boarding-foster
     categories:
     - community-dogs
     - cattle-gaushalas
@@ -570,9 +581,8 @@ sections:
     - rabies-public-health
     - veterinary-care
     - wildlife
-    tags:
-    - campaign-lab-animals-2026
-    - campaign-india-writes-community-dogs
+    - animal-experimentation
+    tags: []
   aw_campaign:
     categories:
     - adoption
@@ -593,6 +603,7 @@ sections:
     - rabies-public-health
     - veterinary-care
     - wildlife
+    - animal-experimentation
     tags: []
 press:
   enabled: true
