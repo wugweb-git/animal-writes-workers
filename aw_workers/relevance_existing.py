@@ -26,7 +26,7 @@ log = logging.getLogger("aw_workers.relevance_existing")
 # USD per million tokens (input, output) for the usual cheap models; an estimate from text length (4 chars ≈ 1 token).
 PRICES = {"openai/gpt-4o-mini": (0.15, 0.60), "gpt-4o-mini": (0.15, 0.60), "deepseek-chat": (0.27, 1.10),
           "claude-haiku-4-5": (1.00, 5.00)}
-DOC_TYPES = {"guide", "faq", "how-to"}  # our own guides: no outside issuer
+DOC_TYPES = {"guide", "faq"}  # our own guides: no outside issuer
 
 
 def kind_of(row: dict) -> str:
