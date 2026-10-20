@@ -98,13 +98,15 @@ def europepmc(term: str, floor: date, today: date, get=requests.get) -> list[dic
         r.raise_for_status()
         d = r.json()
         for x in (d.get("resultList") or {}).get("result", []):
-            aff = " ".join(a.get("affiliation", "") for a in ((x.get("authorList") or {}).get("author") or []) if isinstance(a, dict))
+            people = [a for a in ((x.get("authorList") or {}).get("author") or []) if isinstance(a, dict)]
+            aff = " ".join(a.get("affiliation", "") for a in people)
             doi = x.get("doi") or ""
             out.append({
                 "title": clean(x.get("title", "")), "abstract": clean(x.get("abstractText", "")), "affiliation": aff,
                 "date": (x.get("firstPublicationDate") or "")[:10],
                 "url": f"https://doi.org/{doi}" if doi else f"https://europepmc.org/article/{x.get('source', 'MED')}/{x.get('id')}",
                 "journal": ((x.get("journalInfo") or {}).get("journal") or {}).get("title") or x.get("bookOrReportDetails", {}).get("publisher", "") or "Europe PMC",
+                "authors": authors_of(people),
             })
         nxt = d.get("nextCursorMark")
         if not nxt or nxt == cursor or not (d.get("resultList") or {}).get("result"):
@@ -114,11 +116,25 @@ def europepmc(term: str, floor: date, today: date, get=requests.get) -> list[dic
     return out
 
 
+def authors_of(people: list) -> list[str]:
+    """Author names as printed ("Given Family"), from Europe PMC (fullName / firstName + lastName) or Crossref/CSL
+    (given + family, or a group "name"). The site shows them in the item's Sources block (owner, 20 Oct 2026)."""
+    out = []
+    for a in people or []:
+        if not isinstance(a, dict):
+            continue
+        name = " ".join(x for x in (a.get("given") or a.get("firstName") or "", a.get("family") or a.get("lastName") or "") if x).strip()
+        name = clean(name or a.get("name") or a.get("fullName") or a.get("collectiveName") or "")
+        if name and name not in out:
+            out.append(name)
+    return out
+
+
 def crossref(term: str, floor: date, get=requests.get) -> list[dict]:
     r = get("https://api.crossref.org/works", headers=UA, timeout=60, params={
         "query.bibliographic": f"{term} India", "rows": 200, "sort": "relevance",
         "filter": f"from-pub-date:{floor.isoformat()},type:journal-article",
-        "select": "DOI,title,container-title,published,issued,abstract,publisher"})
+        "select": "DOI,title,container-title,published,issued,abstract,publisher,author"})
     r.raise_for_status()
     out = []
     for x in r.json()["message"]["items"]:
@@ -126,7 +142,8 @@ def crossref(term: str, floor: date, get=requests.get) -> list[dict]:
         when = "-".join(f"{p:02d}" if i else str(p) for i, p in enumerate(parts if len(parts) == 3 else [])) if parts and parts[0] else ""
         out.append({"title": clean((x.get("title") or [""])[0]), "abstract": clean(x.get("abstract", "")), "affiliation": "",
                     "date": when, "url": f"https://doi.org/{x['DOI']}",
-                    "journal": clean((x.get("container-title") or [""])[0]) or x.get("publisher", "")})
+                    "journal": clean((x.get("container-title") or [""])[0]) or x.get("publisher", ""),
+                    "authors": authors_of(x.get("author") or [])})
     return out
 
 
@@ -187,7 +204,8 @@ def main() -> int:
         try:
             summary = summariser.summarise(item)
             cats = summarise.pick_categories(summariser, item, summary, sources.allowed_categories("research"))
-            payload = dict(ingest.build_payload(item, summary, cats), backfill=True)
+            payload = dict(ingest.build_payload(item, summary, cats), backfill=True,
+                           authors=p.get("authors") or [], journal=p.get("journal") or "")  # the study's credit (Sources block)
             if getattr(summariser, "last_short", False):
                 payload["summary_short"] = True  # still below the minimum after the fallback: published, marked
             if verdict is not None:

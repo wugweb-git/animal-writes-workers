@@ -25,3 +25,11 @@ def test_other_country_in_title_dropped():
 
 def test_india_in_abstract_kept():
     assert relevant("Dog bite patterns at a rural health training centre", "A study in Bidar, Karnataka.")
+
+
+def test_authors_of_reads_europe_pmc_and_crossref_names():
+    from aw_workers.research import authors_of
+
+    assert authors_of([{"firstName": "Asha", "lastName": "Rao"}, {"fullName": "Kumar V"}]) == ["Asha Rao", "Kumar V"]
+    assert authors_of([{"given": "Meera", "family": "Iyer"}, {"name": "WII Team"}, {"given": "Meera", "family": "Iyer"}]) == ["Meera Iyer", "WII Team"]
+    assert authors_of(None) == []
