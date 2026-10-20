@@ -90,3 +90,13 @@ def test_numbers_must_come_from_the_source():
     assert summary_rules.unsourced_numbers("Only 63.8 percent completed the vaccine.", src) == ["63.8"]
     assert summary_rules.unsourced_numbers("70.8 percent took three doses; 201 patients; 5 percent washed.", src) == []
     assert summary_rules.unsourced_numbers("In 2026, 70.8 percent.", src, {"2026"}) == []
+
+
+def test_number_words_scales_and_law_years():
+    from aw_workers.summary_rules import unsourced_numbers
+
+    assert unsourced_numbers("Twenty-five people were hurt.", "25 people were injured") == []
+    assert unsourced_numbers("Rs 2.5 lakh fine; one lakh rupees.", "fined Rs 2,50,000 and Rs 1 lakh") == []
+    assert unsourced_numbers("Rs 3 lakh fine", "fined Rs 30,000") == ["300000"]
+    assert unsourced_numbers("Booked under the Prevention of Cruelty to Animals Act, 1960.", "booked under the PCA Act") == []
+    assert unsourced_numbers("Reopens for the 2026 to 2027 season", "reopens for the 2026-27 season") == []

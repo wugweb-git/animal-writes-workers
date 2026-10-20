@@ -283,40 +283,50 @@ _SCALES = {"hundred": 100, "thousand": 1000, "lakh": 100000, "lakhs": 100000, "m
 _OTHER = {"half": 50, "dozen": 12}
 
 
-def _word_numbers(text: str) -> set[str]:
+def _word_numbers(text: str, source: bool = False) -> set[str]:
     """Numbers written in words: "two hundred" = 200, "twenty five" = 25, "three" = 3 (each word alone counts too)."""
-    out, total, cur, seen = set(), 0, 0, False
+    out, total, cur, seen, parts = set(), 0, 0, False, 0
     for w in re.findall(r"[a-z]+", (text or "").lower()) + [""]:
         if w in _UNITS or w in _TENS:
             cur += _UNITS.get(w, 0) + _TENS.get(w, 0)
-            out.add(str(_UNITS.get(w, 0) + _TENS.get(w, 0)))
-            seen = True
+            seen, parts = True, parts + 1
         elif w in _SCALES and seen:
+            if source:
+                out.add(str(cur))  # a source's "one lakh" also reads as "1 lakh"
             total += max(cur, 1) * _SCALES[w]
-            cur = 0
+            cur, parts = 0, parts + 1
         elif w == "and" and seen:
             continue
         else:
             if seen:
-                out.add(str(total + cur))
+                out.add(str(total + cur))  # "twenty-five" is 25, never 20 and 5
             if w in _OTHER:
                 out.add(str(_OTHER[w]))
-            total, cur, seen = 0, 0, False
+            total, cur, seen, parts = 0, 0, False, 0
     return out
 
 
-def _nums(text: str) -> set[str]:
+def _nums(text: str, source: bool = False) -> set[str]:
     """Numbers in a text, compared as written (commas and a trailing point dropped, "70.80" = "70.8"); numbers written
     as words count too ("two hundred" = "200")."""
-    out = set()
-    for n in re.findall(r"\d[\d,]*(?:\.\d+)?", text or ""):
-        n = n.replace(",", "")
+    out = {m[1][:2] + m[2] for m in re.finditer(r"\b(\d{4})\s*[-–]\s*(\d{2})\b", text or "")}  # "2026-27": 2027 too
+    for m in re.finditer(r"(\d[\d,]*(?:\.\d+)?)(?:\s+(hundred|thousand|lakhs?|million|crores?)\b)?", text or "", re.I):
+        n = m[1].replace(",", "")
+        if m[2]:  # "2.5 lakh" is 250000; a source's figure also counts as written ("2.5")
+            v = float(n) * _SCALES[m[2].lower()]
+            out.add(str(int(v)) if v == int(v) else str(v))
+            if not source:
+                continue
         out.add(n.rstrip("0").rstrip(".") if "." in n else n)
-    return out | _word_numbers(text)
+    return out | _word_numbers(text, source)
 
 
 def unsourced_numbers(written: str, source_text: str, allowed: set[str] | None = None) -> list[str]:
     """Numbers (counts, percentages, years, amounts) in `written` that the source does not give (owner, 20 Oct 2026:
     every number in a summary or headline must be in the source). `allowed`: numbers known from elsewhere (the
     item's own date)."""
-    return sorted(_nums(written) - _nums(source_text) - (allowed or set()), key=lambda x: (len(x), x))
+    written = _LAW_YEAR.sub(r"\1", written or "")  # a law's name carries its year ("Act, 1960"): a name, not a figure
+    return sorted(_nums(written) - _nums(source_text, source=True) - (allowed or set()), key=lambda x: (len(x), x))
+
+
+_LAW_YEAR = re.compile(r"\b(Act|Acts|Sanhita|Rules|Code|Regulations|Order|Adhiniyam),?\s+\d{4}\b")
