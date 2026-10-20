@@ -20,7 +20,7 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Enable every scheduled workflow (never one switched off by hand)
         run: |
           for f in .github/workflows/*.yml; do
