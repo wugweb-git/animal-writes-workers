@@ -159,7 +159,8 @@ def main(env=None) -> int:
             break
     out = Path(env.get("REPORT_DIR") or "enrich-report")
     out.mkdir(parents=True, exist_ok=True)
-    md = report.markdown(f"Google spend this run: ${spent_run:.2f}." + (f" Stopped: {reason}." if reason and reason != "queue empty" else ""))
+    google_n = round(spent_run / google_places.COST_USD)
+    md = report.markdown(f"Google requests this run: {google_n}" + (" (free quota, no charge)." if budget <= 0 else f" (${spent_run:.2f}).") + (f" Stopped: {reason}." if reason and reason != "queue empty" else ""))
     (out / "report.md").write_text(md)
     (out / "report.json").write_text(json.dumps({"dry_run": dry, "listings": report.listings,
                                                  "fields": report.field, "sources": report.source}, indent=1, default=dict))
