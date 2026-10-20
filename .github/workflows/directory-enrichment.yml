@@ -5,7 +5,9 @@ name: "Directory enrichment"
 # CAPTCHA and is not read), with where each value came from. The site applies its rules (aw/v1/enrich/results) and
 # keeps which listings are done, so each run continues where the last stopped.
 # Dry run until the repository variable ENRICH_LIVE is "true" (after the owner's OK on the dry-run report).
-# Google stops at GOOGLE_PLACES_MONTHLY_BUDGET_USD (variable; unset or 0 = Google off) and resumes next month.
+# Google: free quota only (owner, 20 Oct 2026: 0 USD). Variable GOOGLE_PLACES_FREE_REQUESTS (950 of Google's 1,000 free
+# Text Search Enterprise requests a month) turns it on; GOOGLE_PLACES_MONTHLY_BUDGET_USD (paid spend on top) stays 0.
+# It stops when the month's requests are used and resumes next month.
 on:
   workflow_dispatch:
     inputs:
@@ -48,6 +50,7 @@ jobs:
       WP_INGEST_USER: ${{ secrets.WP_INGEST_USER }}
       WP_INGEST_APP_PASSWORD: ${{ secrets.WP_INGEST_APP_PASSWORD }}
       GOOGLE_PLACES_KEY: ${{ secrets.GOOGLE_PLACES_KEY }}
+      GOOGLE_PLACES_FREE_REQUESTS: ${{ vars.GOOGLE_PLACES_FREE_REQUESTS }}
       GOOGLE_PLACES_MONTHLY_BUDGET_USD: ${{ vars.GOOGLE_PLACES_MONTHLY_BUDGET_USD }}
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}

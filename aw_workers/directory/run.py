@@ -2,7 +2,8 @@
 
   python -m aw_workers.directory.run
   env: WP_BASE_URL, WP_INGEST_USER, WP_INGEST_APP_PASSWORD, the AI keys, GOOGLE_PLACES_KEY,
-       GOOGLE_PLACES_MONTHLY_BUDGET_USD (default 0 = Google off), DRY_RUN (default true), BATCH (50), GROUP
+       GOOGLE_PLACES_FREE_REQUESTS (Google's free monthly requests we may use, no charge; default 0),
+       GOOGLE_PLACES_MONTHLY_BUDGET_USD (paid spend on top; default 0: free quota only, owner 20 Oct 2026), DRY_RUN (default true), BATCH (50), GROUP
        ("awbi-bare" = only AWBI listings with no phone, email or website), AW_IDS (1,2,3), MAX_MINUTES (150),
        REPORT_DIR (enrich-report)
 
@@ -100,9 +101,12 @@ def main(env=None) -> int:
     dry = truthy(env.get("DRY_RUN"), True)
     batch = int(env.get("BATCH") or 50)
     stop_at = time.time() + 60 * float(env.get("MAX_MINUTES") or 150)
+    # Google: Google's free monthly requests only (owner, 20 Oct 2026: 0 USD), plus any paid budget set on top (none).
+    free = max(0, int(env.get("GOOGLE_PLACES_FREE_REQUESTS") or 0))
     budget = float(env.get("GOOGLE_PLACES_MONTHLY_BUDGET_USD") or 0)
-    if budget <= 0:
-        env["GOOGLE_PLACES_KEY"] = ""  # no budget set: Google stays off
+    limit = budget + free * google_places.COST_USD
+    if limit <= 0:
+        env["GOOGLE_PLACES_KEY"] = ""  # no free requests or budget set: Google stays off
     client = ingest.Client(env["WP_BASE_URL"], env["WP_INGEST_USER"], env["WP_INGEST_APP_PASSWORD"])
     cfg = client._call("GET", "/enrich/config", timeout=60)
     on, services = cfg.get("sources") or {}, cfg.get("services") or {}
@@ -129,8 +133,9 @@ def main(env=None) -> int:
         for listing in items:
             if done >= batch or time.time() >= stop_at:
                 break
-            if env.get("GOOGLE_PLACES_KEY") and float(q.get("google_spent") or 0) + spent_run + google_places.COST_USD > budget:
-                reason = f"Google budget ${budget:.0f} reached for this month"
+            if env.get("GOOGLE_PLACES_KEY") and float(q.get("google_spent") or 0) + spent_run + google_places.COST_USD > limit + 1e-9:
+                reason = (f"Google free quota ({free} requests) used for this month" if budget <= 0
+                          else f"Google limit ({free} free requests + ${budget:.0f}) reached for this month")
                 break
             ctx = enrich_one(listing, env, http, on, summariser, services)
             spent_run += ctx.google_cost
