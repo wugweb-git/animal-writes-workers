@@ -27,6 +27,24 @@ TIMEOUT = 30
 _last_search = {"t": 0.0}
 
 
+def ca_bundle() -> str:
+    """The usual CA bundle plus the intermediates in aw_workers/certs that some government sites do not send (eGazette:
+    Let's Encrypt YR1/YR2 and Root YR; AWBI: eMudhra's DV TLS chain, refused on 18-19 Oct 2026). The file name holds a
+    hash of the contents, so a changed bundle is never read from an old copy."""
+    import hashlib
+    import tempfile
+
+    import certifi
+
+    text = Path(certifi.where()).read_text()
+    for pem in sorted((Path(__file__).parent / "certs").glob("*.pem")):
+        text += "\n" + pem.read_text()
+    path = Path(tempfile.gettempdir()) / f"aw-ca-bundle-{hashlib.sha1(text.encode()).hexdigest()[:12]}.pem"
+    if not path.exists():
+        path.write_text(text)
+    return str(path)
+
+
 @dataclass
 class Source:
     id: str
@@ -175,7 +193,8 @@ def is_search(url: str) -> bool:
 
 def fetch(url: str, get=requests.get, sleep=time.sleep) -> str:
     """GET a feed. Search engines (Google News, Bing News): browser user agent, a gap between calls, and up to two
-    retries on 429/5xx (Google answers GitHub's servers with 503 at times, 12 Oct 2026)."""
+    retries on 429/5xx (Google answers GitHub's servers with 503 at times, 12 Oct 2026). Other sites refusing our
+    agent with 403 are asked once more with a browser's (Substack refuses GitHub's servers, 16-20 Oct 2026)."""
     search = is_search(url)
     headers = {"User-Agent": BROWSER_UA if search else USER_AGENT}
     waits = RETRY_WAITS if search else ()
@@ -186,6 +205,9 @@ def fetch(url: str, get=requests.get, sleep=time.sleep) -> str:
                 sleep(gap)
             _last_search["t"] = time.monotonic()
         resp = get(url, headers=headers, timeout=TIMEOUT)
+        if resp.status_code == 403 and headers["User-Agent"] != BROWSER_UA:
+            headers = {"User-Agent": BROWSER_UA}
+            resp = get(url, headers=headers, timeout=TIMEOUT)
         if attempt < len(waits) and (resp.status_code == 429 or resp.status_code >= 500):
             sleep(waits[attempt])
             continue
@@ -209,6 +231,19 @@ def bing_fallback(source: "Source") -> "Source | None":
         return None
     url = "https://www.bing.com/news/search?" + urlencode({"q": q, "format": "rss", "mkt": "en-IN", "qft": 'interval="8"'})
     return replace(source, url=url, lookback_days=min(source.lookback_days or 3, 3))
+
+
+def site_search_fallback(source: "Source") -> "Source | None":
+    """A publisher's own feed that refuses GitHub's servers (PFA's Substack answers 403 there, 200 elsewhere): the
+    publisher's stories from the last week through Google News (site: search). None for search engines and pages
+    that are not feeds. The source's keywords still apply."""
+    from dataclasses import replace
+
+    host = (urlsplit(source.url).hostname or "").lower()
+    if source.kind != "rss" or not host or is_search(source.url):
+        return None
+    url = "https://news.google.com/rss/search?" + urlencode({"q": f"site:{host} when:7d", "hl": "en-IN", "gl": "IN", "ceid": "IN:en"})
+    return replace(source, url=url, lookback_days=min(source.lookback_days or 7, 7))
 
 
 def _unwrap_bing(link: str) -> str:

@@ -131,16 +131,19 @@ def run(
             body = "" if src.kind in sources.SELF_FETCH else fetch(src.url)
             used = src
         except Exception as exc:
-            alt = sources.bing_fallback(src)
+            # A failed Google News search is tried on Bing News; a publisher feed that refuses GitHub's servers, through
+            # a Google News search of its site.
+            alt = sources.bing_fallback(src) or sources.site_search_fallback(src)
             if alt is None:
                 body, used = None, src
                 err = exc
             else:
-                log.warning("%s: %s; trying Bing News instead", src.id, exc)
+                via = "Bing News" if "bing.com" in alt.url else "Google News (site search)"
+                log.warning("%s: %s; trying %s instead", src.id, exc, via)
                 try:
                     body, used = fetch(alt.url), alt
                 except Exception as exc2:
-                    body, used, err = None, src, f"{exc} / Bing: {exc2}"
+                    body, used, err = None, src, f"{exc} / {via}: {exc2}"
             if body is None:  # one broken source must not stop the others
                 stats.failed += 1
                 stats.sources_failed += 1
@@ -344,6 +347,8 @@ def main() -> int:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     dry_run = truthy(os.environ.get("DRY_RUN"), default=True)
 
+    # Every request (feeds, link resolving, page reads) trusts the intermediates some government sites do not send.
+    os.environ.setdefault("REQUESTS_CA_BUNDLE", sources.ca_bundle())
     import yaml
     lists = yaml.safe_load(Path(os.environ.get("AW_SOURCES", "sources.yaml")).read_text(encoding="utf-8")) or {}
 

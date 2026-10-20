@@ -281,15 +281,10 @@ def add_gazette_details(item: Item, session: requests.Session) -> Item:
 
 
 def _ca_bundle() -> str:
-    """The usual CA bundle plus Let's Encrypt's YR2 intermediate and Root YR (cross-signed by ISRG Root X1): egazette.gov.in sends neither."""
-    import certifi
-    import tempfile
+    """egazette.gov.in sends no intermediate (Let's Encrypt YR1 since Oct 2026, YR2 before): see sources.ca_bundle."""
+    from .sources import ca_bundle
 
-    path = Path(tempfile.gettempdir()) / "aw-ca-bundle.pem"
-    if not path.exists():
-        extra = (Path(__file__).parent / "certs" / "lets-encrypt-yr2.pem").read_text()
-        path.write_text(Path(certifi.where()).read_text() + "\n" + extra)
-    return str(path)
+    return ca_bundle()
 
 
 def parse_egazette(source: Source, body: str = "", session: requests.Session | None = None, pages: int = 5) -> list[Item]:

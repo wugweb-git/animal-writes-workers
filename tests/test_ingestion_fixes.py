@@ -256,3 +256,28 @@ def test_post_keeps_the_sites_answer():
 
     c = ingest.Client("https://site.test", "u", "p", session=S())
     assert c.post({"title": "x"}) == "created" and c.last["review"] == "published"
+
+
+def test_fetch_asks_again_as_a_browser_on_403():
+    calls = []
+
+    def get(url, headers, timeout):
+        calls.append(headers["User-Agent"])
+        return Resp(403) if len(calls) == 1 else Resp(200, "ok")
+
+    assert sources.fetch("https://peopleforanimals.substack.com/feed", get=get, sleep=lambda s: None) == "ok"
+    assert calls[0] == sources.USER_AGENT and "Mozilla" in calls[1]
+
+
+def test_site_search_fallback_for_refused_feeds():
+    alt = sources.site_search_fallback(_src(url="https://peopleforanimals.substack.com/feed"))
+    q = parse_qs(urlsplit(alt.url).query)
+    assert alt.url.startswith("https://news.google.com/rss/search?") and q["q"] == ["site:peopleforanimals.substack.com when:7d"]
+    assert sources.site_search_fallback(_src(url="https://news.google.com/rss/search?q=x")) is None
+
+
+def test_ca_bundle_has_the_missing_intermediates():
+    text = open(sources.ca_bundle()).read()
+    for pem in ("lets-encrypt-yr1.pem", "lets-encrypt-yr2.pem", "emsign-dv-tls-g2a-1.pem"):
+        body = open(f"aw_workers/certs/{pem}").read().strip()
+        assert body in text
