@@ -10,7 +10,7 @@ import time
 import requests
 from datetime import datetime, timezone
 
-from . import event_dates, summary_rules
+from . import ai_usage, event_dates, summary_rules
 from .sources import Item
 
 log = logging.getLogger(__name__)
@@ -240,6 +240,11 @@ class OpenAICompatBackend(GroqBackend):
         self.name, self.URL = name, url
         super().__init__(api_key, model, min_interval=kw.pop("min_interval", 0.5), **kw)
 
+
+# Every call is counted per key for Settings → AI models (ai_usage.py; owner, 20 Oct 2026).
+for _cls in (ClaudeBackend, GeminiBackend, GroqBackend, OpenAICompatBackend):
+    if "ask" in _cls.__dict__:
+        _cls.ask = ai_usage.counted(_cls.__dict__["ask"])
 
 # name: (URL, key env var, model env var, default model)
 OPENAI_COMPAT = {
