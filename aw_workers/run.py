@@ -241,6 +241,9 @@ def run(
                     payload["title"], flag = headline_case.case_title(summariser, payload["title"])
                     if flag:
                         payload["title_flag"] = flag  # the original kept; the site notes why
+                pr = "" if as_press or item.source.type != "news" else sources.press_release_headline(item.url, item.title)
+                if pr:  # a copied press-release headline: a person writes a plain one (owner, 20 Oct 2026)
+                    payload["hold"] = "; ".join(filter(None, [payload.get("hold", ""), pr]))
                 if summary and not as_press and item.source.type != "opportunity" and getattr(summariser, "last_numbers", None):  # a number not in the source: held for review (owner, 20 Oct 2026)
                     payload["hold"] = "; ".join(filter(None, [payload.get("hold", ""), *summariser.last_numbers]))
                 if getattr(summariser, "last_short", False) and not as_press:

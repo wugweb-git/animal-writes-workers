@@ -186,13 +186,52 @@ LISTING_PATH = re.compile(r"/(?:tags?|topics?|category|categories|author|authors
 SLUG_TITLE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)+$")
 
 
+# Not news (owner, 20 Oct 2026): a video page or a "watch"/viral clip post, and a list of institutions or courses
+# ("Top Veterinary Science Universities in India: Check List of Institutes", "Video of Can We Protect ...",
+# "Watch these small scared rabbits ...", "India's fat dog vote goes viral").
+VIDEO_PATH = re.compile(r"/(?:videos?|watch|vi-[A-Za-z0-9]+|shorts|reels?)(?:/|$)|youtube\.com|youtu\.be", re.I)
+VIDEO_TITLE = re.compile(r"^\s*(?:watch|video|viral video)\b|^\s*video of\b|\((?:watch|video)\)|\bgoes viral\b|\bviral (?:video|clip|post)\b", re.I)
+LISTICLE_TITLE = re.compile(
+    r"\b(?:top|best|list of|check list|checklist)\b.{0,60}\b(?:universit(?:y|ies)|colleges?|institutes?|institutions?|courses?|"
+    r"schools?|exams?|careers?|jobs)\b|\b(?:universit(?:y|ies)|colleges?|institutes?|courses?)\b.{0,40}\b(?:check list|ranking|rankings|list)\b",
+    re.I,
+)
+
+
 def not_an_article(url: str, title: str) -> str:
-    """Why this link is not a single story ("" when it is)."""
+    """Why this link is not a single news story ("" when it is)."""
     path = urlsplit(url or "").path
     if LISTING_PATH.search(path + "/"):
         return "list page (tag, category, topic, author or search)"
     if SLUG_TITLE.match((title or "").strip().strip("\"'‘’“”").lower()) and " " not in (title or "").strip():
         return "title is only an address name"
+    if VIDEO_PATH.search(url or "") or VIDEO_TITLE.search(title or ""):
+        return "a video or viral clip post, not a news report"
+    if LISTICLE_TITLE.search(title or ""):
+        return "a list of institutions or courses, not a news report"
+    return ""
+
+
+# A headline copied from a press release (owner, 20 Oct 2026: "FIR Registered for Sexual Abuse of a Female Dog in
+# Bhojpur to Protect ALL Females, Following PETA India Intervention"): wire services, or an NGO's own release whose
+# headline shouts (a word in capitals), credits the NGO ("Following PETA India Intervention") or runs long. The item
+# is sent for review with this reason so a person writes a plain headline.
+PR_HOSTS = re.compile(r"(?:^|\.)(?:prnewswire|businesswire|globenewswire|newswire|einpresswire|pressreleasepoint|"
+                      r"openpr|issuewire)\.(?:com|in|org|net)$", re.I)
+NGO_RELEASE = re.compile(r"(?:^|\.)(?:petaindia\.com|hsi\.org|hsiindia\.org|wildlifesos\.org|fiapo\.org|wwfindia\.org)$", re.I)
+PR_WORDING = re.compile(r"\bfollowing [\w.]+(?: [\w.]+){0,3} (?:intervention|complaint|appeal|efforts?)\b|\bannounces?\b|"
+                        r"\bto protect all\b", re.I)
+SHOUTED = re.compile(r"\b(?:ALL|NOW|NEW|FREE|MUST|URGENT|BREAKING|NOT|NEVER|EVERY|STOP|SAVE|JUSTICE)\b")  # words, not acronyms
+
+
+def press_release_headline(url: str, title: str) -> str:
+    """Why the headline reads as copied from a press release ("" when it does not)."""
+    host = (urlsplit(url or "").hostname or "").lower()
+    t = (title or "").strip()
+    if PR_HOSTS.search(host):
+        return "headline copied from a press release (wire service): write a plain headline"
+    if NGO_RELEASE.search(host) and (PR_WORDING.search(t) or SHOUTED.search(t) or len(t) > 90):
+        return "headline copied from an organisation's press release: write a plain headline"
     return ""
 
 
