@@ -409,3 +409,76 @@ def test_rules_say_short_is_published_not_reviewed():
     rules = summary_rules.DEFAULTS
     assert "never sent to To review" in rules["fallback"] and "other coverage" in rules["fallback"]
     assert not any("goes to review" in g for g in rules["general"])
+
+
+# ---- cut-off answers (owner, 20 Oct 2026: "…of Kerala's Th" was published) ----
+
+def test_a_summary_that_ends_mid_sentence_breaks_the_rules():
+    from aw_workers import summary_rules
+
+    cut = "The council approved a new shelter for stray dogs in Pune. Officials said the work would begin after"
+    found = summary_rules.problems(cut, "news")
+    assert any(p.startswith("ends mid-sentence") for p in found)
+    assert not summary_rules.only_short([p for p in found if p.startswith("ends mid-sentence")])
+
+
+def test_a_summary_ending_on_a_quote_or_bracket_is_whole():
+    from aw_workers import summary_rules
+
+    assert summary_rules.ends_sentence("The theme was 'Revenge.'")
+    assert summary_rules.ends_sentence("It was approved (by the board).")
+    assert summary_rules.ends_sentence("Was it legal?”")
+    assert not summary_rules.ends_sentence("in Kottoor within the Kuttichal panchayat of Kerala’s Th")
+
+
+def test_whole_sentences_drops_a_cut_off_tail_never_mid_word():
+    from aw_workers import summary_rules
+
+    assert summary_rules.whole_sentences("One fact here. Two facts there. The minister ordered the transfer after") == \
+        "One fact here. Two facts there."
+    assert summary_rules.whole_sentences("Nothing ends here") == "Nothing ends here"
+    assert summary_rules.whole_sentences("Done. ") == "Done."
+
+
+def test_gemini_stopped_at_its_limit_is_a_cut_off():
+    from aw_workers import summarise
+
+    class Resp:
+        status_code = 200
+        headers = {}
+
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return {"candidates": [{"finishReason": "MAX_TOKENS", "content": {"parts": [{"text": "Allegations of dead dogs in Kerala’s Th"}]}}]}
+
+    class S:
+        def post(self, *a, **k):
+            return Resp()
+
+    b = summarise.GeminiBackend("k", session=S(), sleep=lambda s: None, min_interval=0)
+    with pytest.raises(summarise.CutOff):
+        b.ask("x")
+
+
+def test_groq_stopped_at_its_limit_is_a_cut_off():
+    from aw_workers import summarise
+
+    class Resp:
+        status_code = 200
+        headers = {}
+
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return {"choices": [{"finish_reason": "length", "message": {"content": "The minister ordered the transfer after"}}]}
+
+    class S:
+        def post(self, *a, **k):
+            return Resp()
+
+    b = summarise.GroqBackend("k", session=S(), sleep=lambda s: None, min_interval=0)
+    with pytest.raises(summarise.CutOff):
+        b.ask("x")

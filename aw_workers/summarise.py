@@ -36,6 +36,11 @@ Published: {date} (the day the report came out, not the date of the event)
 Details: {text}"""
 
 
+class CutOff(Exception):
+    """The provider stopped at its output limit: the answer ends mid-sentence (20 Oct 2026: Gemini's thinking used
+    up maxOutputTokens and "…of Kerala's Th" was published). The next key or provider is tried."""
+
+
 class SummaryError(Exception):
     pass
 
@@ -100,7 +105,7 @@ def drop_pub_dates(summary: str, item: Item) -> str:
 
 
 def finalise(summary: str, item: Item) -> str:
-    summary = re.sub(r"\s+", " ", summary).strip()
+    summary = summary_rules.whole_sentences(re.sub(r"\s+", " ", summary).strip())  # never a cut-off tail
     if getattr(item, "draft", False) and "draft" not in summary.lower():  # a draft is never written up as rules in force
         summary = f"Draft, open for objections: {summary}"
     if item.source.type == "legal":
@@ -146,6 +151,8 @@ class ClaudeBackend:
             max_tokens=300,
             messages=[{"role": "user", "content": prompt}],
         )
+        if getattr(msg, "stop_reason", "") == "max_tokens":
+            raise CutOff(f"{self.name}: stopped at max_tokens")
         usage = getattr(msg, "usage", None)
         if usage is not None:
             cost = usage.input_tokens * HAIKU_INPUT_USD + usage.output_tokens * HAIKU_OUTPUT_USD
@@ -198,10 +205,14 @@ class GeminiBackend:
             self.session,
             self.URL.format(model=self.model),
             headers={"x-goog-api-key": self.api_key},
-            json={"contents": [{"parts": [{"text": prompt}]}], "generationConfig": {"maxOutputTokens": 1024}},
+            # 4096: flash models think first, and the thinking counts against this limit (1024 cut answers off)
+            json={"contents": [{"parts": [{"text": prompt}]}], "generationConfig": {"maxOutputTokens": 4096}},
             timeout=30, sleep=self.sleep, min_interval=self.min_interval, state=self.state,
         )
-        parts = resp.json()["candidates"][0]["content"].get("parts", [])
+        cand = resp.json()["candidates"][0]
+        if cand.get("finishReason") == "MAX_TOKENS":
+            raise CutOff(f"{self.name}: stopped at maxOutputTokens")
+        parts = cand.get("content", {}).get("parts", [])
         return "".join(p.get("text", "") for p in parts if not p.get("thought")).strip()
 
 
@@ -230,7 +241,10 @@ class GroqBackend:
             json={"model": self.model, "max_tokens": 800, "messages": [{"role": "user", "content": prompt}]},
             timeout=30, sleep=self.sleep, min_interval=self.min_interval, state=self.state,
         )
-        return (resp.json()["choices"][0]["message"]["content"] or "").strip()
+        choice = resp.json()["choices"][0]
+        if choice.get("finish_reason") == "length":
+            raise CutOff(f"{self.name}: stopped at max_tokens")
+        return (choice["message"]["content"] or "").strip()
 
 
 class OpenAICompatBackend(GroqBackend):

@@ -162,6 +162,9 @@ def problems(summary: str, section: str, source_text: str = "", rules: dict | No
         out.append(f"{SHORT} needs at least {sec['min_sentences']} sentences, got {n_sent}")
     if n_sent > sec["max_sentences"]:
         out.append(f"needs at most {sec['max_sentences']} sentences, got {n_sent}")
+    body = text.strip().split("\n")[0].strip()  # Library summaries carry the legal note on a line of their own
+    if body and not ends_sentence(body):
+        out.append("ends mid-sentence (the answer was cut off): write complete sentences only")
     lead = sentences(text)[:1]
     if lead and len(words(lead[0])) > int(rules.get("lead_max_words", 30)) + 10:
         out.append(f"the lead sentence is {len(words(lead[0]))} words: it must stand alone as the search description "
@@ -223,6 +226,24 @@ def entity_problems(summary: str, rules: dict | None = None) -> list[str]:
         if used:
             out.append(f"write '{canon}', not '{used[0]}' (the site's name, so it can be linked)")
     return out
+
+
+_SENTENCE_END = re.compile(r"[.!?…][\"'”’)\]]*(?=\s|$)")
+
+
+def ends_sentence(text: str) -> bool:
+    """Whether `text` ends on a full sentence (a stop, ? or !, then any closing quote or bracket)."""
+    return bool(re.search(r"[.!?…][\"'”’)\]]*$", (text or "").strip()))
+
+
+def whole_sentences(text: str) -> str:
+    """`text` up to its last full sentence: a cut-off tail is dropped, never cut mid-word (owner, 20 Oct 2026).
+    Text with no full sentence at all is returned as it is (the checks reject it)."""
+    text = (text or "").strip()
+    if ends_sentence(text):
+        return text
+    ends = list(_SENTENCE_END.finditer(text))
+    return text[:ends[-1].end()].strip() if ends else text
 
 
 def only_short(found: list[str]) -> bool:
