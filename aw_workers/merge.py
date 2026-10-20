@@ -252,7 +252,12 @@ def page_text(url: str, session=None, limit: int = 4000) -> str:
     from . import relay
 
     try:
-        resp = (session or requests).get(url, headers=UA, timeout=TIMEOUT)
+        try:
+            resp = (session or requests).get(url, headers=UA, timeout=TIMEOUT)
+        except (requests.ConnectionError, requests.Timeout):
+            if not relay.allowed(url):
+                raise
+            resp = relay.Session().get(url)  # unreachable from GitHub: the site reads it for us
         if getattr(resp, "status_code", 200) == 403 and relay.allowed(url):  # refused from GitHub: the site reads it for us
             page = (relay.fetch(url) or "")[:800_000]
         else:

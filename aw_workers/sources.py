@@ -213,7 +213,14 @@ def fetch(url: str, get=requests.get, sleep=time.sleep) -> str:
             if gap > 0:
                 sleep(gap)
             _last_search["t"] = time.monotonic()
-        resp = get(url, headers=headers, timeout=TIMEOUT)
+        try:
+            resp = get(url, headers=headers, timeout=TIMEOUT)
+        except (requests.ConnectionError, requests.Timeout):
+            # Unreachable from GitHub (Indian government sites time out there at times, 20 Oct 2026): through the site.
+            text = _relay.fetch(url) if _relay.allowed(url) else None
+            if text is None:
+                raise
+            return text
         if resp.status_code == 403 and headers["User-Agent"] != BROWSER_UA:
             headers = {"User-Agent": BROWSER_UA}
             resp = get(url, headers=headers, timeout=TIMEOUT)

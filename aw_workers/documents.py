@@ -292,7 +292,17 @@ def parse_egazette(source: Source, body: str = "", session: requests.Session | N
     s.headers["User-Agent"] = USER_AGENT
     if session is None:
         s.verify = _ca_bundle()
-    home = s.get("https://egazette.gov.in/", timeout=TIMEOUT * 2)
+    try:
+        home = s.get("https://egazette.gov.in/", timeout=TIMEOUT * 2)
+    except (requests.ConnectionError, requests.Timeout):
+        from . import relay
+
+        if session is not None or not relay.allowed("https://egazette.gov.in/"):
+            raise
+        # Unreachable from GitHub: the first page of each list and the notifications through the site (its pages
+        # after the first need the form posts the relay does not make).
+        s, pages = relay.Session(), 1
+        home = s.get("https://egazette.gov.in/", timeout=TIMEOUT * 2)
     home.raise_for_status()
     base = home.url.rsplit("/", 1)[0]
     rows = []

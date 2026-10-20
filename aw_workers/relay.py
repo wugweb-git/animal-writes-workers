@@ -26,8 +26,27 @@ def allowed(url: str) -> bool:
     return bool(_state["client"]) and any(host == h or host.endswith("." + h) for h in _state["hosts"])
 
 
-def fetch(url: str) -> str | None:
-    """The page or feed as the site sees it, or None (not on the list, refused, or the site failed)."""
+class Response:
+    """What the site fetched, shaped like a requests response (status_code, url, content, text, headers)."""
+
+    def __init__(self, status: int, url: str, content_type: str, content: bytes):
+        self.status_code, self.url, self.content = status, url, content
+        self.headers = {"content-type": content_type}
+        m = re.search(r"charset=([\w-]+)", content_type or "", re.I)
+        try:
+            self.text = content.decode(m.group(1) if m else "utf-8", errors="replace")
+        except LookupError:
+            self.text = content.decode("utf-8", errors="replace")
+
+    def raise_for_status(self) -> None:
+        if self.status_code >= 400:
+            import requests
+
+            raise requests.HTTPError(f"{self.status_code} through the relay for url: {self.url}")
+
+
+def get(url: str) -> Response | None:
+    """The page, feed or file as the site sees it, or None (not on the list, refused, or the site failed)."""
     if not allowed(url):
         return None
     try:
@@ -36,17 +55,39 @@ def fetch(url: str) -> str | None:
             log.warning("relay refused %s: HTTP %s %s", url, resp.status_code, resp.text[:200])
             return None
         data = resp.json()
-        if int(data.get("status") or 0) >= 400:
-            log.warning("relay: %s answered the site with HTTP %s", url, data.get("status"))
-            return None
-        raw = base64.b64decode(data.get("body") or "")
-        m = re.search(r"charset=([\w-]+)", data.get("content_type") or "", re.I)
-        try:
-            text = raw.decode(m.group(1) if m else "utf-8", errors="replace")
-        except LookupError:
-            text = raw.decode("utf-8", errors="replace")
-        log.info("relay: %s read through the site (%d bytes)", url, len(raw))
-        return text
+        out = Response(int(data.get("status") or 0), data.get("final_url") or url, data.get("content_type") or "",
+                       base64.b64decode(data.get("body") or ""))
+        log.info("relay: %s read through the site (HTTP %s, %d bytes)", url, out.status_code, len(out.content))
+        return out
     except Exception as exc:  # the relay must never stop a run
         log.warning("relay failed for %s: %s", url, exc)
         return None
+
+
+def fetch(url: str) -> str | None:
+    """The page or feed's text as the site sees it, or None (also when the publisher answered the site with an error)."""
+    resp = get(url)
+    if resp is None:
+        return None
+    if resp.status_code >= 400:
+        log.warning("relay: %s answered the site with HTTP %s", url, resp.status_code)
+        return None
+    return resp.text
+
+
+class Session:
+    """GET-only stand-in for a requests.Session whose requests all go through the site (no cookies, no POST)."""
+
+    def __init__(self):
+        self.headers: dict = {}
+
+    def get(self, url: str, **_kw) -> Response:
+        resp = get(url)
+        if resp is None:
+            import requests
+
+            raise requests.ConnectionError(f"relay could not fetch {url}")
+        return resp
+
+    def post(self, url: str, **_kw):
+        raise NotImplementedError("the relay only fetches pages (GET)")

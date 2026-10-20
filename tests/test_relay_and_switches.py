@@ -101,3 +101,41 @@ def test_heartbeat_says_which_lists_were_used():
     c._call = lambda method, path, **kw: sent.update(kw["json"]) or {}
     c.ingest_heartbeat(3, published=2, lists="site")
     assert sent["lists"] == "site" and sent["published"] == 2
+
+
+def test_unreachable_feed_is_read_through_the_site():
+    import requests
+
+    s = FakeSession(body=b"<table>rows</table>")
+    relay.configure(FakeClient(s), ["awbi.gov.in"])
+
+    def timeout(url, headers, timeout):
+        raise requests.ConnectTimeout("connect timeout")
+
+    assert sources.fetch("https://awbi.gov.in/circulars", get=timeout, sleep=lambda x: None) == "<table>rows</table>"
+    relay.configure(FakeClient(s), ["substack.com"])
+    try:
+        sources.fetch("https://awbi.gov.in/circulars", get=timeout, sleep=lambda x: None)
+        raise AssertionError("expected the timeout")
+    except requests.ConnectTimeout:
+        pass
+
+
+def test_relay_session_is_get_only_and_raises_like_requests():
+    import requests
+
+    relay.configure(FakeClient(FakeSession(status=404)), ["egazette.gov.in"])
+    sess = relay.Session()
+    resp = sess.get("https://egazette.gov.in/RecentUploads.aspx?Category=6")
+    assert resp.status_code == 404
+    try:
+        resp.raise_for_status()
+        raise AssertionError("expected HTTPError")
+    except requests.HTTPError:
+        pass
+    relay.configure(None, ())
+    try:
+        relay.Session().get("https://egazette.gov.in/")
+        raise AssertionError("expected ConnectionError")
+    except requests.ConnectionError:
+        pass
