@@ -19,3 +19,16 @@ def _no_coverage_search(monkeypatch):
         raise OSError("offline in tests")
 
     monkeypatch.setattr(coverage, "_get_feed", offline)
+
+
+@pytest.fixture(autouse=True)
+def _fresh_section_lists():
+    """Each test starts without the site's per-section lists (a test loading sources.yaml, which has them since the
+    lists are copied from the site, must not change what later tests classify)."""
+    from aw_workers import relay, sources
+
+    sources.SECTIONS.clear()
+    relay.configure(None, ())
+    yield
+    sources.SECTIONS.clear()
+    relay.configure(None, ())
