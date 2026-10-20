@@ -91,9 +91,10 @@ def build_payload(item: Item, summary: str, categories: list[str] | None = None)
     if hold:
         payload["hold"] = hold  # the site keeps it in To review whatever the other checks say
     known = allowed_tags(item.source.type)
-    tags = [t for t in dict.fromkeys(tags) if t and (known is None or t in known)]
+    # campaign-* slugs are not tags: the site files the item under that campaign (its Campaign link, 20 Oct 2026)
+    tags = [t for t in dict.fromkeys(tags) if t and (known is None or t in known or t.startswith("campaign-"))]
     if tags:
-        payload["tags"] = tags  # WordPress tags (Library type, Opportunity type ...), from the section's list
+        payload["tags"] = tags  # WordPress tags (Library type, Opportunity type ...) and campaign slugs
     if item.source.file_as == "press":
         return press_payload(payload)
     return payload

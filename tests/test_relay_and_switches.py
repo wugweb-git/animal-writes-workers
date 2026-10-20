@@ -139,3 +139,4 @@ def test_relay_session_is_get_only_and_raises_like_requests():
         raise AssertionError("expected ConnectionError")
     except requests.ConnectionError:
         pass
+

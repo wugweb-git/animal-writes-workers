@@ -48,9 +48,9 @@ def test_payload_carries_tag_and_hold():
     item = S.Item(src, "CCSEA notifies Laboratory Animals Rules, 2026", "https://example.in/a", date(2026, 11, 20))
     p = build_payload(item, "The final rules were published in the Gazette.")
     assert "campaign-lab-animals-2026" in p["tags"] and p["hold"]
-    S.set_sections({"aw_news": {"tags": ["research"]}})  # a section that does not allow the tag drops it
+    S.set_sections({"aw_news": {"tags": ["research"]}})  # a campaign is not a tag: it reaches the site whatever the section allows
     try:
-        assert "tags" not in build_payload(item, "Final rules.")
+        assert build_payload(item, "Final rules.")["tags"] == ["campaign-lab-animals-2026"]
     finally:
         S.SECTIONS.clear()
 
