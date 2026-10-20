@@ -1,4 +1,5 @@
-"""News headlines in sentence case (owner, 20 Oct 2026). Case only: never a word added, removed or changed.
+"""News headlines and press coverage titles in sentence case (owner, 20 Oct 2026). Case only: never a word added,
+removed or changed.
 
 - A News title in Title Case ("Yogi Government Links Gaushalas With Natural Farming") is sent to the provider chain
   (summarise.Summariser backends) to be written in sentence case: a capital first letter, and capitals kept for proper
@@ -9,9 +10,10 @@
 - Lead-ins such as "Watch:", "Video:", "VIDEO |" and "Video of …" are only listed (`lead_in`), never removed here:
   the owner decides.
 
-Ingest (run.py) cases each new News title. The one-off backfill writes a CSV for the owner to review first:
-    python -m aw_workers.headline_case out.csv            # dry run: id, before, after, status, lead_in, without_lead_in
-The site applies a reviewed CSV itself (wp aw news-titles apply), title only; slugs and URLs never change.
+Ingest (run.py) cases each new News title; every press item sent to the site is cased the same way (ingest.Client.post
+with press_caser). The one-off backfill writes a CSV for the owner to review first:
+    python -m aw_workers.headline_case out.csv [--type aw_press]   # dry run: id, before, after, status, lead_in, without_lead_in
+The site applies a reviewed CSV itself (wp aw news-titles apply [--type=aw_press]), title only; slugs and URLs never change.
 """
 
 from __future__ import annotations
@@ -128,6 +130,15 @@ def case_title(owner, title: str) -> tuple[str, str]:
     return new, status[6:] if status.startswith("flag: ") else ""
 
 
+def press_caser(env=os.environ):
+    """A title caser for ingest.Client.title_caser (press items), or None without a provider key."""
+    backends = summarise.backends_from_env(env, ledger={})
+    if not backends:
+        return None
+    owner = summarise.Summariser(backends)
+    return lambda title: case_title(owner, title)
+
+
 def dry_run(owner, rows: list[dict]) -> list[dict]:
     """[{id, before, after, status, lead_in, without_lead_in}] for every row; nothing is written to the site."""
     send = [r for r in rows if needs_case(r["title"])]
@@ -161,11 +172,19 @@ def main(argv: list[str]) -> int:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     from . import ingest
 
-    out_path = argv[0] if argv else "news-title-case.csv"
+    post_type = "aw_news"
+    if "--type" in argv:
+        i = argv.index("--type")
+        post_type = argv[i + 1] if i + 1 < len(argv) else ""
+        argv = argv[:i] + argv[i + 2:]
+    if post_type not in ("aw_news", "aw_press"):
+        log.error("--type is aw_news or aw_press")
+        return 1
+    out_path = argv[0] if argv else ("news-title-case.csv" if post_type == "aw_news" else "press-title-case.csv")
     client = ingest.Client(os.environ["WP_BASE_URL"], os.environ["WP_INGEST_USER"], os.environ["WP_INGEST_APP_PASSWORD"])
     rows, page = [], 1
     while True:
-        data = client.seo_items("aw_news", page, 200, missing_only=False)
+        data = client.seo_items(post_type, page, 200, missing_only=False)
         rows += [{"id": int(r["id"]), "title": r.get("title") or ""} for r in data.get("items") or []]
         if page >= int(data.get("pages") or 1):
             break
@@ -182,7 +201,7 @@ def main(argv: list[str]) -> int:
     counts: dict[str, int] = {}
     for r in out:
         counts[r["status"]] = counts.get(r["status"], 0) + 1
-    log.info("%d News titles read; %d rows written to %s: %s", len(rows), len(out), out_path, counts)
+    log.info("%d %s titles read; %d rows written to %s: %s", len(rows), post_type, len(out), out_path, counts)
     return 0
 
 

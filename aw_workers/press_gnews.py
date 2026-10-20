@@ -22,7 +22,7 @@ import feedparser
 import requests
 import yaml
 
-from . import enrich, ingest, press, relevance
+from . import enrich, headline_case, ingest, press, relevance
 from .backfill import month_windows
 from .run import truthy
 from .sources import utc_today
@@ -99,6 +99,7 @@ def main() -> int:
     client = None
     if not dry_run:
         client = ingest.Client(os.environ["WP_BASE_URL"], os.environ["WP_INGEST_USER"], os.environ["WP_INGEST_APP_PASSWORD"])
+        client.title_caser = headline_case.press_caser()  # sentence case, letter case only (owner, 20 Oct 2026)
     gate = relevance.gate_from_env(client, dry_run=dry_run)
     counts, rows = collect(client, dry_run, cfg, floor, month_windows(floor, utc_today()), gate=gate)
     gate.save()

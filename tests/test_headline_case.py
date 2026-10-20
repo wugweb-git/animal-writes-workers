@@ -75,3 +75,38 @@ def test_dry_run_rows():
     assert out[1]["after"] == SC and out[1]["status"] == "case changed"
     assert out[2]["lead_in"] == "Watch:" and out[2]["without_lead_in"] == "Stray dogs rescued from drain in Pune"
     assert 3 not in out
+
+
+class _Resp:
+    status_code = 200
+
+    def json(self):
+        return {"status": "created"}
+
+
+class _Session:
+    def __init__(self):
+        self.sent = []
+        self.auth = None
+
+    def post(self, url, json=None, timeout=None):
+        self.sent.append(json)
+        return _Resp()
+
+
+def test_press_titles_are_cased_on_the_way_in_and_news_is_left_to_run():
+    from aw_workers import ingest
+
+    s = _Session()
+    c = ingest.Client("https://x.test", "u", "p", session=s)
+    c.title_caser = lambda t: ("Animal Writes on dogs in Delhi", "") if t == "Animal Writes On Dogs In Delhi" else (t, "words changed")
+    c.post({"type": "press", "title": "Animal Writes On Dogs In Delhi"})
+    c.post({"type": "press", "title": "Other Title Here Now"})
+    c.post({"type": "news", "title": "News Title Stays Here"})
+    assert s.sent[0]["title"] == "Animal Writes on dogs in Delhi" and "title_flag" not in s.sent[0]
+    assert s.sent[1]["title"] == "Other Title Here Now" and s.sent[1]["title_flag"] == "words changed"
+    assert s.sent[2]["title"] == "News Title Stays Here"
+
+
+def test_press_caser_needs_a_provider_key():
+    assert hc.press_caser({}) is None

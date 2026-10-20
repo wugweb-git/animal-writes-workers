@@ -134,6 +134,9 @@ class Client:
         self.session = session or requests.Session()
         self.session.auth = (user, app_password)
         self.last: dict = {}
+        # title -> (title, flag): press titles in sentence case on the way in, set by a run that has the provider chain
+        # (headline_case.press_caser; owner, 20 Oct 2026)
+        self.title_caser = None
 
     def policy(self) -> dict:
         """Sourcing policy from WP Admin (News → Sourcing)."""
@@ -217,6 +220,10 @@ class Client:
 
     def post(self, payload: dict) -> str:
         """Returns 'created', 'duplicate', or 'blocked' / 'filtered' (refused by the site's sourcing policy)."""
+        if self.title_caser and payload.get("type") == "press" and payload.get("title"):
+            payload["title"], flag = self.title_caser(payload["title"])
+            if flag:
+                payload["title_flag"] = "; ".join(filter(None, [payload.get("title_flag", ""), flag]))  # the site notes why
         resp = self.session.post(self.url, json=payload, timeout=TIMEOUT)
         if resp.status_code in (401, 403):
             raise AuthError(f"ingest rejected credentials: HTTP {resp.status_code}")

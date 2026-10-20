@@ -1,14 +1,21 @@
-name: "News headlines: sentence case (dry run)"
+name: "News and press titles: sentence case (dry run)"
 
 # Owner, 20 Oct 2026: News headlines in sentence case, letter case only (aw_workers/headline_case.py). This run writes
 # nothing to the site: it cases every published News title with the provider chain, keeps only answers that differ in
 # letter case alone, lists "Watch:" / "Video of" lead-ins, and uploads news-title-case.csv (id, before, after, status,
 # lead_in, without_lead_in) for the owner to review. The reviewed CSV is applied on the server: wp aw news-titles apply.
+# Press coverage titles follow the same rule (owner, 20 Oct 2026): choose aw_press; applied with --type=aw_press.
 on:
   workflow_dispatch:
+    inputs:
+      post_type:
+        description: "Which titles"
+        type: choice
+        options: [aw_news, aw_press]
+        default: aw_news
 
 concurrency:
-  group: news-title-case
+  group: news-title-case-${{ inputs.post_type }}
   cancel-in-progress: false
 
 jobs:
@@ -41,9 +48,9 @@ jobs:
           python-version: "3.12"
           cache: pip
       - run: pip install -r requirements.txt
-      - run: python -m aw_workers.headline_case news-title-case.csv
+      - run: python -m aw_workers.headline_case title-case.csv --type "${{ inputs.post_type || 'aw_news' }}"
       - uses: actions/upload-artifact@v4
         with:
-          name: news-title-case
-          path: news-title-case.csv
+          name: ${{ inputs.post_type == 'aw_press' && 'press-title-case' || 'news-title-case' }}
+          path: title-case.csv
           retention-days: 14

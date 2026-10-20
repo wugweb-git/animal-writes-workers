@@ -396,6 +396,7 @@ def main() -> int:
         client = ingest.Client(
             os.environ["WP_BASE_URL"], os.environ["WP_INGEST_USER"], os.environ["WP_INGEST_APP_PASSWORD"]
         )
+        client.title_caser = lambda t: headline_case.case_title(summariser, t)  # press items in sentence case (owner, 20 Oct 2026)
 
     seen = load_seen(SEEN_FILE)
     titles = load_titles(TITLES_FILE)
