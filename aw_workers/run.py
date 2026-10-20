@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from datetime import date, timedelta
 from pathlib import Path
 
-from . import documents, enrich, ingest, merge, policy as policy_mod, press, relay, relevance, sources, summarise, summary_rules
+from . import documents, enrich, headline_case, ingest, merge, policy as policy_mod, press, relay, relevance, sources, summarise, summary_rules
 
 # How far back Google News searches look (AW_WINDOW, e.g. "4d" to catch up after an outage).
 WINDOW = os.environ.get("AW_WINDOW") or "2d"
@@ -237,6 +237,10 @@ def run(
                 cats = ([] if as_press else None if item.source.type == "opportunity"
                           else summarise.pick_categories(summariser, item, summary, sources.allowed_categories(item.source.type)))
                 payload = ingest.build_payload(item, summary, cats)
+                if item.source.type == "news" and not as_press:  # sentence case, letter case only (owner, 20 Oct 2026)
+                    payload["title"], flag = headline_case.case_title(summariser, payload["title"])
+                    if flag:
+                        payload["title_flag"] = flag  # the original kept; the site notes why
                 if summary and not as_press and item.source.type != "opportunity" and getattr(summariser, "last_numbers", None):  # a number not in the source: held for review (owner, 20 Oct 2026)
                     payload["hold"] = "; ".join(filter(None, [payload.get("hold", ""), *summariser.last_numbers]))
                 if getattr(summariser, "last_short", False) and not as_press:
