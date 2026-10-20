@@ -237,6 +237,8 @@ def run(
                 cats = ([] if as_press else None if item.source.type == "opportunity"
                           else summarise.pick_categories(summariser, item, summary, sources.allowed_categories(item.source.type)))
                 payload = ingest.build_payload(item, summary, cats)
+                if summary and not as_press and item.source.type != "opportunity" and getattr(summariser, "last_numbers", None):  # a number not in the source: held for review (owner, 20 Oct 2026)
+                    payload["hold"] = "; ".join(filter(None, [payload.get("hold", ""), *summariser.last_numbers]))
                 if getattr(summariser, "last_short", False) and not as_press:
                     payload["summary_short"] = True  # still below the minimum after the fallback: published, marked
                 if verdict is not None:

@@ -152,6 +152,12 @@ def check(t: dict, source_text: str) -> str:
     return ""
 
 
+def source_text(p: dict) -> str:
+    """What a headline's numbers are checked against: the paper's abstract and title (the summary only when there is no
+    abstract: a summary can carry a wrong figure, as the Chengalpattu one did, 20 Oct 2026)."""
+    return f'{p.get("abstract") or p.get("summary", "")} {p.get("study_title", "")}'
+
+
 def _lines(papers: list[dict]) -> str:
     return "\n".join(json.dumps({"id": p["id"], "study_title": p["study_title"], "journal": p.get("journal", ""),
                                  "abstract": (p.get("abstract") or "")[:1500], "summary": (p.get("summary") or "")[:1200]},
@@ -208,10 +214,11 @@ def draft(owner, papers: list[dict], tries: int = 3) -> dict[int, dict]:
             t = tidy(got[p["id"]])
             if t["headline"] and not t["slug"]:
                 t["slug"] = slug_from(t["headline"], t["keyphrase"])
-            why = check(t, f'{p.get("abstract", "")} {p.get("summary", "")} {p.get("study_title", "")}')
+            src = source_text(p)
+            why = check(t, src)
             if why and why.startswith("slug"):
                 t["slug"] = slug_from(t["headline"], t["keyphrase"])
-                why = check(t, f'{p.get("abstract", "")} {p.get("summary", "")} {p.get("study_title", "")}')
+                why = check(t, src)
             out[p["id"]] = dict(t, model=model, problem=why)
             if why:
                 reasons[p["id"]] = f'{why} (you wrote {json.dumps({k: t[k] for k in ("headline", "keyphrase", "seo_title", "slug")}, ensure_ascii=False)})'

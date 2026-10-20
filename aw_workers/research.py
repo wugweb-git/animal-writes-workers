@@ -170,6 +170,20 @@ def collect(floor: date, today: date) -> list[dict]:
     return keep
 
 
+def india_doubt(p: dict, verdict=None) -> str:
+    """'' when the paper is India research, else why a person must look (owner, 20 Oct 2026: a list of foreign place
+    names always misses some, so India must be confirmed, not just a foreign name absent). Confirmed: India or an
+    Indian state, district or city named in the title; or named in the abstract and the AI check says the study itself
+    was done in India."""
+    if INDIA.search(p.get("title", "")):
+        return ""
+    if INDIA.search(p.get("abstract", "")) and verdict is not None and verdict.india:
+        return ""
+    if not INDIA.search(p.get("abstract", "")):
+        return "India research not confirmed: India is not named in the title or abstract"
+    return "India research not confirmed: the AI check says the study was not done in India"
+
+
 def headline_fields(summariser, p: dict, summary: str) -> dict:
     """The item's headline (post title), SEO title, focus keyphrase and slug (research_titles.py, owner 20 Oct 2026);
     the paper's own title goes as study_title. {} when no answer keeps every rule: the site then uses the paper's title."""
@@ -211,7 +225,8 @@ def main() -> int:
                     text=p["abstract"] or p["title"], publisher=p["journal"])
         outcome, verdict = gate.admit(relevance.Candidate(kind="research", title=item.title, url=item.url, text=item.text,
                                                           source=item.publisher, issuer=item.publisher, feed="research"))
-        if outcome != "pass":
+        doubt = india_doubt(p, verdict)
+        if outcome != "pass" and not (outcome == "reject" and verdict is not None and verdict.relevant and doubt):
             counts["rejected" if outcome == "reject" else "classifier unavailable"] += 1
             continue
         try:
@@ -220,6 +235,10 @@ def main() -> int:
             payload = dict(ingest.build_payload(item, summary, cats), backfill=True, study_title=p["title"],
                            authors=p.get("authors") or [], journal=p.get("journal") or "")  # the study's credit (Sources block)
             payload.update(headline_fields(summariser, p, summary))
+            if doubt:  # India not confirmed: sent for review, never published by itself (owner, 20 Oct 2026)
+                payload["hold"] = "; ".join(filter(None, [payload.get("hold", ""), doubt]))
+            if getattr(summariser, "last_numbers", None):  # a number not in the source: held for review (owner, 20 Oct 2026)
+                payload["hold"] = "; ".join(filter(None, [payload.get("hold", ""), *summariser.last_numbers]))
             if getattr(summariser, "last_short", False):
                 payload["summary_short"] = True  # still below the minimum after the fallback: published, marked
             if verdict is not None:

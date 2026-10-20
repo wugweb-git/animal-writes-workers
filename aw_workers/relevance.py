@@ -97,7 +97,9 @@ Rules:
   a court or a government body.
 - category: the one best slug from the list ("" when not relevant).
 - india is "yes" when the item concerns India, an Indian state, district or city, or an Indian body (court, ministry,
-  board, department, Indian NGO).
+  board, department, Indian NGO). For a research paper, india is "yes" only when the study itself was done in India (its
+  site, animals, people or data are Indian); a paper about another country is "no" even when it cites Indian studies or
+  has Indian authors.
 - issuer: for a document, judgment, notification or paper, the body that issued or published it; otherwise "".
 - reason: one short sentence.
 - Item types: news (a news report), legal (a Library document or court/legal report), research (a research paper),

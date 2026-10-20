@@ -272,3 +272,51 @@ def rules_block(section: str, rules: dict | None = None, source_text: str = "") 
     if named:
         lines.append("Name these exactly so: " + "; ".join(named) + ".")
     return "\n".join(f"- {line}" for line in lines if line.strip())
+
+
+_UNITS = {w: i for i, w in enumerate(
+    "zero one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen "
+    "eighteen nineteen".split())}
+_TENS = {"twenty": 20, "thirty": 30, "forty": 40, "fifty": 50, "sixty": 60, "seventy": 70, "eighty": 80, "ninety": 90}
+_SCALES = {"hundred": 100, "thousand": 1000, "lakh": 100000, "lakhs": 100000, "million": 1000000, "crore": 10000000,
+           "crores": 10000000}
+_OTHER = {"half": 50, "dozen": 12}
+
+
+def _word_numbers(text: str) -> set[str]:
+    """Numbers written in words: "two hundred" = 200, "twenty five" = 25, "three" = 3 (each word alone counts too)."""
+    out, total, cur, seen = set(), 0, 0, False
+    for w in re.findall(r"[a-z]+", (text or "").lower()) + [""]:
+        if w in _UNITS or w in _TENS:
+            cur += _UNITS.get(w, 0) + _TENS.get(w, 0)
+            out.add(str(_UNITS.get(w, 0) + _TENS.get(w, 0)))
+            seen = True
+        elif w in _SCALES and seen:
+            total += max(cur, 1) * _SCALES[w]
+            cur = 0
+        elif w == "and" and seen:
+            continue
+        else:
+            if seen:
+                out.add(str(total + cur))
+            if w in _OTHER:
+                out.add(str(_OTHER[w]))
+            total, cur, seen = 0, 0, False
+    return out
+
+
+def _nums(text: str) -> set[str]:
+    """Numbers in a text, compared as written (commas and a trailing point dropped, "70.80" = "70.8"); numbers written
+    as words count too ("two hundred" = "200")."""
+    out = set()
+    for n in re.findall(r"\d[\d,]*(?:\.\d+)?", text or ""):
+        n = n.replace(",", "")
+        out.add(n.rstrip("0").rstrip(".") if "." in n else n)
+    return out | _word_numbers(text)
+
+
+def unsourced_numbers(written: str, source_text: str, allowed: set[str] | None = None) -> list[str]:
+    """Numbers (counts, percentages, years, amounts) in `written` that the source does not give (owner, 20 Oct 2026:
+    every number in a summary or headline must be in the source). `allowed`: numbers known from elsewhere (the
+    item's own date)."""
+    return sorted(_nums(written) - _nums(source_text) - (allowed or set()), key=lambda x: (len(x), x))

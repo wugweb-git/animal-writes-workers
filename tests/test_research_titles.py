@@ -67,3 +67,26 @@ def test_research_worker_sends_headline_fields():
                    "focus_keyword": "stray dogs", "slug": "stray-dogs-house-prices-mumbai-study"}
     bad = summarise.Summariser([_Fake(reply.replace("study shows", "report"))])
     assert research.headline_fields(bad, {"title": "x", "url": "u"}, "Mumbai") == {}
+
+
+def test_india_must_be_confirmed_not_just_no_foreign_name():
+    from types import SimpleNamespace
+
+    from aw_workers.research import india_doubt
+
+    yes, no = SimpleNamespace(india=True), SimpleNamespace(india=False)
+    assert india_doubt({"title": "Dog bites in Bidar, Karnataka", "abstract": ""}) == ""
+    assert india_doubt({"title": "Land-use change and human-elephant conflict in elephant conservation",
+                        "abstract": "We reviewed 31 studies, mostly from India and China."}, yes) == ""
+    assert "AI check" in india_doubt({"title": "Land-use change and human-elephant conflict in Borneo elephant conservation",
+                                      "abstract": "31 studies, mostly from India and China."}, no)
+    assert "not named" in india_doubt({"title": "Rabies in dogs: a review", "abstract": "A global review."}, yes)
+
+
+def test_numbers_must_come_from_the_source():
+    from aw_workers import summary_rules
+
+    src = "The overall ARV completion rate (up to the 3rd dose) was 70.8%. Two hundred and one patients; 5% washed wounds."
+    assert summary_rules.unsourced_numbers("Only 63.8 percent completed the vaccine.", src) == ["63.8"]
+    assert summary_rules.unsourced_numbers("70.8 percent took three doses; 201 patients; 5 percent washed.", src) == []
+    assert summary_rules.unsourced_numbers("In 2026, 70.8 percent.", src, {"2026"}) == []

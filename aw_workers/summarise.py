@@ -92,6 +92,13 @@ def date_problems(summary: str, item: Item) -> list[str]:
     return [event_dates.problem(wrong)] if wrong else []
 
 
+def number_problems(summary: str, item: Item) -> list[str]:
+    """Numbers in the summary that the source does not give (owner, 20 Oct 2026); the item's own date is allowed."""
+    allowed = {str(item.date.year), str(item.date.day)} if item.date else set()
+    extra = summary_rules.unsourced_numbers(summary, f"{item.title}. {item.text}", allowed)
+    return [f"numbers not in the source: {', '.join(extra)} (use only numbers the source gives, exactly as it gives them)"] if extra else []
+
+
 def drop_pub_dates(summary: str, item: Item) -> str:
     """The summary with such a date phrase taken out (a sentence that only gave the date goes); unchanged when there is
     none or it can't be taken out cleanly (then the checks refuse it)."""
@@ -455,6 +462,7 @@ class Summariser:
         problems = check_summary(summary, item) + date_problems(summary, item)
         if summary_rules.only_short(problems) and thin_source(item):
             raise ShortSummary(summary, "; ".join(problems))  # asking again would only pad: read the page instead
+        problems += number_problems(summary, item)
         if problems:
             summary = backend.ask(
                 prompt + "\n\nYour previous attempt broke these rules: " + "; ".join(problems)
@@ -466,6 +474,8 @@ class Summariser:
             raise ShortSummary(summary, "; ".join(problems))
         if problems:
             raise SummaryError("; ".join(problems))
+        # A number the source does not give, still there after the second ask: the item waits for a person.
+        self.last_numbers = number_problems(summary, item)
         return summary
 
     def _summarise(self, item: Item) -> str:
@@ -493,7 +503,7 @@ class Summariser:
         raise SummaryError(" | ".join(reasons))
 
     def summarise(self, item: Item) -> str:
-        self.last_short, self.last_coverage = False, []
+        self.last_short, self.last_coverage, self.last_numbers = False, [], []
         try:
             return finalise(self._summarise(item), item)
         except ShortSummary as short:
