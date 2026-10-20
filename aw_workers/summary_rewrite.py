@@ -250,6 +250,8 @@ def candidates(client, batch: int, only: list[int] | None, dry: bool, log_) -> l
     while len(out) < batch:
         got = client._call("GET", "/summary-rewrite", params=({"ids[]": only} if only else {"skip": skip, "per_page": 100}))
         for row in got.get("items") or []:
+            if not (row.get("source_url") or "").strip():
+                continue  # our own content has no source: never rewritten (20 Oct 2026: letter templates got unrelated stories)
             section = row.get("section") or SECTION.get(row["type"], "news")
             probs = summary_rules.problems(row.get("summary") or "", section, "", publisher=row.get("publisher") or "")
             if not probs and not only:
