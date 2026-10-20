@@ -86,3 +86,15 @@ def test_job_vacancies_are_not_news_but_pass_from_opportunity_sources():
     for news in ("Amid poaching concerns, apex tiger body flags 63.81% vacancies in Bandipur Tiger Reserve",
                  "Forest guard recruitment scam: three held", "Veterinary college students protest fee hike"):
         assert not_an_article("https://example.in/news/x", news) == ""
+
+
+def test_institution_lists_only_rankings_of_universities_colleges_courses():
+    assert not_an_article("https://example.in/x", "Top veterinary colleges in India")
+    assert not_an_article("https://example.in/x", "Top 10 Veterinary Universities in India 2026")
+    assert not_an_article("https://example.in/x", "List of veterinary courses after 12th")
+    assert not_an_article("https://example.in/x", "NIRF ranking: veterinary institutes ranking 2026")
+    # 12148: news naming schools and hospitals stays
+    assert not_an_article("https://www.animals24-7.org/2025/11/11/india-top-court-no-dogs-in-schools",
+                          'India top court: "No dogs in schools, hospitals, stadiums, & bus/train stations"') == ""
+    assert not_an_article("https://example.in/x", "Best way to keep stray dogs out of school campuses, says court") == ""
+    assert not_an_article("https://example.in/x", "Supreme Court orders removal of stray dogs from schools, hospitals") == ""

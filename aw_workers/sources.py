@@ -191,9 +191,12 @@ SLUG_TITLE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)+$")
 # "Watch these small scared rabbits ...", "India's fat dog vote goes viral").
 VIDEO_PATH = re.compile(r"/(?:videos?|watch|vi-[A-Za-z0-9]+|shorts|reels?)(?:/|$)|youtube\.com|youtu\.be", re.I)
 VIDEO_TITLE = re.compile(r"^\s*(?:watch|video|viral video)\b|^\s*video of\b|\((?:watch|video)\)|\bgoes viral\b|\bviral (?:video|clip|post)\b", re.I)
+# Only a ranking or list of universities, colleges, institutes or courses ("Top veterinary colleges in India"); never
+# news that names schools or hospitals ("India top court: No dogs in schools, hospitals ...", owner 20 Oct 2026).
+_INST = r"(?:universit(?:y|ies)|colleges|institutes|institutions|courses)"
 LISTICLE_TITLE = re.compile(
-    r"\b(?:top|best|list of|check list|checklist)\b.{0,60}\b(?:universit(?:y|ies)|colleges?|institutes?|institutions?|courses?|"
-    r"schools?|exams?|careers?|jobs)\b|\b(?:universit(?:y|ies)|colleges?|institutes?|courses?)\b.{0,40}\b(?:check list|ranking|rankings|list)\b",
+    rf"\b(?:top|best)\s+(?:\d+\s+)?(?:[\w&-]+\s+){{0,4}}{_INST}\b|\b(?:list|ranking|rankings)\s+of\s+(?:the\s+)?(?:[\w&-]+\s+){{0,4}}{_INST}\b"
+    rf"|\b{_INST}\b.{{0,40}}\b(?:check list|ranking|rankings)\b",
     re.I,
 )
 
