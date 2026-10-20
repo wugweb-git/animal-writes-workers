@@ -167,7 +167,7 @@ def run(
         items = unseen[:cap]
         stats.fetched += len(items) + already
         log.info("%s: %d item(s) after filters, %d already seen%s", src.id, len(items), already,
-                 " (via Bing News)" if used is not src else "")
+                 (" (via Bing News)" if "bing.com" in used.url else " (via Google News site search)") if used is not src else "")
 
         for item in items:
             if deadline is not None and time.monotonic() > deadline:
