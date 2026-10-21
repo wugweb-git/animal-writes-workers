@@ -209,3 +209,11 @@ def test_social_link_from_website_and_its_own_preview_is_one_source():
     assert merge.proposals(c)[0][0]["confidence"] == "medium"
     c = ctx_with(Fact("facebook", "https://www.facebook.com/x", "website", "W"), Fact("facebook", "https://www.facebook.com/x", "wikidata", "D"))
     assert merge.proposals(c)[0][0]["confidence"] == "high"
+
+
+def test_spelling_variants_and_bracketed_names():
+    from aw_workers.directory.model import names_in_text
+
+    assert names_in_text("Poona Panjrapole Trust", "Poona Panjarpol Trust, Pune since 1855") >= 0.6
+    assert names_in_text("The Paws Pack (Resq Charitable Trust)", "RESQ Charitable Trust, Pune") >= 0.6
+    assert names_in_text("Rashtriya Ahimsa Pratishthan", "Ahimsa Fellowship works for animals") < 0.6

@@ -113,13 +113,25 @@ def name_similarity(a: str, b: str) -> float:
     return round(max(ratio, overlap * weight), 3)
 
 
-def names_in_text(name: str, text: str) -> float:
-    """Share of the name's significant words found in a page's text."""
-    toks = core_tokens(name)
+def _share(toks: list[str], hay_words: set[str]) -> float:
+    """Share of the name's significant words in the text; a word of 7+ letters also counts when the text has one very like
+    it (Panjrapole / Panjarpol)."""
     if not toks:
         return 0.0
-    hay = " " + fold(text) + " "
-    return sum(1 for t in toks if f" {t} " in hay) / len(toks)
+    hit = 0
+    for t in toks:
+        if t in hay_words or (len(t) >= 7 and any(abs(len(w) - len(t)) <= 2 and SequenceMatcher(None, t, w).ratio() >= 0.8 for w in hay_words)):
+            hit += 1
+    return hit / len(toks)
+
+
+def names_in_text(name: str, text: str) -> float:
+    """Best share of the name's significant words found in a page's text, for the whole name, the part outside brackets and
+    the part inside them ("The Paws Pack (Resq Charitable Trust)": either name counts)."""
+    hay = set(fold(text).split())
+    inside = " ".join(re.findall(r"\(([^)]*)\)", name))
+    outside = re.sub(r"\([^)]*\)", " ", name)
+    return max(_share(core_tokens(v), hay) for v in (name, outside, inside) if core_tokens(v)) if core_tokens(name) else 0.0
 
 
 PIN = re.compile(r"\b([1-9]\d{2})\s?(\d{3})\b")
