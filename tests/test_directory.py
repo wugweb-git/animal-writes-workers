@@ -166,7 +166,7 @@ def test_obfuscated_email_is_read():
     c = ctx_with()
     c.listing["name"] = "Balmukund Charitable Trust"
     c.leads["website"] = "https://balmukund.org"
-    page = "<html><title>Balmukund Charitable Trust</title><body><p>Balmukund Charitable Trust Email :- info [at] balmukund.org</p></body></html>"
+    page = "<html><title>Balmukund Charitable Trust</title><body><p>Balmukund Charitable Trust, Guntur. Email :- info [at] balmukund.org</p></body></html>"
     website.run(c, {}, FakeHttp({"https://balmukund.org": page}))
     assert ("email", "info@balmukund.org") in {(f.field, f.value) for f in c.facts}
 
@@ -184,3 +184,12 @@ def test_district_sweep_matches_without_a_request():
     c2 = Context({"id": 614, "name": "Shri Pipardi Brahmeshwar Gaushala Trust", "district": "Rajkot", "state": "Gujarat",
                   "_district_places": places, "_taken": {"A"}})
     assert gp.best(c2.listing, places, {"A"})[1] is None  # a place is matched to one listing only
+
+
+def test_a_namesake_in_another_state_is_rejected():
+    c = ctx_with()
+    c.listing.update(name="Ashray Welfare Foundation", district="Lucknow", state="Uttar Pradesh")
+    c.leads["website"] = "https://aashray.org.in"
+    page = "<html><title>Aashray Welfare Foundation</title><body><p>Aashray Welfare Foundation, Baruipur, South 24 Parganas, West Bengal. Email: a@aashray.org.in</p></body></html>"
+    website.run(c, {}, FakeHttp({"https://aashray.org.in": page}))
+    assert not c.facts and "place" in c.status["website"]

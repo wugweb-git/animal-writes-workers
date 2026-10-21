@@ -13,7 +13,7 @@ from urllib.parse import urljoin, urlparse
 
 from bs4 import BeautifulSoup
 
-from ..model import BROWSER_UA, Fact, core_tokens, names_in_text, norm_phone, norm_url, pincode_in
+from ..model import BROWSER_UA, Fact, core_tokens, fold, names_in_text, norm_phone, norm_url, pincode_in
 
 KEY, NAME, HOST = "website", "The organisation's website", ""
 MAX_PAGES = 8
@@ -160,7 +160,18 @@ def run(ctx, env, http) -> None:
     found_any = False
     for url, raw in pages:
         found_any |= _extract(ctx, url, raw, home)
+    if not place_in_text(ctx.listing, " ".join(t for k, _, t in ctx.texts if k == KEY)):
+        ctx.facts[:] = [f for f in ctx.facts if f.source_key != KEY]  # a namesake elsewhere in India: nothing from this site is kept
+        ctx.texts[:] = [t for t in ctx.texts if t[0] != KEY]
+        ctx.status[KEY] = "website does not mention the place"
+        return
     ctx.status[KEY] = "ok" if found_any else "ok: nothing new"
+
+
+def place_in_text(listing: dict, text: str) -> bool:
+    """The site must mention the listing's district or state (guards against a namesake in another city)."""
+    hay = " " + fold(text) + " "
+    return any(f" {fold(listing.get(k, '')).strip()} " in hay for k in ("district", "state") if fold(listing.get(k, "")).strip())
 
 
 def _add(ctx, field, value, url, note=""):
