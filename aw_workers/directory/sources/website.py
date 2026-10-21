@@ -250,6 +250,8 @@ def _extract(ctx, url: str, raw: str, home: str) -> bool:
     if photos:
         _add(ctx, "photos", photos, url)
     text = _text(soup)
+    text = re.sub(r"\s*[\[\(]\s*at\s*[\]\)]\s*", "@", text, flags=re.I)  # "info [at] example.org"
+    text = re.sub(r"\s*[\[\(]\s*dot\s*[\]\)]\s*", ".", text, flags=re.I)
     ctx.texts.append((KEY, url, text[:4000]))
     for e in EMAIL.findall(text):
         if not EMAIL_JUNK.search(e) and (domain in e.lower() or re.search(r"@(gmail|yahoo|rediffmail|hotmail|outlook)\.", e, re.I)):

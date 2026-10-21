@@ -39,6 +39,8 @@ def run(ctx, env, http) -> None:
         m = meta(http, ig)
         d = m.get("og:description") or m.get("description") or ""
         f = re.search(NUM + r"\s+Followers?,\s*" + NUM + r"\s+Following,\s*" + NUM + r"\s+Posts?", d, re.I)
+        if d:
+            ctx.add(Fact("instagram", ig, KEY, "Instagram", ig))  # a public page that answers: the profile itself
         if f:
             ctx.add(Fact("ig_followers", count(f.group(1)), KEY, "Instagram", ig), Fact("ig_posts", count(f.group(3)), KEY, "Instagram", ig))
             got.append("instagram")
@@ -53,6 +55,7 @@ def run(ctx, env, http) -> None:
         d = m.get("og:description") or ""
         if d:
             got.append("facebook")
+            ctx.add(Fact("facebook", fb, KEY, "Facebook", fb))
             ctx.texts.append((KEY, fb, d))
             _contacts(ctx, d, fb, "Facebook")
     if not tried:

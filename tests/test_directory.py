@@ -160,3 +160,12 @@ def test_lead_finder_keeps_only_own_pages():
             ' {"id": 99, "website": "https://x.org"}]\n```'
     out = lf.parse(reply, {5, 6})
     assert out == {5: {"facebook": "https://www.facebook.com/myngo"}, 6: {"website": "https://balmukund.org", "instagram": "https://www.instagram.com/bal/"}}
+
+
+def test_obfuscated_email_is_read():
+    c = ctx_with()
+    c.listing["name"] = "Balmukund Charitable Trust"
+    c.leads["website"] = "https://balmukund.org"
+    page = "<html><title>Balmukund Charitable Trust</title><body><p>Balmukund Charitable Trust Email :- info [at] balmukund.org</p></body></html>"
+    website.run(c, {}, FakeHttp({"https://balmukund.org": page}))
+    assert ("email", "info@balmukund.org") in {(f.field, f.value) for f in c.facts}
