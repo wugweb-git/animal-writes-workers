@@ -36,8 +36,20 @@ def truthy(v: str | None, default: bool) -> bool:
     return default if v in (None, "") else str(v).lower() in ("1", "true", "yes", "on")
 
 
+LEADS_FILE = Path(__file__).resolve().parents[2] / "data" / "directory-leads.json"
+
+
+def file_leads(listing_id: int) -> dict:
+    """Leads found by searching Google in a browser (data/directory-leads.json): the organisation's own pages."""
+    try:
+        return {k: v for k, v in (json.loads(LEADS_FILE.read_text()).get(str(listing_id)) or {}).items() if v}
+    except (OSError, ValueError):
+        return {}
+
+
 def enrich_one(listing: dict, env: dict, http, on: dict, summariser, services: dict) -> Context:
     ctx = Context(listing)
+    ctx.leads.update(file_leads(listing["id"]))
     for key, mod in REGISTRY.items():
         if not on.get(key, True):
             ctx.status[key] = "off"

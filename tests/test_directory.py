@@ -143,3 +143,10 @@ def test_awbi_address_is_high_on_its_own():
                  Fact("email", "a@x.org", "awbi", "A"))
     props = {p["field"]: p["confidence"] for p in merge.proposals(c)[0]}
     assert props == {"address": "high", "pincode": "high", "email": "medium"}
+
+
+def test_file_leads_are_read():
+    from aw_workers.directory import run
+
+    assert run.file_leads(624) == {"website": "https://vibhastrust.org.in/"}
+    assert run.file_leads(1) == {}
