@@ -130,6 +130,7 @@ def main(env=None) -> int:
     http = Polite(gap=1.0)
     report, run_id, spent_run, done = Report(dry), env.get("GITHUB_RUN_ID") or f"local-{int(time.time())}", 0.0, 0
     reason = ""
+    sweeps, taken, carry = {}, {}, 0.0
     while done < batch and time.time() < stop_at:
         params = {"limit": min(200, batch) if dry else min(25, batch - done)}  # a dry run marks nothing done: one fetch
         if env.get("AW_IDS"):
@@ -148,15 +149,25 @@ def main(env=None) -> int:
         asked = lead_finder.find(need, gemini, http) if need and gemini and on.get("website", True) and env.get("LEAD_FINDER") == "1" else {}  # off: leads come from searches in the browser (owner, 21 Oct 2026; no Gemini billing)
         if asked:
             log.info("lead finder: %d of %d listings got a lead", sum(1 for v in asked.values() if v), len(need))
+        if env.get("GOOGLE_PLACES_KEY") and on.get("google_places", True):  # one search per district for all its listings
+            for (st, di) in {(L.get("state"), L.get("district")) for L in items if L.get("state") and L.get("district")} - set(sweeps):
+                if float(q.get("google_spent") or 0) + spent_run + carry + 2 * google_places.COST_USD > limit:
+                    break
+                sweeps[(st, di)], used = google_places.sweep(env, http, st, di)
+                carry += used * google_places.COST_USD  # reported to the site with the next listing's cost
         for listing in items:
             if done >= batch or time.time() >= stop_at:
                 break
+            listing["_district_places"] = sweeps.get((listing.get("state"), listing.get("district")), [])
+            listing["_taken"] = taken.setdefault((listing.get("state"), listing.get("district")), set())
             listing["_asked"] = asked.get(listing["id"], {})
             if env.get("GOOGLE_PLACES_KEY") and float(q.get("google_spent") or 0) + spent_run + google_places.COST_USD > limit + 1e-9:
                 reason = (f"Google free quota ({free} requests) used for this month" if budget <= 0
                           else f"Google limit ({free} free requests + ${budget:.0f}) reached for this month")
                 break
             ctx = enrich_one(listing, env, http, on, summariser, services)
+            ctx.google_cost += carry
+            carry = 0.0
             spent_run += ctx.google_cost
             props, invite = merge.proposals(ctx)
             flags = {"invite_claim": invite}

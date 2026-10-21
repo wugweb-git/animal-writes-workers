@@ -169,3 +169,18 @@ def test_obfuscated_email_is_read():
     page = "<html><title>Balmukund Charitable Trust</title><body><p>Balmukund Charitable Trust Email :- info [at] balmukund.org</p></body></html>"
     website.run(c, {}, FakeHttp({"https://balmukund.org": page}))
     assert ("email", "info@balmukund.org") in {(f.field, f.value) for f in c.facts}
+
+
+def test_district_sweep_matches_without_a_request():
+    from aw_workers.directory.sources import google_places as gp
+
+    places = [{"id": "A", "displayName": {"text": "Shri Pipardi Brahmeshwar Gaushala Trust"}, "formattedAddress": "Pipardi, Rajkot, Gujarat",
+               "googleMapsUri": "https://maps.google.com/?cid=1", "websiteUri": "https://pipardi.example"}]
+    c = Context({"id": 613, "name": "Shri Pipardi Brahmeshwar Gaushala Trust", "district": "Rajkot", "state": "Gujarat",
+                 "_district_places": places, "_taken": set()})
+    gp.run(c, {"GOOGLE_PLACES_KEY": "k"}, http=None)  # no http: it must not ask Google again
+    assert c.leads["website"] == "https://pipardi.example" and c.google_cost == 0
+    assert {f.field for f in c.facts} >= {"place_id", "maps_url"}
+    c2 = Context({"id": 614, "name": "Shri Pipardi Brahmeshwar Gaushala Trust", "district": "Rajkot", "state": "Gujarat",
+                  "_district_places": places, "_taken": {"A"}})
+    assert gp.best(c2.listing, places, {"A"})[1] is None  # a place is matched to one listing only
