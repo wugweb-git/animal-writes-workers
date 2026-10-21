@@ -106,7 +106,7 @@ def _https_img(base: str, src: str) -> str:
     if not src or src.startswith("data:"):
         return ""
     u = urljoin(base, src.strip())
-    return u if u.startswith("https://") and not re.search(r"\.(svg|gif)(\?|$)", u, re.I) else ""
+    return u if u.startswith(("https://", "http://")) and not re.search(r"\.(svg|gif)(\?|$)", u, re.I) else ""  # http is fine: the site copies the picture, it never links to it
 
 
 def fetch(http, url: str):
