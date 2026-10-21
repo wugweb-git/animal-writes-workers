@@ -166,7 +166,8 @@ def main(env=None) -> int:
             if env.get("GOOGLE_PLACES_KEY") and float(q.get("google_spent") or 0) + spent_run + google_places.COST_USD > limit + 1e-9:
                 reason = (f"Google free quota ({free} requests) used for this month" if budget <= 0
                           else f"Google limit ({free} free requests + ${budget:.0f}) reached for this month")
-                break
+                env["GOOGLE_PLACES_KEY"] = ""  # the run goes on without Google (the other sources still work); it is back next month
+                log.info("%s: carrying on without Google", reason)
             ctx = enrich_one(listing, env, http, on, summariser, services)
             ctx.google_cost += carry
             carry = 0.0
