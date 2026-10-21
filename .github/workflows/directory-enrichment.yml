@@ -16,7 +16,7 @@ on:
         type: boolean
         default: true
       batch:
-        description: "Listings this run (empty = 300; dry run: 50)"
+        description: "Listings this run (empty = as many as fit in the 150-minute limit; dry run: 50)"
         type: string
         default: ""
       group:
@@ -41,7 +41,7 @@ jobs:
     timeout-minutes: 170
     env:
       DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && (inputs.dry_run && 'true' || 'false') || (vars.ENRICH_LIVE == 'true' && 'false' || 'true') }}
-      BATCH: ${{ inputs.batch || (github.event_name == 'workflow_dispatch' && inputs.dry_run && '50') || vars.ENRICH_BATCH || '300' }}
+      BATCH: ${{ inputs.batch || (github.event_name == 'workflow_dispatch' && inputs.dry_run && '50') || vars.ENRICH_BATCH || '5000' }}
       GROUP: ${{ inputs.group }}
       AW_IDS: ${{ inputs.ids }}
       MAX_MINUTES: "150"
