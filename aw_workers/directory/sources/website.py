@@ -17,7 +17,7 @@ from ..model import BROWSER_UA, Fact, core_tokens, names_in_text, norm_phone, no
 
 KEY, NAME, HOST = "website", "The organisation's website", ""
 MAX_PAGES = 8
-PAGE_WORDS = re.compile(r"contact|about|who-we-are|donat|support-us|volunteer|get-involved|join|adopt|reach|helpline", re.I)
+PAGE_WORDS = re.compile(r"contact|about|who-we-are|donat|contribut|appeal|support-us|volunteer|get-involved|join|adopt|reach|helpline", re.I)
 SOCIAL_HOSTS = ("instagram.com", "facebook.com", "fb.com", "twitter.com", "x.com", "youtube.com", "youtu.be", "linkedin.com",
                 "wa.me", "whatsapp.com", "linktr.ee")
 EMAIL = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b")
