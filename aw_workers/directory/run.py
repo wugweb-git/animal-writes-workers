@@ -25,7 +25,7 @@ from collections import Counter, defaultdict
 from pathlib import Path
 
 from .. import ingest, summarise
-from . import ai, merge
+from . import ai, lead_finder, merge
 from .model import Context, Polite, now_ist
 from .sources import REGISTRY, google_places
 
@@ -49,6 +49,7 @@ def file_leads(listing_id: int) -> dict:
 
 def enrich_one(listing: dict, env: dict, http, on: dict, summariser, services: dict) -> Context:
     ctx = Context(listing)
+    ctx.leads.update(listing.get("_asked") or {})  # Gemini's leads (lead_finder.py)
     ctx.leads.update(file_leads(listing["id"]))
     for key, mod in REGISTRY.items():
         if not on.get(key, True):
@@ -142,9 +143,15 @@ def main(env=None) -> int:
         if not items:
             reason = reason or "queue empty"
             break
+        need = [L for L in items if not file_leads(L["id"]) and not (L.get("now") or {}).get("website") and not (L.get("claim") or {}).get("aw_website")]
+        gemini = [k for k in (env.get("GEMINI_API_KEY"), env.get("GEMINI_API_KEY_2")) if k]
+        asked = lead_finder.find(need, gemini, http) if need and gemini and on.get("website", True) else {}
+        if asked:
+            log.info("lead finder: %d of %d listings got a lead", sum(1 for v in asked.values() if v), len(need))
         for listing in items:
             if done >= batch or time.time() >= stop_at:
                 break
+            listing["_asked"] = asked.get(listing["id"], {})
             if env.get("GOOGLE_PLACES_KEY") and float(q.get("google_spent") or 0) + spent_run + google_places.COST_USD > limit + 1e-9:
                 reason = (f"Google free quota ({free} requests) used for this month" if budget <= 0
                           else f"Google limit ({free} free requests + ${budget:.0f}) reached for this month")

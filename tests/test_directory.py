@@ -150,3 +150,13 @@ def test_file_leads_are_read():
 
     assert run.file_leads(624) == {"website": "https://vibhastrust.org.in/"}
     assert run.file_leads(1) == {}
+
+
+def test_lead_finder_keeps_only_own_pages():
+    from aw_workers.directory import lead_finder as lf
+
+    reply = '```json\n[{"id": 5, "website": "https://www.justdial.com/x", "instagram": "https://www.instagram.com/p/abc/", "facebook": "facebook.com/myngo"},' \
+            ' {"id": 6, "website": "http://balmukund.org/contact_us.html", "instagram": "instagram.com/bal/?hl=en", "facebook": ""},' \
+            ' {"id": 99, "website": "https://x.org"}]\n```'
+    out = lf.parse(reply, {5, 6})
+    assert out == {5: {"facebook": "https://www.facebook.com/myngo"}, 6: {"website": "https://balmukund.org", "instagram": "https://www.instagram.com/bal/"}}
