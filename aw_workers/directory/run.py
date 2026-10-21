@@ -30,6 +30,7 @@ from .model import Context, Polite, now_ist
 from .sources import REGISTRY, google_places
 
 log = logging.getLogger("aw_workers.directory")
+SWEEP_MIN = 3  # listings of one district in a batch before a district search is made
 
 
 def truthy(v: str | None, default: bool) -> bool:
@@ -150,7 +151,8 @@ def main(env=None) -> int:
         if asked:
             log.info("lead finder: %d of %d listings got a lead", sum(1 for v in asked.values() if v), len(need))
         if env.get("GOOGLE_PLACES_KEY") and on.get("google_places", True):  # one search per district for all its listings
-            for (st, di) in {(L.get("state"), L.get("district")) for L in items if L.get("state") and L.get("district")} - set(sweeps):
+            by_district = Counter((L.get("state"), L.get("district")) for L in items if L.get("state") and L.get("district"))
+            for (st, di) in {k for k, n in by_district.items() if n >= SWEEP_MIN} - set(sweeps):  # 2 requests pay off only for a few listings or more
                 if float(q.get("google_spent") or 0) + spent_run + carry + 2 * google_places.COST_USD > limit:
                     break
                 sweeps[(st, di)], used = google_places.sweep(env, http, st, di)
