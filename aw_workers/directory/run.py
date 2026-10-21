@@ -145,7 +145,7 @@ def main(env=None) -> int:
             break
         need = [L for L in items if not file_leads(L["id"]) and not (L.get("now") or {}).get("website") and not (L.get("claim") or {}).get("aw_website")]
         gemini = [k for k in (env.get("GEMINI_API_KEY"), env.get("GEMINI_API_KEY_2")) if k]
-        asked = lead_finder.find(need, gemini, http) if need and gemini and on.get("website", True) else {}
+        asked = lead_finder.find(need, gemini, http) if need and gemini and on.get("website", True) and env.get("LEAD_FINDER") == "1" else {}  # off: leads come from searches in the browser (owner, 21 Oct 2026; no Gemini billing)
         if asked:
             log.info("lead finder: %d of %d listings got a lead", sum(1 for v in asked.values() if v), len(need))
         for listing in items:
