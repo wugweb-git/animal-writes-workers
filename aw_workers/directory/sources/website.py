@@ -244,7 +244,7 @@ def _extract(ctx, url: str, raw: str, home: str) -> bool:
     for img in soup.find_all("img"):
         src = _https_img(url, img.get("src") or img.get("data-src") or "")
         w = re.sub(r"\D", "", str(img.get("width", "")))
-        if src and not re.search(r"logo|icon|avatar|banner|head?er|hed(?:e)?r|menu|pipe|line|topbottom|bg|background|sprite|flag|payment|qr|button|arrow|shloka", src + " " + str(img.get("class", "")), re.I) and (not w or int(w) >= 250):
+        if src and not re.search(r"logo|icon|avatar|banner|h[ae]{1,2}de?r|menu|pipe|line|topbottom|bg|background|sprite|flag|payment|qr|button|arrow|shloka", src + " " + str(img.get("class", "")), re.I) and (not w or int(w) >= 250):
             photos.append(src)
     photos = [p for p in dict.fromkeys(photos) if p][:6]
     if photos:
