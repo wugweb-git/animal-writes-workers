@@ -8,6 +8,7 @@ to the AI pass (services, animals, areas served, description)."""
 from __future__ import annotations
 
 import json
+import math
 import re
 from urllib.parse import urljoin, urlparse
 
@@ -134,7 +135,10 @@ def run(ctx, env, http) -> None:
             title = (soup.title.string if soup.title and soup.title.string else "")
             domain = (urlparse(final).hostname or "").lower()
             text = title + " " + _text(BeautifulSoup(page, "html.parser"))
-            if names_in_text(ctx.name, text) >= 0.6 or any(t in domain for t in core_tokens(ctx.name) if len(t) >= 5):
+            toks = core_tokens(ctx.name)
+            in_domain = sum(1 for t in toks if len(t) >= 4 and t in domain)
+            # the pages name the organisation, or its web address carries most of its name (one shared word is not enough)
+            if names_in_text(ctx.name, text) >= 0.6 or in_domain >= max(2, math.ceil(len(toks) * 0.6)):
                 home = final
                 break
             ctx.status[KEY] = "website does not name the organisation"

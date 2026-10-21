@@ -192,4 +192,13 @@ def test_a_namesake_in_another_state_is_rejected():
     c.leads["website"] = "https://aashray.org.in"
     page = "<html><title>Aashray Welfare Foundation</title><body><p>Aashray Welfare Foundation, Baruipur, South 24 Parganas, West Bengal. Email: a@aashray.org.in</p></body></html>"
     website.run(c, {}, FakeHttp({"https://aashray.org.in": page}))
-    assert not c.facts and "place" in c.status["website"]
+    assert not c.facts and c.status["website"].startswith("website does not")  # by name or by place
+
+
+def test_one_shared_word_in_the_domain_is_not_enough():
+    c = ctx_with()
+    c.listing.update(name="Rashtriya Ahimsa Pratishthan", district="Jodhpur", state="Rajasthan")
+    c.leads["website"] = "https://ahimsafellowship.org"
+    page = "<html><title>Ahimsa Fellowship</title><body><p>Ahimsa Fellowship works for animals across India and Rajasthan. a@ahimsafellowship.org</p></body></html>"
+    website.run(c, {}, FakeHttp({"https://ahimsafellowship.org": page}))
+    assert not c.facts and c.status["website"].startswith("website does not name")
