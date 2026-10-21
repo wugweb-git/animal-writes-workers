@@ -57,9 +57,10 @@ def test_ai_fields_capped_at_medium():
 
 def test_would_apply_rules():
     L = {"now": {"email": "old@x.org"}, "protected": False}
-    assert merge.would(L, {"field": "email", "value": "new@x.org", "confidence": "high"}) == "queued"
-    assert merge.would(L, {"field": "founded", "value": "1999", "confidence": "high"}) == "applied"
-    assert merge.would(L, {"field": "founded", "value": "1999", "confidence": "medium"}) == "queued"
+    assert merge.would(L, {"field": "email", "value": "new@x.org", "confidence": "medium"}) == "applied"  # kept beside the old one
+    assert merge.would(L, {"field": "founded", "value": "1999", "confidence": "medium"}) == "applied"  # an empty field, medium is enough
+    assert merge.would(L, {"field": "founded", "value": "1999", "confidence": "low"}) == "queued"
+    assert merge.would({**L, "now": {"founded": "1990"}}, {"field": "founded", "value": "1999", "confidence": "high"}) == "queued"
     assert merge.would({**L, "protected": True}, {"field": "founded", "value": "1999", "confidence": "high"}) == "queued"
     assert merge.would(L, {"field": "email", "value": "OLD@x.org", "confidence": "high"}) == "skipped"
 

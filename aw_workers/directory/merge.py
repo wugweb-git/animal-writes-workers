@@ -72,12 +72,16 @@ def proposals(ctx) -> tuple[list[dict], list[str]]:
 
 
 def would(listing: dict, p: dict) -> str:
-    """What the site would do with a proposal (for the dry run): applied, queued or skipped (already held)."""
-    now = (listing.get("now") or {}).get(p["field"])
-    if now not in (None, "", []) and same_value(p["field"], now, p["value"]) or (
-            p["field"] in ("phone", "whatsapp", "emergency") and now and any(same_value("phone", n.strip(), p["value"]) for n in str(now).split(","))):
+    """What the site will do with a proposal (owner's rule, 21 Oct 2026), for the dry run: 'applied' (empty field),
+    and also for a second phone, email or website (kept beside the existing one), 'queued' or 'skipped' (already held)."""
+    field, now = p["field"], (listing.get("now") or {}).get(p["field"])
+    if now not in (None, "", []) and same_value(field, now, p["value"]) or (
+            field in ("phone", "whatsapp", "emergency") and now and any(same_value("phone", n.strip(), p["value"]) for n in str(now).split(","))):
         return "skipped"
-    empty = now in (None, "", []) or p["field"] in ("whatsapp", "emergency")
-    if listing.get("protected") or p["confidence"] != "high" or not empty:
+    if listing.get("protected") or p["confidence"] == "low":
         return "queued"
-    return "applied"
+    if field in ("phone", "whatsapp", "emergency"):
+        return "applied"  # a second number is kept beside the first, both marked unverified
+    if now in (None, "", []):
+        return "applied"
+    return "applied" if field in ("email", "website") else "queued"
