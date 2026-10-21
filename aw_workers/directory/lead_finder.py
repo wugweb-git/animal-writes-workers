@@ -65,22 +65,26 @@ def parse(reply: str, ids: set[int]) -> dict[int, dict]:
 def find(listings: list[dict], keys: list[str], http) -> dict[int, dict]:
     """{listing id: {website, instagram, facebook}} for listings with nothing to start from; {} when no Gemini key works."""
     found: dict[int, dict] = {}
+    state = {"no_search": False}
+    keys = [k.strip() for v in keys for k in re.split(r"[\n,]", v or "") if k.strip()]
     todo = [L for L in listings if L.get("name")]
     for i in range(0, len(todo), BATCH):
         group = todo[i:i + BATCH]
         rows = "\n".join(f'{L["id"]}. {L["name"]} ({", ".join(x for x in (L.get("district"), L.get("state")) if x)})' for L in group)
-        body = {"contents": [{"parts": [{"text": PROMPT.format(rows=rows)}]}], "tools": [{"google_search": {}}],
-                "generationConfig": {"temperature": 0, "maxOutputTokens": 1500}}
+        base = {"contents": [{"parts": [{"text": PROMPT.format(rows=rows)}]}], "generationConfig": {"temperature": 0, "maxOutputTokens": 1500}}
         done = False
         for key in keys:
-            for model in MODELS:
+            for model, grounded in [(m, g) for g in (True, False) for m in MODELS if g or not state["no_search"]]:
+                body = {**base, "tools": [{"google_search": {}}]} if grounded and not state["no_search"] else base
                 try:
                     r = http.post(URL.format(model=model), gap=4.0, json=body, timeout=90, headers={"x-goog-api-key": key})
                 except Exception as exc:  # noqa: BLE001
                     log.warning("lead finder %s: %s", model, type(exc).__name__)
                     continue
                 if r.status_code != 200:
-                    log.warning("lead finder %s: HTTP %s %s", model, r.status_code, r.text[:100])
+                    log.warning("lead finder %s%s: HTTP %s %s", model, " (search)" if grounded else "", r.status_code, r.text[:80].replace("\n", " "))
+                    if grounded and r.status_code in (400, 403, 429):
+                        state["no_search"] = True  # this key has no Search grounding: ask from the model's own knowledge
                     continue
                 parts = (r.json().get("candidates") or [{}])[0].get("content", {}).get("parts", [])
                 found.update(parse("".join(p.get("text", "") for p in parts), {L["id"] for L in group}))
