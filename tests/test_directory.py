@@ -202,3 +202,10 @@ def test_one_shared_word_in_the_domain_is_not_enough():
     page = "<html><title>Ahimsa Fellowship</title><body><p>Ahimsa Fellowship works for animals across India and Rajasthan. a@ahimsafellowship.org</p></body></html>"
     website.run(c, {}, FakeHttp({"https://ahimsafellowship.org": page}))
     assert not c.facts and c.status["website"].startswith("website does not name")
+
+
+def test_social_link_from_website_and_its_own_preview_is_one_source():
+    c = ctx_with(Fact("facebook", "https://www.facebook.com/x", "website", "W"), Fact("facebook", "https://www.facebook.com/x", "social", "S"))
+    assert merge.proposals(c)[0][0]["confidence"] == "medium"
+    c = ctx_with(Fact("facebook", "https://www.facebook.com/x", "website", "W"), Fact("facebook", "https://www.facebook.com/x", "wikidata", "D"))
+    assert merge.proposals(c)[0][0]["confidence"] == "high"

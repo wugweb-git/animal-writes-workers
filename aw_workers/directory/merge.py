@@ -13,6 +13,7 @@ MULTI = {"phone": 2, "whatsapp": 1, "emergency": 1}  # how many different number
 AI_FIELDS = {"services", "animals", "areas_served", "description", "reg_type", "head"}
 PRIORITY = ["claim", "website", "darpan", "wikidata", "osm", "social", "awbi", "google_places"]
 INVITE_FIELDS = ("phone", "hours", "address", "website")
+SOCIAL_FIELDS = {"instagram", "facebook", "x", "youtube", "linkedin"}
 OFFICIAL_AWBI = {"address", "pincode"}  # the AWBI list is the official record of these: high on its own
 
 
@@ -47,6 +48,8 @@ def proposals(ctx) -> tuple[list[dict], list[str]]:
         rivals = groups[len(keep):]
         for g in keep:
             keys = {f.source_key for f in g}
+            if field in SOCIAL_FIELDS and "website" in keys:
+                keys.discard("social")  # the website links to the page and the preview reads that same page: one source, not two
             confirmed = any(same_value(field, c.value, g[0].value) for c in check)
             if "claim" in keys or (keys == {"awbi"} and field in OFFICIAL_AWBI):
                 conf = "high"  # the organisation itself, or the AWBI list's own address (owner, 18 Oct 2026)
