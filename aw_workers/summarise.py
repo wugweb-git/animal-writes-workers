@@ -347,7 +347,8 @@ def backends_from_rows(rows: list[dict], budget: float | None = None, ledger: di
             n = seen[provider] = seen.get(provider, -1) + 1
             k = n % len(extra) if extra else 0
             free = [*extra[k:], *extra[:k]]
-            models = list(dict.fromkeys([m for m in [*free, model] if m]))
+            # free-tier accounts only (owner, 22 Oct 2026): a paid saved model (gpt-4o-mini) can never answer, so it is left out
+            models = list(dict.fromkeys([m for m in [*free, model] if m and (m in extra or _free_model(m))]))
         else:
             models = list(dict.fromkeys([m for m in [model, *extra] if m]))
         if provider == "anthropic":

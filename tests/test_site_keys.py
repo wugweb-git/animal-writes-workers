@@ -56,10 +56,10 @@ def test_secret_keys_follow_site_rows_without_repeats(monkeypatch):
     assert keys[-1] == "k2" and set(keys[:-1]) == {"k1"} and len(keys) == 6  # k1: saved model + 4 free Groq models
 
 
-def test_openrouter_key_uses_its_free_models_before_the_paid_one():
+def test_openrouter_key_uses_only_free_models():
     rows = [{"provider": "openrouter", "name": "openrouter", "model": "openai/gpt-4o-mini", "url": "https://openrouter.ai/api/v1", "key": "o1"}]
     models = [b.model for b in summarise.backends_from_rows(rows)]
-    assert models[-1] == "openai/gpt-4o-mini" and all(m.endswith(":free") or m == "openrouter/free" for m in models[:-1]) and len(models) == 6
+    assert models == summarise.EXTRA_MODELS["openrouter"]  # free-tier accounts: the paid saved model is left out
     rows[0]["model"] = "minimax/minimax-m3.1-flash:free"  # a free saved model is not repeated
     assert [b.model for b in summarise.backends_from_rows(rows)] == summarise.EXTRA_MODELS["openrouter"]
 
@@ -113,5 +113,5 @@ def test_free_quota_used_drops_that_keys_free_models_only():
     i = next(n for n, b in enumerate(owner.backends) if b.api_key == "a" and b.model.endswith(":free"))
     summarise.note_failure(owner, i, summarise.FreeQuotaUsed("429 free-models-per-day"))
     alive = [(b.api_key, b.model) for n, b in enumerate(owner.backends) if n not in owner.dead]
-    assert ("a", "openai/gpt-4o-mini") in alive and not any(k == "a" and m.endswith(":free") for k, m in alive)
+    assert not any(k == "a" for k, m in alive)  # key a has only free models: all dropped for the run
     assert any(k == "b" and m.endswith(":free") for k, m in alive)

@@ -24,6 +24,7 @@ KEY_URL = "https://openrouter.ai/api/v1/key"
 class Account:
     def __init__(self, account_id: str, remaining: int, limit: int, share: int):
         self.id, self.remaining, self.limit, self.left = account_id, remaining, limit, share
+        self.share, self.keys = share, set()
 
     def take(self) -> bool:
         if self.left <= 0:
@@ -68,5 +69,13 @@ def openrouter_account(key: str, session=None) -> Account | None:
                          account_id[-4:], remaining, limit, acct.left)
     except Exception as exc:  # noqa: BLE001
         log.info("free models: OpenRouter account not read: %s", type(exc).__name__)
+    if acct is not None:
+        acct.keys.add(key[-4:])
     _by_key[key] = acct
     return acct
+
+
+def summary() -> list[dict]:
+    """This run's caps for Settings → AI models (account ids and keys by their last 4 characters only)."""
+    return [{"provider": "openrouter", "account": a.id[-4:], "limit": a.limit, "remaining": a.remaining, "share": a.share,
+             "used": a.share - a.left, "keys": sorted(a.keys)} for a in _accounts.values()]

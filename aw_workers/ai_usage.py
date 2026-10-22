@@ -31,6 +31,9 @@ def _outcome(exc: BaseException | None) -> str:
 
 
 def record(backend, exc: BaseException | None) -> None:
+    if not _state["registered"]:
+        _state["registered"] = True
+        atexit.register(report)
     if getattr(exc, "not_called", False):  # skipped before any call (a free-model cap): nothing to count
         return
     key = str(getattr(backend, "api_key", "") or "")
@@ -69,7 +72,10 @@ def report(env=None, session=None) -> bool:
     """Send this run's counts to the site. True when sent."""
     env = env if env is not None else os.environ
     base, user, pw = env.get("WP_BASE_URL"), env.get("WP_INGEST_USER"), env.get("WP_INGEST_APP_PASSWORD")
-    if not USAGE or not (base and user and pw):
+    from . import free_budget
+
+    accounts = free_budget.summary()
+    if not (USAGE or accounts) or not (base and user and pw):
         return False
     run = env.get("GITHUB_RUN_ID", "")
     body = {
@@ -77,6 +83,7 @@ def report(env=None, session=None) -> bool:
         "link": f"{env.get('GITHUB_SERVER_URL', 'https://github.com')}/{env.get('GITHUB_REPOSITORY', '')}/actions/runs/{run}" if run else "",
         "dry_run": str(env.get("DRY_RUN", "")).lower() in ("1", "true", "yes"),
         "keys": [{"id": k, **v} for k, v in USAGE.items()],
+        "accounts": accounts,  # free-model daily caps per account (free_budget.py)
     }
     try:
         import requests

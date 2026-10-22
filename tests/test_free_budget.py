@@ -54,3 +54,25 @@ def test_capped_free_model_is_skipped_without_a_call(monkeypatch):
         assert exc.not_called
     else:
         raise AssertionError("expected FreeQuotaUsed")
+
+
+def test_report_carries_the_caps_even_without_calls(monkeypatch):
+    from aw_workers import ai_usage
+
+    monkeypatch.setattr(free_budget, "_accounts", {"user_ABCD": free_budget.Account("user_ABCD", 10, 50, 2)})
+    free_budget._accounts["user_ABCD"].keys.add("9e65")
+    monkeypatch.setattr(ai_usage, "USAGE", {})
+    sent = {}
+
+    class S:
+        def post(self, url, json, auth, timeout):
+            sent.update(json)
+
+            class R:
+                def raise_for_status(self):
+                    pass
+            return R()
+
+    assert ai_usage.report({"WP_BASE_URL": "https://x.test", "WP_INGEST_USER": "u", "WP_INGEST_APP_PASSWORD": "p"}, session=S())
+    assert sent["accounts"] == [{"provider": "openrouter", "account": "ABCD", "limit": 50, "remaining": 10, "share": 2,
+                                 "used": 0, "keys": ["9e65"]}]
