@@ -311,8 +311,9 @@ EXTRA_MODELS = {
     "gemini": ["gemini-flash-lite-latest", "gemini-3-flash-preview", "gemini-flash-latest"],
     "groq": ["openai/gpt-oss-120b", "openai/gpt-oss-20b", "llama-3.3-70b-versatile", "llama-3.1-8b-instant"],
     "openrouter": ["minimax/minimax-m3.1-flash:free", "nvidia/nemotron-3-ultra-550b-a55b:free", "google/gemma-4-31b-it:free",
-                   "xingchen-agi/xing4.0-29b-a4b:free"],
-    "requesty": ["google/gemma-4-31b-it", "nvidia/nemotron-3-ultra-550b-a55b"],
+                   "xingchen-agi/xing4.0-29b-a4b:free", "openrouter/free"],  # openrouter/free: any free model OpenRouter has room on
+    "requesty": ["google/gemma-4-31b-it", "nvidia/nemotron-3-ultra-550b-a55b", "novita/ling-3.1-flash",
+                 "nvidia/nemotron-3.5-lightning-30b-a3b", "nvidia/muse-glimmer-30b", "mistral/leanstral-1-5"],
     "cline": ["minimax/minimax-m3.1-flash:free", "nvidia/nemotron-3-ultra-550b-a55b:free"],
     "commandcode": ["reflection/beam:free", "poolside/laguna-s-2.1-free", "stealth/glyph-cluster:free"],
 }

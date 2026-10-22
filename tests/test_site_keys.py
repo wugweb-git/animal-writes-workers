@@ -59,7 +59,7 @@ def test_secret_keys_follow_site_rows_without_repeats(monkeypatch):
 def test_openrouter_key_uses_its_free_models_before_the_paid_one():
     rows = [{"provider": "openrouter", "name": "openrouter", "model": "openai/gpt-4o-mini", "url": "https://openrouter.ai/api/v1", "key": "o1"}]
     models = [b.model for b in summarise.backends_from_rows(rows)]
-    assert models[-1] == "openai/gpt-4o-mini" and all(m.endswith(":free") for m in models[:-1]) and len(models) == 5
+    assert models[-1] == "openai/gpt-4o-mini" and all(m.endswith(":free") or m == "openrouter/free" for m in models[:-1]) and len(models) == 6
     rows[0]["model"] = "minimax/minimax-m3.1-flash:free"  # a free saved model is not repeated
     assert [b.model for b in summarise.backends_from_rows(rows)] == summarise.EXTRA_MODELS["openrouter"]
 
