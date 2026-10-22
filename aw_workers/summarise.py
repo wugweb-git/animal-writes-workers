@@ -513,10 +513,13 @@ class Summariser:
             return finalise(self._summarise(item), item)
         except ShortSummary as short:
             kept = short
-        fetch = self.fetch
+        fetch, deep = self.fetch, None
         if fetch is None:
+            from .firecrawl import page_text as deep  # the page hides its text from a plain read (22 Oct 2026)
             from .merge import page_text as fetch
         more = fetch(item.url) if _readable_url(item.url) else ""
+        if deep and _readable_url(item.url) and len((more or "").strip()) <= len(item.text or "") + 200:
+            more = max(more or "", deep(item.url), key=len)
         base = item
         if len((more or "").strip()) > len(item.text or "") + 200:
             base = dataclasses.replace(item, text=more)
