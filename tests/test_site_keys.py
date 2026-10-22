@@ -59,7 +59,7 @@ def test_secret_keys_follow_site_rows_without_repeats(monkeypatch):
 def test_openrouter_key_uses_its_free_models_before_the_paid_one():
     rows = [{"provider": "openrouter", "name": "openrouter", "model": "openai/gpt-4o-mini", "url": "https://openrouter.ai/api/v1", "key": "o1"}]
     models = [b.model for b in summarise.backends_from_rows(rows)]
-    assert models[-1] == "openai/gpt-4o-mini" and all(m.endswith(":free") for m in models[:-1]) and len(models) == 4
+    assert models[-1] == "openai/gpt-4o-mini" and all(m.endswith(":free") for m in models[:-1]) and len(models) == 5
     rows[0]["model"] = "minimax/minimax-m3.1-flash:free"  # a free saved model is not repeated
     assert [b.model for b in summarise.backends_from_rows(rows)] == summarise.EXTRA_MODELS["openrouter"]
 
@@ -80,3 +80,9 @@ def test_cline_answer_wrapped_in_data_is_read():
 
     b = summarise.OpenAICompatBackend("cline", "https://api.cline.bot/api/v1/chat/completions", "k", "m", session=S(), sleep=lambda s: None)
     assert b.ask("hi") == "ok"
+
+
+def test_openrouter_keys_start_on_different_free_models():
+    rows = [{"provider": "openrouter", "model": "openai/gpt-4o-mini", "url": "https://openrouter.ai/api/v1", "key": f"o{i}"} for i in range(3)]
+    firsts = [next(b.model for b in summarise.backends_from_rows(rows) if b.api_key == f"o{i}") for i in range(3)]
+    assert firsts == summarise.EXTRA_MODELS["openrouter"][:3]

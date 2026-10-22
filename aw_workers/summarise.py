@@ -310,21 +310,30 @@ def site_rows(env, session=None) -> list[dict]:
 EXTRA_MODELS = {
     "gemini": ["gemini-flash-lite-latest", "gemini-3-flash-preview", "gemini-flash-latest"],
     "groq": ["openai/gpt-oss-120b", "openai/gpt-oss-20b", "llama-3.3-70b-versatile", "llama-3.1-8b-instant"],
-    "openrouter": ["minimax/minimax-m3.1-flash:free", "nvidia/nemotron-3-ultra-550b-a55b:free", "google/gemma-4-31b-it:free"],
+    "openrouter": ["minimax/minimax-m3.1-flash:free", "nvidia/nemotron-3-ultra-550b-a55b:free", "google/gemma-4-31b-it:free",
+                   "xingchen-agi/xing4.0-29b-a4b:free"],
     "requesty": ["google/gemma-4-31b-it", "nvidia/nemotron-3-ultra-550b-a55b"],
     "cline": ["minimax/minimax-m3.1-flash:free", "nvidia/nemotron-3-ultra-550b-a55b:free"],
+    "commandcode": ["reflection/beam:free", "poolside/laguna-s-2.1-free", "stealth/glyph-cluster:free"],
 }
 # Free models a key is tried on BEFORE its saved model (owner, 22 Oct 2026: use the daily free quotas, pay only after).
-FREE_FIRST = {"openrouter", "requesty", "cline"}
+FREE_FIRST = {"openrouter", "requesty", "cline", "commandcode"}
 
 
 def backends_from_rows(rows: list[dict], budget: float | None = None, ledger: dict | None = None) -> list:
     """One backend per saved row and model. Anthropic and Gemini use their own clients; the rest are OpenAI-compatible."""
-    out = []
+    out, seen = [], {}
     for r in rows:
         key, model, provider = r["key"].strip(), (r.get("model") or "").strip(), r.get("provider") or "other"
         extra = EXTRA_MODELS.get(provider, [])
-        models = list(dict.fromkeys([m for m in ([*extra, model] if provider in FREE_FIRST else [model, *extra]) if m]))
+        if provider in FREE_FIRST:
+            # each key of a provider starts on the next free model, so busy free models are spread (owner, 22 Oct 2026)
+            n = seen[provider] = seen.get(provider, -1) + 1
+            k = n % len(extra) if extra else 0
+            free = [*extra[k:], *extra[:k]]
+            models = list(dict.fromkeys([m for m in [*free, model] if m]))
+        else:
+            models = list(dict.fromkeys([m for m in [model, *extra] if m]))
         if provider == "anthropic":
             out.append(ClaudeBackend(key, budget_usd=budget, ledger=ledger, model=model or MODEL))
         elif provider == "gemini":
