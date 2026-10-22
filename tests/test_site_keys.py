@@ -86,3 +86,32 @@ def test_openrouter_keys_start_on_different_free_models():
     rows = [{"provider": "openrouter", "model": "openai/gpt-4o-mini", "url": "https://openrouter.ai/api/v1", "key": f"o{i}"} for i in range(3)]
     firsts = [next(b.model for b in summarise.backends_from_rows(rows) if b.api_key == f"o{i}") for i in range(3)]
     assert firsts == summarise.EXTRA_MODELS["openrouter"][:3]
+
+
+def test_free_quota_used_drops_that_keys_free_models_only():
+    class R:
+        status_code, text, headers = 429, '{"error":{"message":"Rate limit exceeded: free-models-per-day"}}', {}
+
+        def raise_for_status(self):
+            raise AssertionError("not reached")
+
+    class S:
+        calls = 0
+
+        def post(self, *a, **kw):
+            S.calls += 1
+            return R()
+
+    import pytest
+    with pytest.raises(summarise.FreeQuotaUsed):
+        summarise._post_with_retry(S(), "u", headers={}, json={"model": "x:free"}, timeout=1, sleep=lambda s: None,
+                                   min_interval=0, state={})
+    assert S.calls == 1  # no retry
+
+    rows = [{"provider": "openrouter", "model": "openai/gpt-4o-mini", "url": "https://openrouter.ai/api/v1", "key": k} for k in ("a", "b")]
+    owner = summarise.Summariser(summarise.backends_from_rows(rows))
+    i = next(n for n, b in enumerate(owner.backends) if b.api_key == "a" and b.model.endswith(":free"))
+    summarise.note_failure(owner, i, summarise.FreeQuotaUsed("429 free-models-per-day"))
+    alive = [(b.api_key, b.model) for n, b in enumerate(owner.backends) if n not in owner.dead]
+    assert ("a", "openai/gpt-4o-mini") in alive and not any(k == "a" and m.endswith(":free") for k, m in alive)
+    assert any(k == "b" and m.endswith(":free") for k, m in alive)

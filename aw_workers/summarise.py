@@ -167,6 +167,11 @@ class ClaudeBackend:
         return "".join(b.text for b in msg.content if getattr(b, "type", "") == "text").strip()
 
 
+class FreeQuotaUsed(Exception):
+    """OpenRouter's free models are used up for today on this key's account (50 a day without credit): no retry, and
+    the key's free models are dropped for the run (owner, 22 Oct 2026: two accounts made 255 and 86 calls past it)."""
+
+
 def _post_with_retry(session, url, *, headers, json, timeout, sleep, min_interval, state):
     """Free tiers are rate-limited: keep a minimum gap between calls and retry a 429/5xx once, after a short wait.
     A key that asks to wait longer than MAX_RETRY_WAIT is given up for this call at once (12 Oct 2026: waiting out
@@ -179,6 +184,8 @@ def _post_with_retry(session, url, *, headers, json, timeout, sleep, min_interva
     for attempt in range(2):
         state["last"] = time.monotonic()
         resp = session.post(url, headers=headers, json=json, timeout=timeout)
+        if resp.status_code == 429 and "free-models-per-day" in str(getattr(resp, "text", "") or "")[:3000]:
+            raise FreeQuotaUsed(f"429 free-models-per-day ({json.get('model')})")
         if (resp.status_code == 429 or resp.status_code >= 500) and attempt == 0:
             retry_after = str((getattr(resp, "headers", None) or {}).get("Retry-After", "")).strip()
             delay = float(retry_after) if retry_after.replace(".", "", 1).isdigit() else 5.0
@@ -396,10 +403,19 @@ def note_failure(owner, i: int, exc: Exception) -> None:
     """Shared by summaries, categories and the relevance gate (`owner` has .dead): a dead key is dropped for the run;
     a key still rate-limited after its retry rests COOLDOWN_S and is then used again (12 Oct 2026: dropping it for
     the whole run left 199 items unchecked while Groq's per-minute limit had long reset)."""
-    if _is_dead_key_error(exc):
+    if isinstance(exc, FreeQuotaUsed):  # every free model on this key, for the rest of the run
+        backends = getattr(owner, "backends", None) or []
+        key = getattr(backends[i], "api_key", None) if i < len(backends) else None
+        owner.dead.update(j for j, b in enumerate(backends) if b.api_key == key and _free_model(getattr(b, "model", "")))
+        owner.dead.add(i)
+    elif _is_dead_key_error(exc):
         owner.dead.add(i)
     elif _is_rate_limit(exc):
         owner.__dict__.setdefault("cool", {})[i] = time.monotonic() + COOLDOWN_S
+
+
+def _free_model(model: str) -> bool:
+    return str(model).endswith(":free") or model == "openrouter/free"
 
 
 def note_success(owner, i: int) -> None:
