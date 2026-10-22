@@ -248,7 +248,10 @@ class GroqBackend:
             json={"model": self.model, "max_tokens": 800, "messages": [{"role": "user", "content": prompt}]},
             timeout=30, sleep=self.sleep, min_interval=self.min_interval, state=self.state,
         )
-        choice = resp.json()["choices"][0]
+        body = resp.json()
+        if "choices" not in body and isinstance(body.get("data"), dict):
+            body = body["data"]  # Cline wraps the OpenAI answer in "data" (22 Oct 2026)
+        choice = body["choices"][0]
         if choice.get("finish_reason") == "length":
             raise CutOff(f"{self.name}: stopped at max_tokens")
         return (choice["message"]["content"] or "").strip()
@@ -309,9 +312,10 @@ EXTRA_MODELS = {
     "groq": ["openai/gpt-oss-120b", "openai/gpt-oss-20b", "llama-3.3-70b-versatile", "llama-3.1-8b-instant"],
     "openrouter": ["minimax/minimax-m3.1-flash:free", "nvidia/nemotron-3-ultra-550b-a55b:free", "google/gemma-4-31b-it:free"],
     "requesty": ["google/gemma-4-31b-it", "nvidia/nemotron-3-ultra-550b-a55b"],
+    "cline": ["minimax/minimax-m3.1-flash:free", "nvidia/nemotron-3-ultra-550b-a55b:free"],
 }
 # Free models a key is tried on BEFORE its saved model (owner, 22 Oct 2026: use the daily free quotas, pay only after).
-FREE_FIRST = {"openrouter", "requesty"}
+FREE_FIRST = {"openrouter", "requesty", "cline"}
 
 
 def backends_from_rows(rows: list[dict], budget: float | None = None, ledger: dict | None = None) -> list:

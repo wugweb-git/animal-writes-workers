@@ -62,3 +62,21 @@ def test_openrouter_key_uses_its_free_models_before_the_paid_one():
     assert models[-1] == "openai/gpt-4o-mini" and all(m.endswith(":free") for m in models[:-1]) and len(models) == 4
     rows[0]["model"] = "minimax/minimax-m3.1-flash:free"  # a free saved model is not repeated
     assert [b.model for b in summarise.backends_from_rows(rows)] == summarise.EXTRA_MODELS["openrouter"]
+
+
+def test_cline_answer_wrapped_in_data_is_read():
+    class R:
+        status_code = 200
+
+        def json(self):
+            return {"data": {"choices": [{"finish_reason": "stop", "message": {"content": " ok "}}]}}
+
+        def raise_for_status(self):
+            pass
+
+    class S:
+        def post(self, *a, **kw):
+            return R()
+
+    b = summarise.OpenAICompatBackend("cline", "https://api.cline.bot/api/v1/chat/completions", "k", "m", session=S(), sleep=lambda s: None)
+    assert b.ask("hi") == "ok"
