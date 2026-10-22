@@ -86,3 +86,12 @@ def test_openrouter_keys_start_on_different_free_models():
     rows = [{"provider": "openrouter", "model": "openai/gpt-4o-mini", "url": "https://openrouter.ai/api/v1", "key": f"o{i}"} for i in range(3)]
     firsts = [next(b.model for b in summarise.backends_from_rows(rows) if b.api_key == f"o{i}") for i in range(3)]
     assert firsts == summarise.EXTRA_MODELS["openrouter"][:3]
+
+
+def test_github_models_follow_the_site_rows(monkeypatch):
+    monkeypatch.setattr(summarise, "site_rows", lambda env: [{"provider": "groq", "model": "x", "url": "https://g.test", "key": "k1"}])
+    backends = summarise.backends_from_env({"GITHUB_MODELS_TOKEN": "ghs_abc", "LLM_PROVIDERS": "groq"})
+    gh = [b for b in backends if b.name == "github"]
+    assert [b.model for b in gh] == summarise.GITHUB_MODELS and all(b.usage_key == "github-models" for b in gh)
+    assert backends.index(gh[0]) > max(i for i, b in enumerate(backends) if b.api_key == "k1" and b.name != "github" and i < backends.index(gh[0]))
+    assert summarise.github_models({}) == []
