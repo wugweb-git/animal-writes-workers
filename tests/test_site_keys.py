@@ -115,3 +115,10 @@ def test_free_quota_used_drops_that_keys_free_models_only():
     alive = [(b.api_key, b.model) for n, b in enumerate(owner.backends) if n not in owner.dead]
     assert not any(k == "a" for k, m in alive)  # key a has only free models: all dropped for the run
     assert any(k == "b" and m.endswith(":free") for k, m in alive)
+
+
+def test_nvidia_keys_rotate_free_models_and_wait_longer():
+    rows = [{"provider": "nvidia", "model": "nvidia/nemotron-3.5-lightning-30b-a3b", "url": "https://integrate.api.nvidia.com/v1/chat/completions", "key": f"nvapi-{i}"} for i in range(2)]
+    bs = summarise.backends_from_rows(rows)
+    firsts = [next(b.model for b in bs if b.api_key == f"nvapi-{i}") for i in range(2)]
+    assert firsts == summarise.EXTRA_MODELS["nvidia"][:2] and all(b.timeout == 60 for b in bs)

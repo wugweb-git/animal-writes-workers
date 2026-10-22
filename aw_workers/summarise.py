@@ -261,7 +261,7 @@ class GroqBackend:
             headers={"Authorization": f"Bearer {self.api_key}"},
             # 800: gpt-oss models reason before answering, and 300 tokens could end before the answer (12 Oct 2026)
             json={"model": self.model, "max_tokens": 800, "messages": [{"role": "user", "content": prompt}]},
-            timeout=30, sleep=self.sleep, min_interval=self.min_interval, state=self.state,
+            timeout=getattr(self, "timeout", 30), sleep=self.sleep, min_interval=self.min_interval, state=self.state,
         )
         body = resp.json()
         if "choices" not in body and isinstance(body.get("data"), dict):
@@ -331,9 +331,11 @@ EXTRA_MODELS = {
                  "nvidia/nemotron-3.5-lightning-30b-a3b", "nvidia/muse-glimmer-30b", "mistral/leanstral-1-5"],
     "cline": ["minimax/minimax-m3.1-flash:free", "nvidia/nemotron-3-ultra-550b-a55b:free"],
     "commandcode": ["reflection/beam:free", "poolside/laguna-s-2.1-free", "stealth/glyph-cluster:free"],
+    "nvidia": ["nvidia/nemotron-3.5-lightning-30b-a3b", "nvidia/nemotron-3-ultra-550b-a55b", "meta/muse-glimmer-30b"],
 }
 # Free models a key is tried on BEFORE its saved model (owner, 22 Oct 2026: use the daily free quotas, pay only after).
-FREE_FIRST = {"openrouter", "requesty", "cline", "commandcode"}
+FREE_FIRST = {"openrouter", "requesty", "cline", "commandcode", "nvidia"}
+SLOW = {"nvidia": 60}  # seconds per call: NVIDIA's free models take about 20 s (22 Oct 2026)
 
 
 def backends_from_rows(rows: list[dict], budget: float | None = None, ledger: dict | None = None) -> list:
@@ -359,6 +361,7 @@ def backends_from_rows(rows: list[dict], budget: float | None = None, ledger: di
             made = [OpenAICompatBackend(r.get("name") or provider, r["url"], key, m) for m in models]
             for b in made:
                 b.free_cap = provider == "openrouter"  # daily free requests per account, paced (free_budget.py)
+                b.timeout = SLOW.get(provider, 30)
             out += made
         else:
             log.warning("AI model row skipped (%s): needs a model and an API address", r.get("name") or provider)
