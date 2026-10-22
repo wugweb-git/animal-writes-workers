@@ -31,6 +31,8 @@ def _outcome(exc: BaseException | None) -> str:
 
 
 def record(backend, exc: BaseException | None) -> None:
+    if getattr(exc, "not_called", False):  # skipped before any call (a free-model cap): nothing to count
+        return
     key = str(getattr(backend, "api_key", "") or "")
     if not key:
         return

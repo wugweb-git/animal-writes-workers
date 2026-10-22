@@ -247,6 +247,14 @@ class GroqBackend:
         self.sleep, self.min_interval, self.state = sleep or time.sleep, min_interval, {}
 
     def ask(self, prompt: str) -> str:
+        if getattr(self, "free_cap", False) and _free_model(self.model):  # this run's share of the account's free requests
+            from . import free_budget
+
+            acct = free_budget.openrouter_account(self.api_key)
+            if acct is not None and not acct.take():
+                exc = FreeQuotaUsed(f"free-models-per-day: this run's share for account …{acct.id[-4:]} is used")
+                exc.not_called = True
+                raise exc
         resp = _post_with_retry(
             self.session,
             self.URL,
@@ -347,7 +355,10 @@ def backends_from_rows(rows: list[dict], budget: float | None = None, ledger: di
         elif provider == "gemini":
             out += [GeminiBackend(key, m) for m in models or ["gemini-flash-latest"]]
         elif r.get("url") and models:
-            out += [OpenAICompatBackend(r.get("name") or provider, r["url"], key, m) for m in models]
+            made = [OpenAICompatBackend(r.get("name") or provider, r["url"], key, m) for m in models]
+            for b in made:
+                b.free_cap = provider == "openrouter"  # daily free requests per account, paced (free_budget.py)
+            out += made
         else:
             log.warning("AI model row skipped (%s): needs a model and an API address", r.get("name") or provider)
     return out
