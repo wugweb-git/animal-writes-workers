@@ -1,0 +1,43 @@
+name: Tests
+
+# On push and pull requests, and after "Sources sync" (its commits are pushed with the workflow token, which starts
+# no push workflows). Sourcing does not wait for this: a failure on main opens (or adds to) an issue assigned to the
+# owner, which GitHub emails (owner, 22 Oct 2026).
+on:
+  push:
+  pull_request:
+  workflow_run:
+    workflows: ["Sources sync"]
+    types: [completed]
+  workflow_dispatch:
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements-dev.txt
+      - run: pytest -q
+      - name: Tell the owner
+        if: failure() && github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TITLE: "Tests failing on ${{ github.ref_name }}"
+          BODY: "Tests failed on ${{ github.sha }}: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}. Sourcing runs keep going."
+        run: |
+          n=$(gh issue list --state open --search "in:title \"$TITLE\"" --json number -q '.[0].number')
+          if [ -n "$n" ]; then gh issue comment "$n" --body "$BODY"
+          else gh issue create --title "$TITLE" --body "$BODY" --assignee "${{ github.repository_owner }}"; fi

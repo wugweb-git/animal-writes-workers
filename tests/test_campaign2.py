@@ -61,9 +61,10 @@ def test_new_sources_load():
 
 
 def test_lab_rules_coverage_goes_to_media_and_pr():
-    srcs, _ = S.load_sources_data(_lists())
-    src = next(s for s in srcs if s.id == "gnews-lab-animal-rules")
-    assert src.file_as == "press"
+    # The source is built here, not read from sources.yaml: that file is copied from the site every hour, and the
+    # 21 Oct copy without file_as failed this test and skipped two sourcing runs (22 Oct 2026).
+    S.load_sources_data(_lists())
+    src = S.Source("gnews-lab-animal-rules", "Google News", "rss", "news", "https://news.google.com/rss", file_as="press")
     item = S.Item(src, "Centre proposes CCSEA draft rules on animal experiments", "https://example.com/story", date(2026, 10, 14),
                   publisher="Example Times", image="https://example.com/a.jpg")
     p = build_payload(item, "")

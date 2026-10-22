@@ -19,20 +19,10 @@ concurrency:
   group: sourcing
   cancel-in-progress: false
 
+# Tests run in tests.yml on push and pull requests; a failing test emails the owner there and no longer skips
+# sourcing (owner, 22 Oct 2026: a sources.yaml copy from the site failed a test and skipped two runs).
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-python@v6
-        with:
-          python-version: "3.12"
-          cache: pip
-      - run: pip install -r requirements-dev.txt
-      - run: pytest -q
-
   run:
-    needs: test
     runs-on: ubuntu-latest
     timeout-minutes: 45 # the run stops taking new items after 25 minutes (AW_TIME_BUDGET_MIN) and saves as it goes
     env:
