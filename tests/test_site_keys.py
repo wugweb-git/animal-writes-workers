@@ -54,3 +54,11 @@ def test_secret_keys_follow_site_rows_without_repeats(monkeypatch):
     backends = summarise.backends_from_env({"GROQ_API_KEY": "k1\nk2", "LLM_PROVIDERS": "groq"})
     keys = [b.api_key for b in backends]
     assert keys[-1] == "k2" and set(keys[:-1]) == {"k1"} and len(keys) == 6  # k1: saved model + 4 free Groq models
+
+
+def test_openrouter_key_uses_its_free_models_before_the_paid_one():
+    rows = [{"provider": "openrouter", "name": "openrouter", "model": "openai/gpt-4o-mini", "url": "https://openrouter.ai/api/v1", "key": "o1"}]
+    models = [b.model for b in summarise.backends_from_rows(rows)]
+    assert models[-1] == "openai/gpt-4o-mini" and all(m.endswith(":free") for m in models[:-1]) and len(models) == 4
+    rows[0]["model"] = "minimax/minimax-m3.1-flash:free"  # a free saved model is not repeated
+    assert [b.model for b in summarise.backends_from_rows(rows)] == summarise.EXTRA_MODELS["openrouter"]

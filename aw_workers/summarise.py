@@ -307,7 +307,11 @@ def site_rows(env, session=None) -> list[dict]:
 EXTRA_MODELS = {
     "gemini": ["gemini-flash-lite-latest", "gemini-3-flash-preview", "gemini-flash-latest"],
     "groq": ["openai/gpt-oss-120b", "openai/gpt-oss-20b", "llama-3.3-70b-versatile", "llama-3.1-8b-instant"],
+    "openrouter": ["minimax/minimax-m3.1-flash:free", "nvidia/nemotron-3-ultra-550b-a55b:free", "google/gemma-4-31b-it:free"],
+    "requesty": ["google/gemma-4-31b-it", "nvidia/nemotron-3-ultra-550b-a55b"],
 }
+# Free models a key is tried on BEFORE its saved model (owner, 22 Oct 2026: use the daily free quotas, pay only after).
+FREE_FIRST = {"openrouter", "requesty"}
 
 
 def backends_from_rows(rows: list[dict], budget: float | None = None, ledger: dict | None = None) -> list:
@@ -315,7 +319,8 @@ def backends_from_rows(rows: list[dict], budget: float | None = None, ledger: di
     out = []
     for r in rows:
         key, model, provider = r["key"].strip(), (r.get("model") or "").strip(), r.get("provider") or "other"
-        models = list(dict.fromkeys([m for m in [model, *EXTRA_MODELS.get(provider, [])] if m]))
+        extra = EXTRA_MODELS.get(provider, [])
+        models = list(dict.fromkeys([m for m in ([*extra, model] if provider in FREE_FIRST else [model, *extra]) if m]))
         if provider == "anthropic":
             out.append(ClaudeBackend(key, budget_usd=budget, ledger=ledger, model=model or MODEL))
         elif provider == "gemini":
