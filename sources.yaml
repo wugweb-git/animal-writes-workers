@@ -216,6 +216,7 @@ sources:
   - IAEC
   - Palamur
   - non-animal method
+  file_as: press
 - id: pfa-substack
   name: People For Animals (Substack)
   kind: rss
