@@ -346,26 +346,6 @@ def backends_from_rows(rows: list[dict], budget: float | None = None, ledger: di
     return out
 
 
-# GitHub Models (owner, 22 Oct 2026): free with the GitHub account, through the workflow's own token (GITHUB_MODELS_TOKEN
-# = github.token with "models: read"), so no key to keep. Free limits are per model and small (about 150 a day for the
-# low tier, 15 a minute), so it comes after the owner's saved rows. A model GitHub does not offer just fails over.
-GITHUB_MODELS_URL = "https://models.github.ai/inference/chat/completions"
-GITHUB_MODELS = ["openai/gpt-4.1-mini", "openai/gpt-4o-mini", "mistral-ai/mistral-small-2503", "microsoft/Phi-4",
-                 "meta/Llama-4-Scout-17B-16E-Instruct", "deepseek/DeepSeek-V3-0324"]
-
-
-def github_models(env) -> list:
-    token = (env.get("GITHUB_MODELS_TOKEN") or "").strip()
-    if not token:
-        return []
-    out = []
-    for m in GITHUB_MODELS:
-        b = OpenAICompatBackend("github", GITHUB_MODELS_URL, token, m, min_interval=4.0)
-        b.usage_key = "github-models"
-        out.append(b)
-    return out
-
-
 def backends_from_env(env, ledger: dict | None = None) -> list:
     """Providers in LLM_PROVIDERS order (default haiku,gemini,groq), one backend per key.
     Providers without a key are skipped. Haiku stops for the month once its estimated spend
@@ -387,7 +367,7 @@ def backends_from_env(env, ledger: dict | None = None) -> list:
     if unknown:
         raise ValueError(f"unknown LLM_PROVIDERS entries: {', '.join(unknown)}")
     ledger = ledger if ledger is not None else {}
-    first = backends_from_rows(site_rows(env), budget, ledger) + github_models(env)  # the owner's saved rows, top down
+    first = backends_from_rows(site_rows(env), budget, ledger)  # the owner's saved rows, top down
     used = {b.api_key for b in first}
     return first + [b for p in order for b in makers[p]() if b.api_key not in used]  # a key saved in both: once
 

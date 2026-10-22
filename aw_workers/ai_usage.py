@@ -31,7 +31,7 @@ def _outcome(exc: BaseException | None) -> str:
 
 
 def record(backend, exc: BaseException | None) -> None:
-    key = str(getattr(backend, "usage_key", "") or getattr(backend, "api_key", "") or "")  # usage_key: a key that changes every run (GitHub's token)
+    key = str(getattr(backend, "api_key", "") or "")
     if not key:
         return
     row = USAGE.setdefault(key_id(key), {"provider": getattr(backend, "name", ""), "last4": key[-4:], "calls": 0,

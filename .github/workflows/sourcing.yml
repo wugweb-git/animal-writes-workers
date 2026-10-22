@@ -32,9 +32,6 @@ jobs:
       - run: pytest -q
 
   run:
-    permissions:
-      contents: read
-      models: read  # GitHub Models (owner, 22 Oct 2026)
     needs: test
     runs-on: ubuntu-latest
     timeout-minutes: 45 # the run stops taking new items after 25 minutes (AW_TIME_BUDGET_MIN) and saves as it goes
@@ -57,7 +54,6 @@ jobs:
       GEMINI_API_KEY_2: ${{ secrets.GEMINI_API_KEY_2 }}
       XAI_API_KEY: ${{ secrets.XAI_API_KEY }}
       OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-      GITHUB_MODELS_TOKEN: ${{ github.token }}  # GitHub Models, free with the account (needs models: read)
       BRAVE_SEARCH_KEY: ${{ secrets.BRAVE_SEARCH_KEY }}
       LLM_PROVIDERS: ${{ vars.LLM_PROVIDERS || 'haiku,gemini,groq' }}
       HAIKU_MONTHLY_BUDGET_USD: ${{ vars.HAIKU_MONTHLY_BUDGET_USD || '4' }}
