@@ -79,6 +79,7 @@ jobs:
           cache: pip
       - run: pip install -r requirements-dev.txt
       - run: pytest -q tests/test_directory.py
+        id: tests
       - run: python -m aw_workers.directory.run
         id: main
       - uses: actions/upload-artifact@v4

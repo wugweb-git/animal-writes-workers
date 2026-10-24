@@ -41,7 +41,7 @@ runs:
         main_outcome=$(jq -r --arg m "$MAIN" '.[$m].outcome // ""' <<< "$STEPS" 2>/dev/null)
         case "$STATUS" in
           cancelled) result=cancelled ;;
-          failure) result=failed ;;
+          failure) result=failed; [ -n "$failed" ] || failed="setup" ;;  # a step without an id (checkout, install) failed
           *) if [ -n "$MAIN" ] && [ "$main_outcome" = "skipped" ]; then result=skipped; else result=success; fi ;;
         esac
         [ "$PHASE" = "start" ] && result=running
