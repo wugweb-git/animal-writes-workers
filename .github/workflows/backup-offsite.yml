@@ -31,8 +31,14 @@ jobs:
         id: main
         run: |
           set -euo pipefail
+          # The password goes to curl in a config file (mode 600, removed on exit), never on the command line; the same
+          # as .github/actions/report. A config file, not .netrc: application passwords contain spaces.
+          cfg=$(umask 077; mktemp "$RUNNER_TEMP/aw-curl.XXXXXX")
+          trap 'rm -f "$cfg"' EXIT
+          esc() { printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'; }
+          printf 'user = "%s:%s"\n' "$(esc "$WP_INGEST_USER")" "$(esc "$WP_INGEST_APP_PASSWORD")" > "$cfg"
           for kind in db code; do
-            curl -fsS -u "$WP_INGEST_USER:$WP_INGEST_APP_PASSWORD" -D "h-$kind.txt" -o "aw-$kind.gz" "${WP_BASE_URL%/}/wp-json/aw/v1/backup/$kind"
+            curl -fsS -K "$cfg" -D "h-$kind.txt" -o "aw-$kind.gz" "${WP_BASE_URL%/}/wp-json/aw/v1/backup/$kind"
             name=$(grep -i '^content-disposition' "h-$kind.txt" | sed -E 's/.*filename="([^"]+)".*/\1/' | tr -d '\r')
             mv "aw-$kind.gz" "$name"
             gzip -t "$name"
