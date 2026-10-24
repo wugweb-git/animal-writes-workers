@@ -20,7 +20,15 @@ jobs:
       WP_INGEST_APP_PASSWORD: ${{ secrets.WP_INGEST_APP_PASSWORD }}
       GH_TOKEN: ${{ github.token }}
     steps:
+      - uses: actions/checkout@v5
+        with:
+          sparse-checkout: .github/actions
+      - name: Report the start to the site
+        uses: ./.github/actions/report
+        with:
+          phase: start
       - name: Download the latest backups
+        id: main
         run: |
           set -euo pipefail
           for kind in db code; do
@@ -45,3 +53,11 @@ jobs:
             d=${t#site-backup-}
             if [[ "$d" < "$cutoff" ]]; then gh release delete "$t" --repo "$GITHUB_REPOSITORY" --yes --cleanup-tag; fi
           done
+      - name: Report the end to the site (Settings → Sourcing → Workers)
+        if: always()
+        uses: ./.github/actions/report
+        with:
+          phase: end
+          main: main
+          steps: ${{ toJSON(steps) }}
+          status: ${{ job.status }}

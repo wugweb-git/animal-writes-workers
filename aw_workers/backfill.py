@@ -27,7 +27,7 @@ from pathlib import Path
 
 import requests
 
-from . import ingest, relevance, sources, summarise, summary_rules
+from . import counts, ingest, relevance, sources, summarise, summary_rules
 from . import policy as policy_mod
 from .run import SEEN_FILE, default_enricher, load_seen, run, save_seen, truthy
 
@@ -207,6 +207,7 @@ def main() -> int:
             log.warning("relevance alert not sent: %s", exc)
     out = report(client.rows, stats, floor)
     print(json.dumps({k: (v if not isinstance(v, list) else len(v)) for k, v in out.items()}, ensure_ascii=False))
+    counts.write(sent=out["sent"], duplicate=len(out["duplicates_exact"]), dead_links=len(out["dead_links"]), failed=len(stats.errors))
     return 0
 
 

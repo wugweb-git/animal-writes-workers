@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from datetime import date, timedelta
 from pathlib import Path
 
-from . import documents, enrich, headline_case, ingest, merge, policy as policy_mod, press, relay, relevance, sources, summarise, summary_rules
+from . import counts, documents, enrich, headline_case, ingest, merge, policy as policy_mod, press, relay, relevance, sources, summarise, summary_rules
 from . import titles as titles_mod
 
 # How far back Google News searches look (AW_WINDOW, e.g. "4d" to catch up after an outage).
@@ -473,6 +473,8 @@ def main() -> int:
           f"skipped={stats.skipped} failed={stats.failed} rejected={stats.rejected} classifier_unavailable={stats.unavailable} "
           f"sources={stats.sources} sources_failed={stats.sources_failed}" + (" stopped_early=1" if stats.stopped_early else ""))
     print(f"relevance gate: {gate.counts}")
+    counts.write(fetched=stats.fetched, new=stats.new, published=stats.published, duplicate=stats.duplicate,
+                 rejected=stats.rejected, failed=stats.failed, sources_failed=stats.sources_failed, sources=stats.sources)
     print(f"lists: {'the site (Settings → Sourcing)' if lists_from == 'site' else 'sources.yaml'}")
     sources_down = sources_failing(stats)
     if sources_down:

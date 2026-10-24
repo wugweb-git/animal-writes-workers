@@ -25,6 +25,10 @@ jobs:
         working-directory: scripts/seo-scores
     steps:
       - uses: actions/checkout@v5
+      - name: Report the start to the site
+        uses: ./.github/actions/report
+        with:
+          phase: start
       - uses: actions/setup-node@v5
         with:
           node-version: "22"
@@ -32,3 +36,12 @@ jobs:
           cache-dependency-path: scripts/seo-scores/package-lock.json
       - run: npm ci --no-audit --no-fund
       - run: node score.js
+        id: main
+      - name: Report the end to the site (Settings → Sourcing → Workers)
+        if: always()
+        uses: ./.github/actions/report
+        with:
+          phase: end
+          main: main
+          steps: ${{ toJSON(steps) }}
+          status: ${{ job.status }}

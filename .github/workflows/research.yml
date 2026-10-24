@@ -44,6 +44,10 @@ jobs:
       GROQ_MODEL: ${{ vars.GROQ_MODEL }}
     steps:
       - uses: actions/checkout@v5
+      - name: Report the start to the site
+        uses: ./.github/actions/report
+        with:
+          phase: start
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
@@ -57,6 +61,7 @@ jobs:
           key: research-known-${{ github.run_id }}
           restore-keys: research-known-
       - run: python -m aw_workers.research
+        id: main
       - name: Save known research DOIs
         if: always() && hashFiles('.state/**') != ''
         uses: actions/cache/save@v4
@@ -68,3 +73,11 @@ jobs:
         with:
           name: research-report
           path: research-report.json
+      - name: Report the end to the site (Settings → Sourcing → Workers)
+        if: always()
+        uses: ./.github/actions/report
+        with:
+          phase: end
+          main: main
+          steps: ${{ toJSON(steps) }}
+          status: ${{ job.status }}

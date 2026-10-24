@@ -24,7 +24,7 @@ from pathlib import Path
 
 import requests
 
-from . import ingest, relevance, research_titles, sources, summarise, summary_rules
+from . import counts as run_counts, ingest, relevance, research_titles, sources, summarise, summary_rules
 from .run import truthy
 from .sources import Item, Source
 
@@ -405,6 +405,7 @@ def main() -> int:
         lines += [f"| {r['date']} | {r['journal']} | [{r['title'][:90]}]({r['url']}) |" for r in rows]
         Path(summary_file).write_text("\n".join(lines) + "\n")
     print(json.dumps(counts))
+    run_counts.write(**{k.replace(" ", "_"): v for k, v in counts.items()})
     return 0
 
 

@@ -24,7 +24,7 @@ import time
 from collections import Counter, defaultdict
 from pathlib import Path
 
-from .. import ingest, summarise
+from .. import counts, ingest, summarise
 from . import ai, lead_finder, merge
 from .model import Context, Polite, now_ist
 from .sources import REGISTRY, google_places
@@ -203,6 +203,7 @@ def main(env=None) -> int:
         with open(env["GITHUB_STEP_SUMMARY"], "a") as fh:
             fh.write(md.split("## Listings")[0])
     print(md.split("## Listings")[0])
+    counts.write(listings=done, google_requests=google_n, dry_run=dry)
     return 0
 
 

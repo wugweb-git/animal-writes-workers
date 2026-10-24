@@ -26,7 +26,7 @@ import os
 import re
 from collections import Counter
 
-from . import ingest, summarise
+from . import counts, ingest, summarise
 from .titles import no_hyphens
 
 log = logging.getLogger("aw_workers.focus_keywords")
@@ -240,6 +240,7 @@ def main() -> int:
                 stats["written"] += int(res.get("written") or 0)
                 stats["refused by site"] += len(res.get("skipped") or [])
     log.info("done: %s; providers used: %s", dict(stats), owner.used)
+    counts.write(**{("fk_" if os.environ.get("AW_SEO_TYPES") else "") + k.replace(" ", "_"): v for k, v in stats.items()})
     return 0
 
 
