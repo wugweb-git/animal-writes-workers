@@ -179,26 +179,50 @@ def norm_title(t: str) -> str:
     return " ".join(re.sub(r"[^a-z0-9]+", " ", html.unescape(t or "").lower()).split())
 
 
-def surname(name: str) -> str:
-    parts = re.sub(r"[^a-z\s-]", "", (name or "").lower()).split()
-    return parts[-1] if parts else ""
+_HONORIFIC = {"mr", "mrs", "ms", "miss", "dr", "prof", "professor", "sri", "smt", "shri"}
 
 
-def same_study(p: dict, studies: list[dict]) -> int:
-    """The site item that is this paper under another DOI or URL (a preprint and its journal version): normalised
-    titles alike at >= 0.9 and the same first author (surname) or year. 0 when none (owner, 24 Oct 2026: 20054 was
-    12573 again, once from Europe PMC and once from the journal's DOI)."""
+def author_key(name: str) -> str:
+    """First author as "surname initial", lower case: "Nitin Sekar" and "N. Sekar" and "Sekar, Nitin" are "sekar n".
+    Honorifics are dropped, and of a list packed into one string ("Ms. A B, Ms. C D") only the first name counts."""
+    name = (name or "").strip()
+    if "," in name:
+        head, _, rest = name.partition(",")
+        rest_words = [w for w in re.findall(r"[a-z]+", rest.lower()) if w not in _HONORIFIC]
+        name = f"{rest.strip()} {head.strip()}" if "," not in rest and 0 < len(rest_words) <= 2 else head  # Family, Given
+    words = [w for w in re.findall(r"[a-z]+", name.lower()) if w not in _HONORIFIC]
+    return f"{words[-1]} {words[0][0]}" if len(words) >= 2 else (words[0] if words else "")
+
+
+def same_study(p: dict, studies: list[dict]) -> tuple[str, dict]:
+    """The site item this paper may be under another DOI or URL (preprint and journal version; owner, 24 Oct 2026):
+    - ("duplicate", item): normalised titles alike at >= 0.9 and, both listing authors, the same first author
+      (surname and initial). Skipped before any AI step (20054 was 12573 again).
+    - ("possible", item): titles alike at >= 0.9 and the same year, but one of the two lists no authors. Not skipped:
+      sent held as a possible duplicate, with a link to the item, for a person to decide.
+    - ("", {}) otherwise. Alike titles with different first authors are different papers."""
     title = norm_title(p.get("title", ""))
     if not title:
-        return 0
-    first = surname((p.get("authors") or [""])[0])
+        return "", {}
+    first = author_key((p.get("authors") or [""])[0])
     year = str(p.get("date", ""))[:4]
+    possible: dict = {}
     for s in studies:
         if difflib.SequenceMatcher(None, title, norm_title(s.get("title", ""))).ratio() < SAME_STUDY:
             continue
-        if (first and first == surname(s.get("first_author", ""))) or (year and year == str(s.get("year", ""))):
-            return int(s.get("id") or 0) or -1
-    return 0
+        theirs = author_key(s.get("first_author", ""))
+        if first and theirs:
+            if first == theirs:
+                return "duplicate", s
+            continue
+        if not possible and year and year == str(s.get("year", "")):
+            possible = s
+    return ("possible", possible) if possible else ("", {})
+
+
+def possible_duplicate_hold(s: dict) -> str:
+    link = s.get("url") or (f"post {s.get('id')}" if s.get("id") else "")
+    return f"possible duplicate of \"{s.get('title', '')}\" ({link}): same title and year, authors missing on one side"
 
 
 def drop_existing(papers: list[dict], client, known: set[str]) -> tuple[list[dict], int]:
@@ -231,12 +255,16 @@ def drop_existing(papers: list[dict], client, known: set[str]) -> tuple[list[dic
         for p in chunk:
             if doi_of(p["url"]) in have_dois or p["url"] in have_urls:
                 already += 1
-            elif (twin := same_study(p, studies)):
-                already += 1
-                log.info("research: %s is the same study as site item %s; skipped", p["url"], twin)
-                if doi_of(p["url"]):
-                    known.add(doi_of(p["url"]))
             else:
+                kind, twin = same_study(p, studies)
+                if kind == "duplicate":
+                    already += 1
+                    log.info("research: %s is the same study as site item %s; skipped", p["url"], twin.get("id"))
+                    if doi_of(p["url"]):
+                        known.add(doi_of(p["url"]))
+                    continue
+                if kind == "possible":
+                    p["possible_duplicate"] = twin  # sent held for a person (main)
                 keep.append(p)
     return keep, already
 
@@ -346,6 +374,8 @@ def main() -> int:
             payload = dict(ingest.build_payload(item, summary, cats), backfill=True, study_title=p["title"],
                            authors=p.get("authors") or [], journal=p.get("journal") or "")  # the study's credit (Sources block)
             with_headline(payload, headline_fields(summariser, p, summary))
+            if p.get("possible_duplicate"):  # same title and year, authors missing on one side (owner, 24 Oct 2026)
+                payload["hold"] = "; ".join(filter(None, [payload.get("hold", ""), possible_duplicate_hold(p["possible_duplicate"])]))
             if doubt:  # India not confirmed: sent for review, never published by itself (owner, 20 Oct 2026)
                 payload["hold"] = "; ".join(filter(None, [payload.get("hold", ""), doubt]))
             if getattr(summariser, "last_numbers", None):  # a number not in the source: held for review (owner, 20 Oct 2026)

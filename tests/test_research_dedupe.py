@@ -77,18 +77,42 @@ PAPER_20054 = {"url": "https://doi.org/10.1111/cobi.70204", "date": "2026-01-07"
 
 
 def test_regression_12573_20054_same_study_under_another_doi_is_skipped():
-    assert research.same_study(PAPER_20054, [SITE_12573]) == 12573
+    kind, twin = research.same_study(PAPER_20054, [SITE_12573])
+    assert kind == "duplicate" and twin["id"] == 12573  # same title, same first author (Sekar N)
     known = set()
     todo, already = research.drop_existing([PAPER_20054], _Client(studies=[SITE_12573]), known)
     assert todo == [] and already == 1 and "10.1111/cobi.70204" in known
 
 
-def test_similar_title_needs_the_same_first_author_or_year():
-    other = dict(PAPER_20054, url="https://doi.org/10.1/z", date="2024-03-01", authors=["Someone Else"])
-    assert research.same_study(other, [SITE_12573]) == 0  # title alike, but another author and another year
-    assert research.same_study(dict(other, date="2026-05-01"), [SITE_12573]) == 12573  # same year
+def test_same_title_and_year_but_another_first_author_is_not_a_duplicate():
+    other = dict(PAPER_20054, url="https://doi.org/10.1/z", authors=["Priya Menon", "Nitin Sekar"])  # 2026 like 12573
+    assert research.same_study(other, [SITE_12573]) == ("", {})
+    todo, already = research.drop_existing([other], _Client(studies=[SITE_12573]), set())
+    assert todo == [other] and already == 0 and "possible_duplicate" not in other
+
+
+def test_authors_missing_on_one_side_same_year_is_held_as_possible_duplicate():
+    no_authors = dict(PAPER_20054, url="https://doi.org/10.1/w", authors=[])
+    kind, twin = research.same_study(no_authors, [dict(SITE_12573, url="https://animalwrites.in/?p=12573")])
+    assert kind == "possible" and twin["id"] == 12573
+    todo, already = research.drop_existing([no_authors], _Client(studies=[dict(SITE_12573, url="https://animalwrites.in/?p=12573")]), set())
+    assert todo == [no_authors] and already == 0  # not skipped: sent, held for a person
+    hold = research.possible_duplicate_hold(no_authors["possible_duplicate"])
+    assert hold.startswith("possible duplicate of") and "https://animalwrites.in/?p=12573" in hold
+    other_year = dict(no_authors, date="2024-02-01")
+    assert research.same_study(other_year, [SITE_12573]) == ("", {})  # no authors and another year: nothing
+
+
+def test_unlike_title_is_never_a_match():
     unlike = dict(PAPER_20054, title="Elephant corridors and railway deaths in Assam")
-    assert research.same_study(unlike, [SITE_12573]) == 0
+    assert research.same_study(unlike, [SITE_12573]) == ("", {})
+
+
+def test_author_key_reads_the_usual_forms():
+    k = research.author_key
+    assert k("Nitin Sekar") == k("N. Sekar") == k("Sekar, Nitin") == k("NITIN SEKAR") == "sekar n"
+    assert k("Ms. Athira Ramachandran, Ms. Aysha Ruksana, Mr. Bajio Sibi") == "ramachandran a"
+    assert k("Priya Menon") != k("Nitin Sekar") and k("") == ""
 
 
 def test_doi_trailing_slash_is_the_same_doi():
