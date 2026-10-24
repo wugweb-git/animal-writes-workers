@@ -11,6 +11,7 @@ Run: python -m aw_workers.research   (DRY_RUN=true by default)
 
 from __future__ import annotations
 
+import difflib
 import html
 import json
 import logging
@@ -147,6 +148,127 @@ def crossref(term: str, floor: date, get=requests.get) -> list[dict]:
     return out
 
 
+KNOWN_FILE = Path(os.environ.get("AW_RESEARCH_KNOWN", ".state/research-known.json"))
+EXISTS_BATCH = 500
+_DOI = re.compile(r"^https?://(?:dx\.)?doi\.org/(10\.[^\s?#]+)", re.I)
+
+
+def doi_of(url: str) -> str:
+    """The DOI of a doi.org link, lower case ('' otherwise)."""
+    m = _DOI.match(url or "")
+    return m.group(1).lower().rstrip("/") if m else ""
+
+
+def load_known(path: Path = KNOWN_FILE) -> set[str]:
+    try:
+        return set(json.loads(path.read_text(encoding="utf-8")))
+    except (OSError, ValueError):
+        return set()
+
+
+def save_known(known: set[str], path: Path = KNOWN_FILE) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(sorted(known)), encoding="utf-8")
+
+
+SAME_STUDY = 0.9
+
+
+def norm_title(t: str) -> str:
+    """Lower case, letters and digits only, single spaces (an en dash and a hyphen read the same)."""
+    return " ".join(re.sub(r"[^a-z0-9]+", " ", html.unescape(t or "").lower()).split())
+
+
+_HONORIFIC = {"mr", "mrs", "ms", "miss", "dr", "prof", "professor", "sri", "smt", "shri"}
+
+
+def author_key(name: str) -> str:
+    """First author as "surname initial", lower case: "Nitin Sekar" and "N. Sekar" and "Sekar, Nitin" are "sekar n".
+    Honorifics are dropped, and of a list packed into one string ("Ms. A B, Ms. C D") only the first name counts."""
+    name = (name or "").strip()
+    if "," in name:
+        head, _, rest = name.partition(",")
+        rest_words = [w for w in re.findall(r"[a-z]+", rest.lower()) if w not in _HONORIFIC]
+        name = f"{rest.strip()} {head.strip()}" if "," not in rest and 0 < len(rest_words) <= 2 else head  # Family, Given
+    words = [w for w in re.findall(r"[a-z]+", name.lower()) if w not in _HONORIFIC]
+    return f"{words[-1]} {words[0][0]}" if len(words) >= 2 else (words[0] if words else "")
+
+
+def same_study(p: dict, studies: list[dict]) -> tuple[str, dict]:
+    """The site item this paper may be under another DOI or URL (preprint and journal version; owner, 24 Oct 2026):
+    - ("duplicate", item): normalised titles alike at >= 0.9 and, both listing authors, the same first author
+      (surname and initial). Skipped before any AI step (20054 was 12573 again).
+    - ("possible", item): titles alike at >= 0.9 and the same year, but one of the two lists no authors. Not skipped:
+      sent held as a possible duplicate, with a link to the item, for a person to decide.
+    - ("", {}) otherwise. Alike titles with different first authors are different papers."""
+    title = norm_title(p.get("title", ""))
+    if not title:
+        return "", {}
+    first = author_key((p.get("authors") or [""])[0])
+    year = str(p.get("date", ""))[:4]
+    possible: dict = {}
+    for s in studies:
+        if difflib.SequenceMatcher(None, title, norm_title(s.get("title", ""))).ratio() < SAME_STUDY:
+            continue
+        theirs = author_key(s.get("first_author", ""))
+        if first and theirs:
+            if first == theirs:
+                return "duplicate", s
+            continue
+        if not possible and year and year == str(s.get("year", "")):
+            possible = s
+    return ("possible", possible) if possible else ("", {})
+
+
+def possible_duplicate_hold(s: dict) -> str:
+    link = s.get("url") or (f"post {s.get('id')}" if s.get("id") else "")
+    return f"possible duplicate of \"{s.get('title', '')}\" ({link}): same title and year, authors missing on one side"
+
+
+def drop_existing(papers: list[dict], client, known: set[str]) -> tuple[list[dict], int]:
+    """Papers the site does not have yet, before any AI step (owner, 24 Oct 2026: a hand-started run summarised a year of
+    papers, most already on the site). Known DOIs from earlier runs first, then one aw/v1/exists call per 500 papers;
+    DOIs found on the site are added to `known`. If the site cannot answer, the papers are kept (the ingest still
+    refuses duplicates). Returns (papers to process, how many are already on the site)."""
+    fresh = [p for p in papers if not (doi_of(p["url"]) and doi_of(p["url"]) in known)]
+    already = len(papers) - len(fresh)
+    if client is None or not fresh:
+        return fresh, already
+    keep: list[dict] = []
+    studies: list[dict] = []
+    for i in range(0, len(fresh), EXISTS_BATCH):
+        chunk = fresh[i:i + EXISTS_BATCH]
+        dois = [d for d in (doi_of(p["url"]) for p in chunk) if d]
+        try:
+            found = client.exists(dois, [p["url"] for p in chunk], index=(i == 0))
+        except ingest.AuthError:
+            raise
+        except Exception as exc:  # endpoint missing or the site busy: keep them, the ingest refuses duplicates anyway
+            log.warning("research: could not ask the site which papers it has (%s); checking them one by one", exc)
+            keep += fresh[i:]
+            break
+        if i == 0:
+            studies = found.get("studies") or []
+        have_dois = {str(d).lower() for d in found.get("dois") or []}
+        have_urls = {str(u) for u in found.get("urls") or []}
+        known |= have_dois
+        for p in chunk:
+            if doi_of(p["url"]) in have_dois or p["url"] in have_urls:
+                already += 1
+            else:
+                kind, twin = same_study(p, studies)
+                if kind == "duplicate":
+                    already += 1
+                    log.info("research: %s is the same study as site item %s; skipped", p["url"], twin.get("id"))
+                    if doi_of(p["url"]):
+                        known.add(doi_of(p["url"]))
+                    continue
+                if kind == "possible":
+                    p["possible_duplicate"] = twin  # sent held for a person (main)
+                keep.append(p)
+    return keep, already
+
+
 def collect(floor: date, today: date) -> list[dict]:
     seen, keep = set(), []
     for words in SUBJECTS.values():
@@ -197,6 +319,19 @@ def headline_fields(summariser, p: dict, summary: str) -> dict:
     return {"title": t["headline"], "seo_title": t["seo_title"], "focus_keyword": t["keyphrase"], "slug": t["slug"]}
 
 
+NO_HEADLINE = "no headline (the paper's own title would be published as the headline)"
+
+
+def with_headline(payload: dict, fields: dict) -> dict:
+    """The three-field model (owner, 24 Oct 2026): study title in Sources, a headline of at most 70 characters, an SEO
+    title. Without a headline that keeps every rule the item is held for a person, never published under the paper's
+    raw title (20054 and 20139 went out that way)."""
+    payload.update(fields)
+    if not (fields.get("title") and fields.get("slug") and fields.get("seo_title")):
+        payload["hold"] = "; ".join(filter(None, [payload.get("hold", ""), NO_HEADLINE]))
+    return payload
+
+
 def main() -> int:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     dry_run = truthy(os.environ.get("DRY_RUN"), default=True)
@@ -217,10 +352,13 @@ def main() -> int:
     gate = relevance.Gate.from_site(None if dry_run else summariser, client, dry_run=dry_run)
     summary_rules.use(client)
     papers = collect(floor, today)
-    log.info("research: %d India papers since %s", len(papers), floor)
+    known = load_known()
+    todo, already = drop_existing(papers, client, known)
+    log.info("research: %d India papers since %s; %d already on the site; %d to check", len(papers), floor, already, len(todo))
     src = Source(id="research", name="Research", kind="api", type="research", url="")
-    counts, rows = {"sent": 0, "duplicate": 0, "failed": 0, "rejected": 0, "classifier unavailable": 0}, []
-    for p in papers:
+    counts, rows = {"found": len(papers), "already on site": already, "summarised": 0, "sent": 0, "duplicate": 0, "failed": 0,
+                    "rejected": 0, "classifier unavailable": 0}, []
+    for p in todo:
         item = Item(source=src, title=p["title"], url=p["url"], date=date.fromisoformat(p["date"]),
                     text=p["abstract"] or p["title"], publisher=p["journal"])
         outcome, verdict = gate.admit(relevance.Candidate(kind="research", title=item.title, url=item.url, text=item.text,
@@ -231,10 +369,13 @@ def main() -> int:
             continue
         try:
             summary = summariser.summarise(item)
+            counts["summarised"] += 1
             cats = summarise.pick_categories(summariser, item, summary, sources.allowed_categories("research"))
             payload = dict(ingest.build_payload(item, summary, cats), backfill=True, study_title=p["title"],
                            authors=p.get("authors") or [], journal=p.get("journal") or "")  # the study's credit (Sources block)
-            payload.update(headline_fields(summariser, p, summary))
+            with_headline(payload, headline_fields(summariser, p, summary))
+            if p.get("possible_duplicate"):  # same title and year, authors missing on one side (owner, 24 Oct 2026)
+                payload["hold"] = "; ".join(filter(None, [payload.get("hold", ""), possible_duplicate_hold(p["possible_duplicate"])]))
             if doubt:  # India not confirmed: sent for review, never published by itself (owner, 20 Oct 2026)
                 payload["hold"] = "; ".join(filter(None, [payload.get("hold", ""), doubt]))
             if getattr(summariser, "last_numbers", None):  # a number not in the source: held for review (owner, 20 Oct 2026)
@@ -251,9 +392,12 @@ def main() -> int:
             log.error("failed %s: %s", p["url"], exc)
             continue
         counts["duplicate" if result == "duplicate" else "sent"] += 1
+        if client and doi_of(p["url"]):
+            known.add(doi_of(p["url"]))  # on the site now (sent, held or a duplicate): never summarised again
         rows.append({"date": p["date"], "journal": p["journal"], "title": p["title"], "url": p["url"], "result": result})
     if not dry_run:
         gate.save()
+        save_known(known)
     Path("research-report.json").write_text(json.dumps({"floor": floor.isoformat(), "counts": counts, "items": rows}, ensure_ascii=False, indent=1))
     summary_file = os.environ.get("GITHUB_STEP_SUMMARY")
     if summary_file:
