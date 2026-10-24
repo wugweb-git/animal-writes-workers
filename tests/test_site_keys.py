@@ -144,5 +144,25 @@ def test_an_item_stops_after_the_try_limit(monkeypatch):
     assert Bad.calls == 3
 
 
-def test_model_not_found_drops_that_backend_for_the_run():
-    assert summarise._is_dead_key_error(RuntimeError("404 Client Error: Not Found for url: https://api.groq.com/x"))
+def test_a_404_model_is_dropped_but_the_key_keeps_serving_its_other_models():
+    exc = RuntimeError("404 Client Error: Not Found for url: https://api.groq.com/openai/v1/chat/completions")
+    assert summarise._is_model_unavailable(exc) and not summarise._is_dead_key_error(exc)
+
+    class Missing:
+        name, api_key, model = "groq", "gsk_1", "gone-model"
+
+        def ask(self, prompt):
+            raise exc
+
+    class Works:
+        name, api_key, model = "groq", "gsk_1", "openai/gpt-oss-120b"
+        calls = 0
+
+        def ask(self, prompt):
+            Works.calls += 1
+            return "ok"
+
+    owner = summarise.Summariser([Missing(), Works()])
+    summarise.note_failure(owner, 0, exc)
+    assert owner.dead == {0}  # only the 404 pair
+    assert summarise.usable(owner, 1) and owner.backends[1].ask("x") == "ok"

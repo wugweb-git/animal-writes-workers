@@ -397,8 +397,7 @@ def backends_from_env(env, ledger: dict | None = None) -> list:
 
 
 # Errors that mean "this key is unusable for the rest of the run" (not a bad summary).
-# 404/410: the model is not offered on this key (24 Oct 2026: Groq and NVIDIA models answered "not found" all run long)
-_DEAD_KEY_MARKERS = ("401", "402", "403", "404 client error", "410 client error", "credit balance", "budget", "quota", "insufficient", "no credits", "suspended")
+_DEAD_KEY_MARKERS = ("401", "402", "403", "credit balance", "budget", "quota", "insufficient", "no credits", "suspended")
 # A 429 (rate limit) is not a dead key: _post_with_retry already waited and retried; the key is dropped for the run only
 # after this many calls in a row still ended in 429 (12 Oct 2026: one 429 used to drop Groq, the only working key).
 
@@ -408,6 +407,13 @@ def _is_dead_key_error(exc: Exception) -> bool:
         return False
     text = f"{type(exc).__name__} {exc}".lower()
     return isinstance(exc, BudgetExceeded) or any(m in text for m in _DEAD_KEY_MARKERS)
+
+
+def _is_model_unavailable(exc: Exception) -> bool:
+    """404/410: this model is not offered on this key (24 Oct 2026: Groq and NVIDIA models answered "not found" all run
+    long). Only that key+model pair is dropped for the run; the key's other models stay in use."""
+    text = f"{exc}".lower()
+    return "404 client error" in text or "410 client error" in text
 
 
 def _is_rate_limit(exc: Exception) -> bool:
@@ -426,7 +432,7 @@ def note_failure(owner, i: int, exc: Exception) -> None:
         key = getattr(backends[i], "api_key", None) if i < len(backends) else None
         owner.dead.update(j for j, b in enumerate(backends) if b.api_key == key and _free_model(getattr(b, "model", "")))
         owner.dead.add(i)
-    elif _is_dead_key_error(exc):
+    elif _is_dead_key_error(exc) or _is_model_unavailable(exc):  # `dead` holds backend indexes: one key+model pair each
         owner.dead.add(i)
     elif _is_rate_limit(exc):
         owner.__dict__.setdefault("cool", {})[i] = time.monotonic() + COOLDOWN_S
