@@ -96,14 +96,14 @@ def test_quote_of_fifteen_words_allowed():
 
 def test_retry_then_success():
     client = FakeClient(["Too short.", GOOD])
-    out = summarise.Summariser([summarise.ClaudeBackend("k", client=client)]).summarise(item())
+    out = summarise.Summariser([summarise.ClaudeBackend("k", model="claude-haiku-4-5", client=client)]).summarise(item())
     assert out == GOOD and client.calls == 2
 
 
 def test_gives_up_after_retry():
     client = FakeClient([BAD, BAD])
     with pytest.raises(summarise.SummaryError):
-        summarise.Summariser([summarise.ClaudeBackend("k", client=client)]).summarise(item())
+        summarise.Summariser([summarise.ClaudeBackend("k", model="claude-haiku-4-5", client=client)]).summarise(item())
 
 
 def test_short_fallback_reads_the_page_again_then_publishes_the_short_summary():
@@ -149,9 +149,9 @@ def test_rules_are_read_from_the_site_and_fall_back_to_the_defaults():
 
 def test_legal_note_added():
     legal_good = GOOD + " Feeders and residents can report injured animals on the helpline, officials said."
-    out = summarise.Summariser([summarise.ClaudeBackend("k", client=FakeClient([legal_good]))]).summarise(item(LEGAL))
+    out = summarise.Summariser([summarise.ClaudeBackend("k", model="claude-haiku-4-5", client=FakeClient([legal_good]))]).summarise(item(LEGAL))
     assert out.endswith("\n[Needs legal review]")
-    news = summarise.Summariser([summarise.ClaudeBackend("k", client=FakeClient([GOOD]))]).summarise(item())
+    news = summarise.Summariser([summarise.ClaudeBackend("k", model="claude-haiku-4-5", client=FakeClient([GOOD]))]).summarise(item())
     assert "legal review" not in news
 
 
@@ -234,20 +234,35 @@ def test_all_providers_fail():
 def test_backends_from_env_order_and_skips_missing_keys():
     env = {"GEMINI_API_KEY": "g", "GROQ_API_KEY": "q"}
     assert [b.name for b in summarise.backends_from_env(env)] == ["gemini", "groq"]
-    env["ANTHROPIC_API_KEY"] = "a"
-    assert [b.name for b in summarise.backends_from_env(env)] == ["haiku", "gemini", "groq"]
-    env["LLM_PROVIDERS"] = "groq, haiku"
-    assert [b.name for b in summarise.backends_from_env(env)] == ["groq", "haiku"]
+    env["LLM_PROVIDERS"] = "groq, gemini"
+    assert [b.name for b in summarise.backends_from_env(env)] == ["groq", "gemini"]
     with pytest.raises(ValueError):
         summarise.backends_from_env({"LLM_PROVIDERS": "nosuchprovider"})
-    env = {"DEEPSEEK_API_KEY": "d", "OPENAI_API_KEY": "o1\no2", "GEMINI_API_KEY": "g", "GEMINI_API_KEY_2": "g2",
-           "LLM_PROVIDERS": "deepseek,openai,gemini"}
-    assert [b.name for b in summarise.backends_from_env(env)] == ["deepseek", "openai", "openai", "gemini", "gemini"]
+
+
+def test_paid_providers_are_never_called():
+    """Owner, 25 Oct 2026: no paid AI models, not even as a fallback."""
+    env = {"ANTHROPIC_API_KEY": "a", "OPENAI_API_KEY": "o", "DEEPSEEK_API_KEY": "d", "XAI_API_KEY": "x",
+           "MOONSHOT_API_KEY": "m", "MINIMAX_API_KEY": "mm", "GEMINI_API_KEY": "g",
+           "LLM_PROVIDERS": "haiku,openai,deepseek,xai,moonshot,minimax,together,gemini"}
+    assert [b.name for b in summarise.backends_from_env(env)] == ["gemini"]
+    rows = [{"provider": p, "model": "m", "url": "https://x/v1", "key": f"k{i}"}
+            for i, p in enumerate(("anthropic", "openai", "xai", "deepseek", "moonshot", "together"))]
+    assert summarise.backends_from_rows(rows) == []
+
+
+def test_openrouter_from_env_uses_a_free_model_only():
+    env = {"OPENROUTER_API_KEY": "o", "LLM_PROVIDERS": "openrouter"}
+    assert [b.model for b in summarise.backends_from_env(env)] == [summarise.OPENROUTER_FREE_DEFAULT]
+    env["OPENROUTER_MODEL"] = "openai/gpt-4o-mini"  # paid: replaced by the free default
+    assert [b.model for b in summarise.backends_from_env(env)] == [summarise.OPENROUTER_FREE_DEFAULT]
+    env["OPENROUTER_MODEL"] = "google/gemma-4-31b-it:free"
+    assert [b.model for b in summarise.backends_from_env(env)] == ["google/gemma-4-31b-it:free"]
 
 
 def test_haiku_budget_tracks_spend_and_stops():
     ledger = {}
-    b = summarise.ClaudeBackend("k", client=FakeClient([GOOD, GOOD]), budget_usd=0.0015, ledger=ledger, month="2026-10")
+    b = summarise.ClaudeBackend("k", model="claude-haiku-4-5", client=FakeClient([GOOD, GOOD]), budget_usd=0.0015, ledger=ledger, month="2026-10")
     b.ask("p")
     assert ledger == {"2026-10": 0.0011}  # 600 in * $1/M + 100 out * $5/M
     b.ask("p")  # 0.0011 < 0.0015, still allowed
@@ -257,15 +272,15 @@ def test_haiku_budget_tracks_spend_and_stops():
 
 def test_over_budget_haiku_falls_back_to_free():
     ledger = {"2026-10": 4.0}
-    haiku = summarise.ClaudeBackend("k", client=FakeClient([]), budget_usd=4, ledger=ledger, month="2026-10")
+    haiku = summarise.ClaudeBackend("k", model="claude-haiku-4-5", client=FakeClient([]), budget_usd=4, ledger=ledger, month="2026-10")
     gemini = Fixed("gemini", GOOD)
     s = summarise.Summariser([haiku, gemini])
     assert s.summarise(item()) == GOOD and s.used == {"gemini": 1}
 
 
 def test_budget_default_is_four_dollars():
-    [b] = summarise.backends_from_env({"ANTHROPIC_API_KEY": "a"})
-    assert b.budget_usd == 4.0
+    b = summarise.ClaudeBackend("a", model="claude-haiku-4-5", client=FakeClient([]), budget_usd=4.0)
+    assert b.budget_usd == 4.0  # the class keeps its cap; backends_from_env never builds it (paid)
 
 
 def test_free_tier_retries_once_after_a_short_wait():
@@ -297,7 +312,7 @@ def test_long_retry_after_is_not_waited_out():
 def test_multiple_keys_per_provider():
     env = {"GEMINI_API_KEY": "g1\ng2", "GROQ_API_KEY": "q1, q2 ,q3", "ANTHROPIC_API_KEY": "a1"}
     names = [b.name for b in summarise.backends_from_env(env)]
-    assert names == ["haiku", "gemini", "gemini", "groq", "groq", "groq"]
+    assert names == ["gemini", "gemini", "groq", "groq", "groq"]  # the Anthropic key is never used (paid)
 
 
 class Dead:

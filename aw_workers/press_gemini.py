@@ -46,8 +46,11 @@ PERIODS = ["in November 2025", "in December 2025", "between January and March 20
 
 
 def web_keys(env) -> list[str]:
-    """OpenRouter web search first (marked "or:"), then Gemini's Google search."""
-    return ["or:" + k for k in _keys(env.get("OPENROUTER_API_KEY"))] + _keys(env.get("GEMINI_API_KEY_2"), env.get("GEMINI_API_KEY"))
+    """Gemini's Google search (free tier). OpenRouter's web search (marked "or:") only when AW_PRESS_OPENROUTER_MODEL
+    names a free model: its old default (openai/gpt-4o-mini:online) was paid (owner, 25 Oct 2026: no paid models)."""
+    model = env.get("AW_PRESS_OPENROUTER_MODEL") or ""
+    free = model.split(":online")[0].endswith(":free")
+    return (["or:" + k for k in _keys(env.get("OPENROUTER_API_KEY"))] if free else []) + _keys(env.get("GEMINI_API_KEY_2"), env.get("GEMINI_API_KEY"))
 
 
 def ask(key: str, prompt: str) -> list[tuple[str, str]]:
@@ -62,7 +65,7 @@ def ask(key: str, prompt: str) -> list[tuple[str, str]]:
 def ask_openrouter(key: str, prompt: str) -> list[tuple[str, str]]:
     """OpenRouter's web search (":online" models): the cited URLs, never the model's text."""
     r = requests.post("https://openrouter.ai/api/v1/chat/completions", headers={"Authorization": f"Bearer {key}"}, timeout=180,
-                      json={"model": os.environ.get("AW_PRESS_OPENROUTER_MODEL", "openai/gpt-4o-mini:online"),
+                      json={"model": os.environ["AW_PRESS_OPENROUTER_MODEL"],  # set and free, or web_keys never gives an "or:" key
                             "messages": [{"role": "user", "content": prompt}]})
     if r.status_code != 200:
         raise RuntimeError(f"{r.status_code}: {r.text[:120]}")

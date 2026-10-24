@@ -45,7 +45,7 @@ jobs:
       XAI_API_KEY: ${{ secrets.XAI_API_KEY }}
       OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
       BRAVE_SEARCH_KEY: ${{ secrets.BRAVE_SEARCH_KEY }}
-      LLM_PROVIDERS: ${{ vars.LLM_PROVIDERS || 'haiku,gemini,groq' }}
+      LLM_PROVIDERS: ${{ vars.LLM_PROVIDERS || 'gemini,groq' }}
       HAIKU_MONTHLY_BUDGET_USD: ${{ vars.HAIKU_MONTHLY_BUDGET_USD || '4' }}
       GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
       GROQ_MODEL: ${{ vars.GROQ_MODEL }}

@@ -13,6 +13,13 @@ state, so a rerun skips what is done. For each item that breaks the rules:
 4. the best candidate that follows the rules is written (old text to aw_summary_history, the story date never moves,
    search description refreshed, only that item's cache purged). If the minimum cannot be reached without padding,
    the best accurate version is written and the item is listed as 'short'. Nothing is held for review.
+
+Time (25 Oct 2026: runs were cancelled at the 50-minute job timeout while one item walked ~150 key/model pairs, each
+with up to two asks of 30-60 s and a cool-down wait; the stop was only checked between items). MAX_MINUTES is counted
+from the process start. No item starts without ITEM_MIN_S left, no AI call is started that could end past the stop
+(each call's timeout is cut to the time left), each ask tries at most AW_MAX_TRIES_PER_ITEM key/model pairs, and
+RESERVE_S is kept for the last write, the progress read and the report. An item cut short is left open (not marked
+failed) for the next run; the run still ends with its counts and success.
 """
 
 from __future__ import annotations
@@ -31,6 +38,44 @@ from . import counts, coverage, event_dates, ingest, merge, summarise, summary_d
 from .summarise import note_failure, note_success, usable, wait_for_cooldown
 
 log = logging.getLogger("aw_workers.summary_rewrite")
+
+_STARTED = time.monotonic()  # the process start: MAX_MINUTES is counted from here, not from the first item
+
+RESERVE_S = 90.0  # kept after the stop: the last item's write to the site, the progress read, the counts
+ITEM_MIN_S = 180.0  # no new item starts with less left (source read, one ask, the write)
+COVERAGE_MIN_S = 240.0  # other coverage (a search and up to a few page reads) only with this much left
+MIN_CALL_S = 10.0  # an AI call is not started with less than this for it
+MAX_TRIES = 30  # key/model pairs per ask (as in summarise.py; AW_MAX_TRIES_PER_ITEM)
+
+
+class TimeUp(Exception):
+    """The run's time is up in the middle of an item: the item stays open for the next run."""
+
+
+class Deadline:
+    """The run's stop, `minutes` after `start` (default: the process start), less RESERVE_S."""
+
+    def __init__(self, minutes: float, start: float | None = None, clock=time.monotonic, reserve: float = RESERVE_S):
+        self.clock = clock
+        self.end = (_STARTED if start is None else start) + 60.0 * float(minutes) - reserve
+
+    def left(self) -> float:
+        return self.end - self.clock()
+
+    def expired(self, need: float = 0.0) -> bool:
+        return self.left() <= need
+
+    def call_timeout(self, cap: float, overhead: float = 0.0, attempts: int = 1) -> float:
+        """Seconds per attempt so that `attempts` attempts plus `overhead` (waits between them) end before the stop;
+        never above `cap`. TimeUp when that leaves less than MIN_CALL_S."""
+        avail = (self.left() - overhead) / max(1, attempts)
+        if avail < min(MIN_CALL_S, float(cap)):
+            raise TimeUp(f"{max(0.0, self.left()):.0f} s left")
+        return min(float(cap), avail)
+
+
+def _no_deadline() -> Deadline:
+    return Deadline(10 ** 6, start=time.monotonic(), reserve=0.0)
 
 SECTION = {"aw_news": "news", "aw_legal": "library", "post": "research"}
 
@@ -132,27 +177,61 @@ def read_source(url: str, session=None) -> dict:
 
 
 class Rewriter:
-    def __init__(self, summariser, pause: float = 4.0):
+    def __init__(self, summariser, pause: float = 4.0, deadline: Deadline | None = None, max_tries: int = MAX_TRIES):
         self.s = summariser
         self.pause = pause
         self.model = ""
+        self.deadline = deadline or _no_deadline()
+        self.max_tries = max_tries
+
+    def _call(self, backend, prompt: str) -> str:
+        """One ask, its timeout cut so that it (with its retries and waits) ends before the run's stop."""
+        claude = isinstance(backend, summarise.ClaudeBackend)
+        cap = backend.__dict__.setdefault("_aw_cap_s", getattr(backend, "timeout", None) or (60.0 if claude else 30.0))
+        if claude:  # the SDK tries up to 3 times, with short waits
+            t = self.deadline.call_timeout(cap, overhead=15.0, attempts=3)
+        else:  # _post_with_retry: the gap between calls, one retry after a wait of at most MAX_RETRY_WAIT
+            t = self.deadline.call_timeout(cap, overhead=summarise.MAX_RETRY_WAIT + float(getattr(backend, "min_interval", 0) or 0),
+                                           attempts=2)
+        backend.timeout = t
+        return backend.ask(prompt)
+
+    def _wait_for_cooldown(self) -> bool:
+        """wait_for_cooldown, only when the first rested key is back before the run's stop."""
+        resting = [t for i, t in getattr(self.s, "cool", {}).items() if i not in self.s.dead]
+        if not resting or min(resting) - time.monotonic() > self.deadline.left() - MIN_CALL_S:
+            return False
+        return wait_for_cooldown(self.s)
 
     def _ask(self, prompt: str, check) -> tuple[str, list[str], list[str]] | None:
-        """Best answer over the providers: (summary, hard, short). One corrective retry per provider."""
-        best = None
+        """Best answer over the providers: (summary, hard, short). One corrective retry per provider; at most
+        max_tries key/model pairs; TimeUp when the run's time ends before any answer."""
+        best, tries = None, 0
         for _ in range(2):  # a second pass once a rate-limited key has rested
             for i, backend in enumerate(self.s.backends):
                 if not usable(self.s, i):
                     continue
+                if tries >= self.max_tries:
+                    log.info("stopped after %d tries on this item; the next run tries again", tries)
+                    return best
+                tries += 1
                 try:
-                    cand = clean(backend.ask(prompt))
+                    cand = clean(self._call(backend, prompt))
                     hard, short = check(cand)
                     if hard:
-                        cand2 = clean(backend.ask(prompt + "\n\nYour previous answer broke these rules: " + "; ".join(hard)
-                                                  + f"\nPrevious answer: {cand}\nWrite it again, fixing exactly these."))
-                        h2, s2 = check(cand2)
-                        if len(h2) <= len(hard):
-                            cand, hard, short = cand2, h2, s2
+                        try:
+                            cand2 = clean(self._call(backend, prompt + "\n\nYour previous answer broke these rules: "
+                                                     + "; ".join(hard) + f"\nPrevious answer: {cand}\nWrite it again, fixing exactly these."))
+                        except TimeUp:
+                            cand2 = None  # no time for the corrective ask: the first answer is judged as it is
+                        if cand2 is not None:
+                            h2, s2 = check(cand2)
+                            if len(h2) <= len(hard):
+                                cand, hard, short = cand2, h2, s2
+                except TimeUp:
+                    if best is not None:
+                        return best
+                    raise
                 except Exception as exc:  # noqa: BLE001
                     note_failure(self.s, i, exc)
                     log.info("provider %s failed: %s", backend.name, str(exc)[:120])
@@ -164,7 +243,7 @@ class Rewriter:
                     return result
                 if best is None or len(hard) < len(best[1]):
                     best = result
-            if best is not None or not wait_for_cooldown(self.s):
+            if best is not None or not self._wait_for_cooldown():
                 break
         return best
 
@@ -180,12 +259,16 @@ class Rewriter:
         check = lambda c: evaluate(c, ours, row, text, section, pubs)  # noqa: E731
         res = self._ask(prompt, check)
         sec = rules["sections"][section]
-        if res and not res[1] and res[2] and len(summary_rules.words(text)) >= 2.5 * int(sec["min_words"]):
+        if (res and not res[1] and res[2] and len(summary_rules.words(text)) >= 2.5 * int(sec["min_words"])
+                and not self.deadline.expired(ITEM_MIN_S)):
             # the source holds more than the answer used: ask once for the further facts it states (never padding)
-            more = self._ask(prompt + f"\n\nYour previous answer was too short ({len(summary_rules.words(res[0]))} words; "
+            try:
+                more = self._ask(prompt + f"\n\nYour previous answer was too short ({len(summary_rules.words(res[0]))} words; "
                              f"{sec['min_words']} to {sec['max_words']} are expected) but the source text holds more facts. Add the "
                              "further facts it states (who, where, when, numbers, what the court or body directed, what happens next). "
                              f"Never pad.\nPrevious answer: {res[0]}", check)
+            except TimeUp:
+                more = None  # the first answer stands
             if more and not more[1] and len(summary_rules.words(more[0])) > len(summary_rules.words(res[0])):
                 res = more
         return res
@@ -208,7 +291,9 @@ def process(rw: Rewriter, row: dict) -> dict:
     if first:
         cands.append((*first, []))
     need_more = not first or first[1] or first[2]  # a problem, or still short
-    if need_more and row.get("title"):
+    if need_more and row.get("title") and rw.deadline.expired(COVERAGE_MIN_S):
+        log.info("#%s: no time left for other coverage this run", row.get("id"))
+    elif need_more and row.get("title"):
         when = event_dates.to_date(row.get("source_date") or row.get("date"))
         try:
             reports = coverage.find(row["title"], row.get("source_url") or "", when, row.get("publisher") or "")
@@ -218,7 +303,12 @@ def process(rw: Rewriter, row: dict) -> dict:
         info["cov"] = len(reports)
         if reports:
             wider = coverage.combined_text(text, reports)
-            second = rw.candidate(row, section, wider, pubs, why)
+            try:
+                second = rw.candidate(row, section, wider, pubs, why)
+            except TimeUp:
+                if not first:
+                    raise
+                second = None  # the first candidate is decided on
             if second:
                 cands.append((*second, [{"name": r.publisher, "url": r.url} for r in reports]))
     ok = [c for c in cands if not c[1]]
@@ -270,29 +360,38 @@ def candidates(client, batch: int, only: list[int] | None, dry: bool, log_) -> l
     return out[:batch]
 
 
-def main(env=os.environ) -> int:
+def main(env=os.environ, *, client=None, backends=None, deadline: Deadline | None = None, process_=None, sleep=time.sleep) -> int:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
+    try:  # each item's line shows when it is done (a cancelled run used to lose every buffered line)
+        sys.stdout.reconfigure(line_buffering=True)
+    except (AttributeError, ValueError):
+        pass
     dry = env.get("DRY_RUN", "false").lower() == "true"
     batch = int(env.get("BATCH") or 25)
     pause = float(env.get("PAUSE_S") or 4)
     only = [int(x) for x in re.split(r"[,\s]+", env.get("AW_IDS", "").strip()) if x] or None
-    deadline = time.monotonic() + 60 * float(env.get("MAX_MINUTES") or 38)
-    client = ingest.Client(env["WP_BASE_URL"], env["WP_INGEST_USER"], env["WP_INGEST_APP_PASSWORD"])
-    summary_rules.use(client)
-    backends = summarise.backends_from_env(env, ledger={})
-    log.info("providers: %s", ", ".join(f"{b.name}:{getattr(b, 'model', '')}" for b in backends))
-    rw = Rewriter(summarise.Summariser(backends), pause)
+    deadline = deadline or Deadline(float(env.get("MAX_MINUTES") or 38))
+    process_ = process_ or process
+    if client is None:
+        client = ingest.Client(env["WP_BASE_URL"], env["WP_INGEST_USER"], env["WP_INGEST_APP_PASSWORD"])
+        summary_rules.use(client)
+    if backends is None:
+        backends = summarise.backends_from_env(env, ledger={})
+    log.info("providers: %d key/model pairs; %.0f min left before the stop", len(backends), deadline.left() / 60)
+    rw = Rewriter(summarise.Summariser(backends), pause, deadline=deadline,
+                  max_tries=int(env.get("AW_MAX_TRIES_PER_ITEM") or MAX_TRIES))
     rows = candidates(client, batch, only, dry, log)
-    stats = {"done": 0, "short": 0, "settled": 0, "failed": 0, "error": 0}
+    stats = {"done": 0, "short": 0, "settled": 0, "failed": 0, "error": 0, "left": 0}
     report = []
     for n, row in enumerate(rows):
-        if time.monotonic() > deadline:
-            log.info("time is up; the rest goes to the next run")
+        if deadline.expired(ITEM_MIN_S):
+            stats["left"] = len(rows) - n
+            log.info("time is up; %d items go to the next run", stats["left"])
             break
         if n:
-            time.sleep(pause)
+            sleep(min(pause, max(0.0, deadline.left() - ITEM_MIN_S)))
         try:
-            res = process(rw, row)
+            res = process_(rw, row)
             line = {"id": row["id"], "section": row.get("section"), "action": res["action"], **getattr(rw, "info", {})}
             if res["action"] == "write":
                 line.update(state=res["state"], before=row["summary"], after=res["summary"], model=res["model"],
@@ -316,6 +415,10 @@ def main(env=os.environ) -> int:
             print(json.dumps(line, ensure_ascii=False))
         except ingest.AuthError:
             raise
+        except TimeUp as exc:  # not marked failed: the item stays open and the next run takes it again
+            stats["left"] = len(rows) - n
+            log.info("time is up during #%s (%s); %d items go to the next run", row["id"], exc, stats["left"])
+            break
         except Exception as exc:  # noqa: BLE001
             stats["error"] += 1
             body = getattr(getattr(exc, "response", None), "text", "")[:300]
@@ -328,15 +431,16 @@ def main(env=os.environ) -> int:
                         (locals().get("res") or {}).get("summary", "")[:400])
     print("RUN", json.dumps(stats))
     counts.write(**{k.replace(" ", "_"): v for k, v in stats.items()})
-    if not dry:
+    if not dry and not deadline.expired(-RESERVE_S / 2):  # the progress read only while the reserve lasts
         try:
             prog = client._call("GET", "/summary-rewrite", params={"progress": 1})
             print("PROGRESS", json.dumps(prog.get("counts")))
         except Exception as exc:  # noqa: BLE001
             log.info("progress not read: %s", type(exc).__name__)
     if env.get("AW_CHAIN_FILE"):  # how many items this run took: the workflow starts the next run while there are more
+        taken = sum(stats.values()) - stats["error"] - stats["left"]
         with open(env["AW_CHAIN_FILE"], "w") as f:
-            f.write(str(sum(stats.values()) - stats["error"]))
+            f.write(str(taken or (1 if stats["left"] else 0)))  # stopped early with items left: there is more to do
     out = env.get("GITHUB_STEP_SUMMARY")
     if out:
         with open(out, "a", encoding="utf-8") as f:

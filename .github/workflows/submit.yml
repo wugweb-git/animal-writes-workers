@@ -39,7 +39,7 @@ jobs:
       GEMINI_API_KEY_2: ${{ secrets.GEMINI_API_KEY_2 }}
       XAI_API_KEY: ${{ secrets.XAI_API_KEY }}
       OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-      LLM_PROVIDERS: ${{ vars.LLM_PROVIDERS || 'haiku,gemini,groq' }}
+      LLM_PROVIDERS: ${{ vars.LLM_PROVIDERS || 'gemini,groq' }}
       HAIKU_MONTHLY_BUDGET_USD: "100000"
       GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
       GROQ_MODEL: ${{ vars.GROQ_MODEL }}

@@ -60,7 +60,7 @@ def test_openrouter_key_uses_only_free_models():
     rows = [{"provider": "openrouter", "name": "openrouter", "model": "openai/gpt-4o-mini", "url": "https://openrouter.ai/api/v1", "key": "o1"}]
     models = [b.model for b in summarise.backends_from_rows(rows)]
     assert models == summarise.EXTRA_MODELS["openrouter"]  # free-tier accounts: the paid saved model is left out
-    rows[0]["model"] = "minimax/minimax-m3.1-flash:free"  # a free saved model is not repeated
+    rows[0]["model"] = "google/gemma-4-31b-it:free"  # a free saved model is not repeated
     assert [b.model for b in summarise.backends_from_rows(rows)] == summarise.EXTRA_MODELS["openrouter"]
 
 
