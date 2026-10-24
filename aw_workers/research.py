@@ -156,7 +156,7 @@ _DOI = re.compile(r"^https?://(?:dx\.)?doi\.org/(10\.[^\s?#]+)", re.I)
 def doi_of(url: str) -> str:
     """The DOI of a doi.org link, lower case ('' otherwise)."""
     m = _DOI.match(url or "")
-    return m.group(1).lower() if m else ""
+    return m.group(1).lower().rstrip("/") if m else ""
 
 
 def load_known(path: Path = KNOWN_FILE) -> set[str]:
@@ -231,9 +231,9 @@ def drop_existing(papers: list[dict], client, known: set[str]) -> tuple[list[dic
         for p in chunk:
             if doi_of(p["url"]) in have_dois or p["url"] in have_urls:
                 already += 1
-            elif same_study(p, studies):
+            elif (twin := same_study(p, studies)):
                 already += 1
-                log.info("research: %s is the same study as site item %s; skipped", p["url"], same_study(p, studies))
+                log.info("research: %s is the same study as site item %s; skipped", p["url"], twin)
                 if doi_of(p["url"]):
                     known.add(doi_of(p["url"]))
             else:

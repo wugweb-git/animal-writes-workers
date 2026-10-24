@@ -89,3 +89,7 @@ def test_similar_title_needs_the_same_first_author_or_year():
     assert research.same_study(dict(other, date="2026-05-01"), [SITE_12573]) == 12573  # same year
     unlike = dict(PAPER_20054, title="Elephant corridors and railway deaths in Assam")
     assert research.same_study(unlike, [SITE_12573]) == 0
+
+
+def test_doi_trailing_slash_is_the_same_doi():
+    assert research.doi_of("https://doi.org/10.1111/COBI.70204/") == research.doi_of("https://doi.org/10.1111/cobi.70204")
