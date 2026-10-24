@@ -322,3 +322,60 @@ def test_exclude_words_drop_off_topic_terms():
     finally:
         del si.SOURCES["fake"]
     assert [r["term"] for r in out["rising"]] == ["stray dog bite"] and out["info"]["excluded"] == 1
+
+
+def test_a_refusal_keeps_what_the_source_already_read():
+    end = TODAY - timedelta(days=1)
+    ok = Resp(body=_gdelt([(end - timedelta(days=i), 2) for i in range(16)]))
+    n = {"i": 0}
+
+    def answer(url, p):
+        n["i"] += 1
+        return ok if n["i"] == 1 else Resp(429, "")
+
+    f = fetcher([("gdeltproject", answer)])
+    out = si.run_source("gdelt", f, {"gdelt": ["rabies", "dog bite", "gaushala"]}, TODAY, 1)
+    assert [o["term"] for o in out["obs"]] == ["rabies"] and "after 1 topics" in out["error"] and n["i"] == 2
+
+
+def test_one_bad_wikipedia_title_skips_only_that_page():
+    end = TODAY - timedelta(days=1)
+    f = fetcher([("/Bad", Resp(400, "{}")), ("/Rabies/", Resp(body=_views([(end, 10)])))])
+    out = si.wikipedia(f, {"wikipedia": ["Bad", "Rabies"]}, TODAY, days=1)
+    assert out["obs"][0]["term"] == "Rabies" and out["info"]["failed"][0].startswith("Bad") and out["error"] == ""
+
+
+def test_a_refused_service_is_not_asked_again_in_the_same_run():
+    f = fetcher([("trends.google.com", Resp(429, ""))])
+    si.run_source("trends_related", f, {"trends_related": ["a"]}, TODAY, 7)
+    out = si.run_source("trends_interest", f, {"interest": ["rabies"]}, TODAY, 30)
+    assert len(f.session.calls) == 1 and "not asked again" in out["error"]
+
+
+def test_single_species_word_in_a_headline_is_not_enough():
+    rss = RSS.replace("Teams bid big at auction", "India opt to bat first as the tiger roars")
+    f = fetcher([("trending/rss", Resp(body=rss))])
+    out = si.trends_rss(f, {"species": ["tiger", "leopard"], "topics": [], "keywords": []}, TODAY, days=1)
+    assert "ipl auction" not in [r["term"] for r in out["rising"]]
+
+
+def test_a_dry_run_does_not_move_the_autocomplete_snapshots():
+    f = fetcher([("suggestqueries", Resp(body=["q", ["a b"]]))])
+    si.autocomplete(f, {"autocomplete": ["a"], "_dry_run": True}, TODAY)
+    assert not (si.STATE / "autocomplete.json").exists()
+
+
+def test_days_must_be_a_small_whole_number():
+    import argparse
+
+    assert si._days("7") == 7 and si._days("0") == 0
+    for bad in ("7d", "-1", "99"):
+        with pytest.raises(argparse.ArgumentTypeError):
+            si._days(bad)
+
+
+def test_scheduled_runs_have_their_own_live_switch():
+    from pathlib import Path
+
+    wf = (Path(__file__).resolve().parent.parent / ".github/workflows/search-insights.yml").read_text()
+    assert "vars.SI_LIVE == 'true'" in wf and "vars.DRY_RUN" not in wf

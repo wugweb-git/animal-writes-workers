@@ -35,8 +35,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      # DRY_RUN stays ON for scheduled runs unless the repo variable DRY_RUN is set to "false", as in sourcing.
-      DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && (inputs.dry_run && 'true' || 'false') || vars.DRY_RUN || 'true' }}
+      # Scheduled runs stay dry until the repository variable SI_LIVE is "true" (its own switch, as ENRICH_LIVE: the shared
+      # DRY_RUN variable is already false for sourcing, and the site route must be deployed before this sends anything).
+      DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && (inputs.dry_run && 'true' || 'false') || (vars.SI_LIVE == 'true' && 'false' || 'true') }}
       AW_SI_JOB: ${{ github.event_name == 'workflow_dispatch' && inputs.job || (github.event.schedule == '0 3 * * 1' && 'weekly' || (github.event.schedule == '30 3 1 * *' && 'monthly' || 'daily')) }}
       AW_SI_DAYS: ${{ inputs.days }}
       WP_BASE_URL: ${{ secrets.WP_BASE_URL }}

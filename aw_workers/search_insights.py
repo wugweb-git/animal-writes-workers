@@ -71,12 +71,12 @@ DEFAULTS = {
     "topics": ["stray dogs", "street dogs", "animal welfare", "animal cruelty", "rabies", "dog bite", "gaushala",
                "cow protection", "wildlife", "animal rescue", "animal shelter", "veterinary hospital", "abc rules",
                "pca act", "awbi", "human wildlife conflict", "elephant", "leopard", "tiger"],
-    "species": ["dog", "dogs", "puppy", "puppies", "cat", "cats", "kitten", "cow", "cows", "cattle", "bull", "buffalo",
+    "species": ["dog", "dogs", "puppy", "puppies", "cat", "cats", "kitten", "cow", "cows", "cattle", "buffalo",
                 "calf", "goat", "sheep", "pig", "horse", "donkey", "camel", "monkey", "macaque", "langur", "elephant",
                 "tiger", "leopard", "lion", "cheetah", "bear", "deer", "blackbuck", "peacock", "peafowl", "pigeon",
-                "parrot", "bird", "birds", "vulture", "kite", "eagle", "owl", "crow", "snake", "cobra", "python",
-                "crocodile", "turtle", "tortoise", "dolphin", "whale", "shark", "fish", "pangolin", "rhino",
-                "rhinoceros", "wolf", "jackal", "hyena", "boar", "bat", "squirrel", "rabbit", "chicken", "hen",
+                "parrot", "bird", "birds", "vulture", "eagle", "owl", "crow", "snake", "cobra",
+                "crocodile", "turtle", "tortoise", "dolphin", "whale", "fish", "pangolin", "rhino",
+                "rhinoceros", "wolf", "jackal", "hyena", "boar", "squirrel", "rabbit", "chicken", "hen",
                 "poultry", "mule"],
     # Canonical titles (redirects count apart in the pageviews API): checked against en.wikipedia on 24 Oct 2026.
     "wikipedia": ["Rabies", "Free-ranging dog", "Indian pariah dog", "Animal Welfare Board of India",
@@ -94,7 +94,8 @@ DEFAULTS = {
     # Terms with these words are not about animals in India: an anime called Bungo Stray Dogs fills "stray dogs" related
     # searches, films and songs the trending list. The site sends its own list (filter aw_si_rising_lists).
     "exclude": ["anime", "manga", "bungo", "movie", "film", "song", "lyrics", "season", "episode", "cast", "trailer",
-                "netflix", "web series", "ott", "box office", "game", "meme", "wallpaper", "cartoon", "meaning in"],
+                "netflix", "web series", "ott", "box office", "game", "meme", "wallpaper", "cartoon", "meaning in",
+                "cricket", "ipl", "vs", "odi", "t20", "match", "score", "shroff"],
 }
 
 GENERIC = {"animal", "animals", "welfare", "india", "indian", "save", "help", "news", "care", "update", "updates",
@@ -146,6 +147,7 @@ class Fetcher:
         self.sleep = sleep
         self.rand = rand
         self.last: dict[str, float] = {}
+        self.refused: dict[str, str] = {}  # service -> why: one attempt per service per run, across sources
         self.requests = 0
 
     def pace(self, service: str, gap: float | tuple[float, float]) -> None:
@@ -156,6 +158,8 @@ class Fetcher:
                 self.sleep(left)
 
     def get(self, service: str, url: str, gap: float | tuple[float, float] = 0, **kw) -> requests.Response:
+        if service in self.refused:
+            raise Refused(self.refused[service] + " (earlier in this run; not asked again)")
         self.pace(service, gap)
         try:
             self.requests += 1
@@ -163,7 +167,8 @@ class Fetcher:
         finally:
             self.last[service] = time.monotonic()
         if resp.status_code in (403, 429) or "/sorry/" in (resp.url or ""):
-            raise Refused(f"{service} refused the request (HTTP {resp.status_code})")
+            self.refused[service] = f"{service} refused the request (HTTP {resp.status_code})"
+            raise Refused(self.refused[service])
         return resp
 
 
@@ -227,8 +232,11 @@ def trends_rss(f: Fetcher, config: dict, today: date, days: int = 1) -> dict:
         phrase, kind = names(term, vocab)
         where = "term"
         if not phrase:
+            # A headline needs a phrase or one of our topics or keywords: a single animal word in a headline is too
+            # loose ("India opt to bat first", "Tiger Shroff").
+            loose = [(p, k) for p, k in vocab if " " in p or k != "species"]
             for h in heads:
-                phrase, kind = names(h, vocab)
+                phrase, kind = names(h, loose)
                 if phrase:
                     where = "news"
                     break
@@ -277,9 +285,16 @@ def wikipedia(f: Fetcher, config: dict, today: date, days: int = 1) -> dict:
     out = result("wikipedia")
     end = today - timedelta(days=1)  # yesterday: the API has whole days only
     start = end - timedelta(days=days - 1 + 30)
-    missing = []
+    missing, failed = [], []
     for article in config.get("wikipedia") or []:
-        series = _wiki_series(f, article, start, end)
+        try:
+            series = _wiki_series(f, article, start, end)
+        except Refused as exc:  # stop here, keep the pages already read
+            out["error"] = f"{exc} after {len(out['obs']) // max(days, 1)} pages"
+            break
+        except Exception as exc:  # one bad title or a server error skips that page only
+            failed.append(f"{article}: {str(exc)[:80]}")
+            continue
         if not series:
             missing.append(article)
             continue
@@ -292,7 +307,9 @@ def wikipedia(f: Fetcher, config: dict, today: date, days: int = 1) -> dict:
                 avg = round(sum(series.get(d - timedelta(days=k), 0) for k in range(1, 31)) / 30)
                 out["rising"].append({"term": article, "growth": growth, "d": d.isoformat(),
                                       "note": f"Wikipedia: {series.get(d, 0):,} views on {d:%-d %b}, 30-day average {avg:,}"})
-    out["info"] = {"pages": len(config.get("wikipedia") or []) - len(missing), "missing": missing}
+    out["info"] = {"pages": len(out["obs"]) // max(days, 1), "missing": missing, "failed": failed}
+    if failed and not out["obs"] and not out["error"]:
+        out["error"] = "Wikipedia answered no page today: " + "; ".join(failed)[:200]
     return out
 
 
@@ -320,12 +337,14 @@ def gdelt(f: Fetcher, config: dict, today: date, days: int = 1) -> dict:
     A failed topic is skipped for the day; the site keeps the last data."""
     out = result("gdelt")
     failed = []
+    done = 0
     end = today - timedelta(days=1)
     for topic in config.get("gdelt") or []:
         try:
             series = _gdelt_series(f, topic, days)
-        except Refused:
-            raise
+        except Refused as exc:  # stop here, keep the topics already read
+            out["error"] = f"{exc} after {done} topics"
+            break
         except Exception as exc:
             failed.append(f"{topic}: {str(exc)[:80]}")
             continue
@@ -337,8 +356,9 @@ def gdelt(f: Fetcher, config: dict, today: date, days: int = 1) -> dict:
                 avg = sum(series.get(d - timedelta(days=k), 0) for k in range(1, 15)) / 14
                 out["rising"].append({"term": topic, "growth": None if r == float("inf") else r, "d": d.isoformat(),
                                       "note": f"News (GDELT, Indian sources): {series.get(d, 0)} articles on {d:%-d %b}, 14-day average {avg:.1f}"})
-    out["info"] = {"topics": len(config.get("gdelt") or []) - len(failed), "failed": failed}
-    if failed and len(failed) == len(config.get("gdelt") or []):
+        done += 1
+    out["info"] = {"topics": done, "failed": failed}
+    if failed and not done and not out["error"]:
         out["error"] = "GDELT answered no topic today: " + "; ".join(failed)[:200]
     return out
 
@@ -356,10 +376,12 @@ def _save_state(name: str, data: dict) -> None:
     (STATE / name).write_text(json.dumps(data, ensure_ascii=False, indent=1, sort_keys=True))
 
 
-def autocomplete(f: Fetcher, config: dict, today: date, days: int = 7, save: bool = True) -> dict:
+def autocomplete(f: Fetcher, config: dict, today: date, days: int = 7, save: bool | None = None) -> dict:
     """English Google suggestions (gl=in) for each seed. A suggestion missing from the seed's last snapshot is rising;
     a seed seen for the first time only stores its snapshot. A refusal stops the remaining seeds (one attempt)."""
     out = result("autocomplete")
+    if save is None:
+        save = not config.get("_dry_run")  # a dry run never moves the snapshots the next live run compares against
     state = _state("autocomplete.json")
     asked = cached = baseline = 0
     try:
@@ -387,6 +409,8 @@ def autocomplete(f: Fetcher, config: dict, today: date, days: int = 7, save: boo
                     out["rising"].append({"term": s, "growth": None, "d": today.isoformat(), "note": f"New Google suggestion for “{seed}” this week"})
     except Refused as exc:
         out["error"] = f"{exc} after {asked} seeds. The bookmarklet runs the same seeds (phase 4)."
+    except requests.RequestException as exc:
+        out["error"] = f"autocomplete failed after {asked} seeds: {str(exc)[:120]}"
     finally:
         if save:
             _save_state("autocomplete.json", state)
@@ -457,7 +481,7 @@ def trends_related(f: Fetcher, config: dict, today: date, days: int = 7) -> dict
             done += 1
     except Refused as exc:
         out["error"] = f"{exc} after {done} seed topics. Paste the rising queries on the Rising tab instead."
-    except (ValueError, KeyError) as exc:
+    except (ValueError, KeyError, requests.RequestException) as exc:
         out["error"] = f"Trends answered in an unexpected form ({str(exc)[:80]}) after {done} seed topics. Paste the rising queries on the Rising tab instead."
     out["info"] = {"seeds": done}
     return out
@@ -488,7 +512,7 @@ def trends_interest(f: Fetcher, config: dict, today: date, days: int = 30) -> di
             done += len(batch)
     except Refused as exc:
         out["error"] = f"{exc} after {done} of {len(words)} keywords. Paste the Trends averages on the Rising tab instead."
-    except (ValueError, KeyError) as exc:
+    except (ValueError, KeyError, requests.RequestException) as exc:
         out["error"] = f"Trends answered in an unexpected form ({str(exc)[:80]}) after {done} keywords. Paste the averages on the Rising tab instead."
     out["info"] = {"keywords": done, "asked": len(words)}
     return out
@@ -567,11 +591,22 @@ def table(rows: list[dict]) -> str:
     return "\n".join(lines)
 
 
+def _days(value: str) -> int:
+    """--days: 0 (each source's default) or 1 to 60."""
+    try:
+        n = int(str(value).strip())
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"days must be a whole number, not {value!r}") from None
+    if not 0 <= n <= 60:
+        raise argparse.ArgumentTypeError("days must be between 1 and 60")
+    return n
+
+
 def main(argv: list[str] | None = None) -> int:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("job", nargs="?", default=os.environ.get("AW_SI_JOB") or "daily", choices=[*JOBS, "all"])
-    ap.add_argument("--days", type=int, default=int(os.environ.get("AW_SI_DAYS") or 0), help="days to look back (default: 1 daily, 7 weekly)")
+    ap.add_argument("--days", type=_days, default=os.environ.get("AW_SI_DAYS") or "0", help="days to look back, 1-60 (default: 1 daily, 7 weekly)")
     ap.add_argument("--top", type=int, default=10)
     ap.add_argument("--config", default=os.environ.get("AW_SI_CONFIG", ""), help="a JSON file of the site's lists (dry runs)")
     ap.add_argument("--only", default=os.environ.get("AW_SI_ONLY", ""), help="comma-separated sources")
@@ -593,6 +628,7 @@ def main(argv: list[str] | None = None) -> int:
             return 1
         log.warning("the site's lists are unavailable (%s): using the defaults", exc)
         config = dict(DEFAULTS)
+    config["_dry_run"] = dry_run
     names_ = [s for j in (JOBS if a.job == "all" else [a.job]) for s in JOBS[j]]
     if a.only:
         names_ = [s for s in names_ if s in a.only.split(",")]

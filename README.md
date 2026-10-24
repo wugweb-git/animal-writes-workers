@@ -62,7 +62,7 @@ Notes:
 - weekly, Monday 08:30 IST: Google autocomplete in English, gl=in (2–4 s between requests; snapshots in `.state/search-insights/`, a new suggestion is rising), Trends rising related queries;
 - monthly, the 1st, 09:00 IST: Trends interest over 12 months, "animal welfare" = 100.
 
-Trends and autocomplete get one paced attempt a run; a refusal is reported to the site and the owner pastes the figures on the Rising tab. The lists come from `GET aw/v1/search-insights`; each source's results go to `POST aw/v1/search-insights`. DRY_RUN as in sourcing.
+Trends and autocomplete get one paced attempt a run; a refusal is reported to the site and the owner pastes the figures on the Rising tab. The lists come from `GET aw/v1/search-insights`; each source's results go to `POST aw/v1/search-insights`. Scheduled runs stay dry until the repository variable `SI_LIVE` is `true` (set it once the site route is live).
 `DRY_RUN=true python -m aw_workers.search_insights all --days 7 --top 10` prints the top rising terms.
 
 ## Local
