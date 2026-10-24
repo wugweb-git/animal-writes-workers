@@ -42,8 +42,13 @@ jobs:
       - run: pip install -r requirements-dev.txt
       - run: pytest -q tests/test_darpan_import.py
         id: tests
-      - run: python -m aw_workers.directory.darpan_import $(echo "${{ inputs.files }}" | tr ',' ' ')
+      # The input reaches the shell as an environment variable, never pasted into the script (GitHub's injection rule).
+      - run: |
+          IFS=',' read -ra files <<< "$AW_FILES"
+          python -m aw_workers.directory.darpan_import "${files[@]}"
         id: main
+        env:
+          AW_FILES: ${{ inputs.files }}
       - uses: actions/upload-artifact@v4
         if: always()
         with:
