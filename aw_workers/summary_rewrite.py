@@ -27,7 +27,7 @@ from datetime import date, datetime
 
 import requests
 
-from . import coverage, event_dates, ingest, merge, summarise, summary_dates, summary_rules
+from . import counts, coverage, event_dates, ingest, merge, summarise, summary_dates, summary_rules
 from .summarise import note_failure, note_success, usable, wait_for_cooldown
 
 log = logging.getLogger("aw_workers.summary_rewrite")
@@ -327,6 +327,7 @@ def main(env=os.environ) -> int:
             log.warning("#%s: %s: %s %s | summary sent: %r", row["id"], type(exc).__name__, str(exc)[:120], body,
                         (locals().get("res") or {}).get("summary", "")[:400])
     print("RUN", json.dumps(stats))
+    counts.write(**{k.replace(" ", "_"): v for k, v in stats.items()})
     if not dry:
         try:
             prog = client._call("GET", "/summary-rewrite", params={"progress": 1})

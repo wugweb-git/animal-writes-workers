@@ -12,7 +12,7 @@ from pathlib import Path
 import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from aw_workers import ingest  # noqa: E402
+from aw_workers import counts, ingest  # noqa: E402
 
 HEADER = ("# Sources for the Animal Writes sourcing workers. COPIED FROM THE SITE (Settings → Sourcing) by\n"
           "# .github/workflows/sources-sync.yml while \"Workers use these lists\" is on: edit the lists on the site, not here.\n"
@@ -24,14 +24,17 @@ def main() -> int:
     config = client.policy().get("config")
     if not isinstance(config, dict) or not config.get("sources"):
         print("unchanged (Workers use these lists is off: sources.yaml stays as it is)")
+        counts.write(changed=0, lists="yaml")
         return 0
     path = Path(os.environ.get("AW_SOURCES", "sources.yaml"))
     old = yaml.safe_load(path.read_text(encoding="utf-8")) if path.exists() else None
     if old == config:
         print("unchanged")
+        counts.write(changed=0)
         return 0
     path.write_text(HEADER + yaml.safe_dump(config, sort_keys=False, allow_unicode=True, width=120), encoding="utf-8")
     print("changed")
+    counts.write(changed=1)
     return 0
 
 

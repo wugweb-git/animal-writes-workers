@@ -43,14 +43,27 @@ jobs:
       GROQ_MODEL: ${{ vars.GROQ_MODEL }}
     steps:
       - uses: actions/checkout@v5
+      - name: Report the start to the site
+        uses: ./.github/actions/report
+        with:
+          phase: start
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
           cache: pip
       - run: pip install -r requirements.txt
       - run: python -m aw_workers.headline_case title-case.csv --type "${{ inputs.post_type || 'aw_news' }}"
+        id: main
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ inputs.post_type == 'aw_press' && 'press-title-case' || 'news-title-case' }}
           path: title-case.csv
           retention-days: 14
+      - name: Report the end to the site (Settings → Sourcing → Workers)
+        if: always()
+        uses: ./.github/actions/report
+        with:
+          phase: end
+          main: main
+          steps: ${{ toJSON(steps) }}
+          status: ${{ job.status }}

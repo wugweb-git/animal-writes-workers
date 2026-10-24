@@ -1,0 +1,22 @@
+{
+  "_about": "The 17 workflows as the site's Settings → Sourcing → Workers tab shows them (owner, 24 Oct 2026). tests/test_workers_registry.py fails when a workflow's name, schedule or timeout differs from this file; the site's copy is plugins/aw-sourcing/includes/workers.php (AW_WORKERS), changed by hand together with this file. interval_min: the longest gap between two scheduled runs (late = no report for twice that). runnow: inputs sent by Run now (none: the workflow's own defaults).",
+  "workers": {
+    "sourcing.yml": {"name": "Sourcing workers", "what": "Finds News, Library and press items (Google News, feeds), checks relevance, summarises with AI and sends them to the site", "crons": ["17 */6 * * *", "47 2-23/6 * * *"], "interval_min": 210, "timeout_min": 45, "runnow": {"dry_run": "false"}},
+    "summary-rewrite.yml": {"name": "Summaries: rewrite those that break the current rules", "what": "Rewrites summaries that break Settings → Sourcing → Summary rules; starts its next run while items remain", "crons": ["7,37 * * * *"], "interval_min": 30, "timeout_min": 50},
+    "sources-sync.yml": {"name": "Sources sync", "what": "Copies the site's source lists into sources.yaml (the workers' fallback) when Workers use these lists is on", "crons": ["23 * * * *"], "interval_min": 60, "timeout_min": 5},
+    "tests.yml": {"name": "Tests", "what": "Runs the workers' tests on every push and after Sources sync; a failure opens an issue (sourcing is not blocked)", "crons": [], "after": "Sources sync", "interval_min": 60, "timeout_min": 15},
+    "focus-keywords.yml": {"name": "Focus keywords (Rank Math)", "what": "Gives items without a Rank Math focus keyword one (AI, or the best words of the SEO title)", "crons": ["30 22 * * *"], "interval_min": 1440, "timeout_min": 90},
+    "backup-offsite.yml": {"name": "Site backup copy", "what": "Copies the site's daily database and code backup to a private GitHub release (kept 14 days)", "crons": ["30 23 * * *"], "interval_min": 1440, "timeout_min": 360},
+    "seo-scores.yml": {"name": "SEO scores (Rank Math)", "what": "Works out Rank Math SEO scores with Rank Math's own analyser for items that have a keyword but no score", "crons": ["45 23 * * *"], "interval_min": 1440, "timeout_min": 30},
+    "directory-enrichment.yml": {"name": "Directory enrichment", "what": "Finds missing contact details for Directory listings (Google Places free quota, OSM, Wikidata, websites) for review", "crons": [], "after": "SEO scores (Rank Math)", "interval_min": 1440, "timeout_min": 170},
+    "research.yml": {"name": "Research (India, Europe PMC and Crossref)", "what": "Finds new Indian animal-welfare papers (Europe PMC, Crossref) for the Library", "crons": ["40 3 * * 1"], "interval_min": 10080, "timeout_min": 120, "runnow": {"dry_run": "false"}},
+    "wp-cron.yml": {"name": "WordPress cron", "what": "Backup trigger for the site's scheduled tasks (Hostinger's server cron is the main one)", "crons": ["*/15 * * * *"], "interval_min": 15, "timeout_min": 3},
+    "keepalive.yml": {"name": "Keepalive", "what": "Switches scheduled workflows back on and commits when the repository has been quiet for 50 days", "crons": ["41 3 1 * *"], "interval_min": 44640, "timeout_min": 5},
+    "backfill.yml": {"name": "Backfill (News + Library from 1 Nov 2025)", "what": "One-off: older News and Library items, sent as drafts", "crons": [], "timeout_min": 300},
+    "submit.yml": {"name": "Submit URLs (News found by hand)", "what": "Sends News URLs found by hand through the same checks and summary as sourcing", "crons": [], "timeout_min": 30, "needs_input": true},
+    "press-gnews.yml": {"name": "Press search (one-off, Google News and Google Search)", "what": "One-off: press coverage of Animal Writes through Google Search", "crons": [], "timeout_min": 60},
+    "relevance-existing.yml": {"name": "Relevance check of existing items", "what": "One-off: checks published items against the relevance rules and stores a verdict", "crons": [], "timeout_min": 120},
+    "news-title-case.yml": {"name": "News and press titles: sentence case (dry run)", "what": "Dry run: a CSV of titles in sentence case; writes nothing to the site", "crons": [], "timeout_min": 60},
+    "same-story-fold.yml": {"name": "Same story: fold duplicates into the first story", "what": "Folds a duplicate story into the first one (pairs given by hand)", "crons": [], "timeout_min": 30, "needs_input": true}
+  }
+}

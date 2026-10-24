@@ -79,6 +79,8 @@ async function score(RA, rankMath, e) {
   }
   console.log(`Stored ${stored.length} score(s)${stored.length ? ': ' + stored.join(', ') : ''}`);
   if (failed.length) console.log(`Not scored: ${failed.join('; ')}`);
+  // This run's totals for the site's Workers tab (aw_workers/counts.py does the same for the Python workers).
+  if (process.env.RUNNER_TEMP) require('fs').writeFileSync(require('path').join(process.env.RUNNER_TEMP, 'aw-counts.json'), JSON.stringify({ stored: stored.length, not_scored: failed.length }));
   const summary = process.env.GITHUB_STEP_SUMMARY;
   if (summary) require('fs').appendFileSync(summary, `### Rank Math SEO scores\n\nStored ${stored.length}.${failed.length ? ` Not scored: ${failed.length}.` : ''}\n`);
 })().catch((err) => { console.error(err.message || err); process.exit(1); });

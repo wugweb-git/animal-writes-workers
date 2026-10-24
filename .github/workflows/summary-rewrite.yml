@@ -59,6 +59,10 @@ jobs:
       GROQ_MODEL: ${{ vars.GROQ_MODEL }}
     steps:
       - uses: actions/checkout@v5
+      - name: Report the start to the site
+        uses: ./.github/actions/report
+        with:
+          phase: start
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
@@ -72,9 +76,18 @@ jobs:
           echo "PAUSE_S=4" >> "$GITHUB_ENV"
           echo "MAX_MINUTES=40" >> "$GITHUB_ENV"
       - run: python -m aw_workers.summary_rewrite
+        id: main
       - name: More to do? Start the next run
         if: ${{ always() && inputs.ids == '' && !inputs.dry_run }}
         run: |
           n=$(cat chain.txt 2>/dev/null || echo 0)
           echo "items taken this run: $n"
           if [ "$n" -gt 0 ]; then gh workflow run summary-rewrite.yml; fi
+      - name: Report the end to the site (Settings → Sourcing → Workers)
+        if: always()
+        uses: ./.github/actions/report
+        with:
+          phase: end
+          main: main
+          steps: ${{ toJSON(steps) }}
+          status: ${{ job.status }}

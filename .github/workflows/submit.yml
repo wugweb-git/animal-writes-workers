@@ -45,6 +45,10 @@ jobs:
       GROQ_MODEL: ${{ vars.GROQ_MODEL }}
     steps:
       - uses: actions/checkout@v5
+      - name: Report the start to the site
+        uses: ./.github/actions/report
+        with:
+          phase: start
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
@@ -57,9 +61,18 @@ jobs:
           key: seen-${{ github.run_id }}
           restore-keys: seen-
       - run: python -m aw_workers.submit
+        id: main
       - name: Save seen-items state
         if: always() && inputs.dry_run == false && hashFiles('.state/**') != ''
         uses: actions/cache/save@v4
         with:
           path: .state
           key: seen-${{ github.run_id }}
+      - name: Report the end to the site (Settings → Sourcing → Workers)
+        if: always()
+        uses: ./.github/actions/report
+        with:
+          phase: end
+          main: main
+          steps: ${{ toJSON(steps) }}
+          status: ${{ job.status }}

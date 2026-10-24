@@ -25,12 +25,21 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v5
+      - name: Report the start to the site
+        uses: ./.github/actions/report
+        env:
+          WP_BASE_URL: ${{ secrets.WP_BASE_URL }}
+          WP_INGEST_USER: ${{ secrets.WP_INGEST_USER }}
+          WP_INGEST_APP_PASSWORD: ${{ secrets.WP_INGEST_APP_PASSWORD }}
+        with:
+          phase: start
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
           cache: pip
       - run: pip install -r requirements-dev.txt
       - run: pytest -q
+        id: main
       - name: Tell the owner
         if: failure() && github.event_name != 'pull_request'
         env:
@@ -41,3 +50,15 @@ jobs:
           n=$(gh issue list --state open --search "in:title \"$TITLE\"" --json number -q '.[0].number')
           if [ -n "$n" ]; then gh issue comment "$n" --body "$BODY"
           else gh issue create --title "$TITLE" --body "$BODY" --assignee "${{ github.repository_owner }}"; fi
+      - name: Report the end to the site (Settings → Sourcing → Workers)
+        if: always()
+        uses: ./.github/actions/report
+        env:
+          WP_BASE_URL: ${{ secrets.WP_BASE_URL }}
+          WP_INGEST_USER: ${{ secrets.WP_INGEST_USER }}
+          WP_INGEST_APP_PASSWORD: ${{ secrets.WP_INGEST_APP_PASSWORD }}
+        with:
+          phase: end
+          main: main
+          steps: ${{ toJSON(steps) }}
+          status: ${{ job.status }}

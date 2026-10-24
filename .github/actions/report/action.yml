@@ -1,0 +1,61 @@
+name: Report to the site
+description: >-
+  Start and end report of a workflow run to the site's Settings → Sourcing → Workers tab (POST aw/v1/worker-run, the
+  workers' application password). Never fails the job: a site that is down or a missing secret only skips the report.
+  Runs on main only (pull requests and branches do not report).
+inputs:
+  phase:
+    description: start or end
+    required: true
+  main:
+    description: Id of the step that does the work; when it was skipped the run is reported as skipped
+    default: ""
+  steps:
+    description: toJSON(steps) of the calling job (end only)
+    default: "{}"
+  status:
+    description: job.status of the calling job (end only)
+    default: success
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        PHASE: ${{ inputs.phase }}
+        MAIN: ${{ inputs.main }}
+        STEPS: ${{ inputs.steps }}
+        STATUS: ${{ inputs.status }}
+      run: |
+        set +e
+        if [ "$GITHUB_REF" != "refs/heads/main" ] || [ -z "$WP_BASE_URL" ] || [ -z "$WP_INGEST_USER" ] || [ -z "$WP_INGEST_APP_PASSWORD" ]; then
+          echo "worker report skipped (not main, or no site secrets)"; exit 0
+        fi
+        now=$(date -u +%s)
+        if [ "$PHASE" = "start" ]; then echo "AW_REPORT_STARTED=$now" >> "$GITHUB_ENV"; fi
+        started="${AW_REPORT_STARTED:-$now}"
+        counts="$RUNNER_TEMP/aw-counts.json"
+        [ -s "$counts" ] && jq -e 'type == "object"' "$counts" > /dev/null 2>&1 || echo '{}' > "$counts"
+        # Result: cancelled / failed (first failed step) / skipped (the main step did not run) / success.
+        failed=$(jq -r '[to_entries[] | select(.value.outcome == "failure") | .key][0] // ""' <<< "$STEPS" 2>/dev/null)
+        skipped=$(jq -c '[to_entries[] | select(.value.outcome == "skipped") | .key]' <<< "$STEPS" 2>/dev/null || echo '[]')
+        main_outcome=$(jq -r --arg m "$MAIN" '.[$m].outcome // ""' <<< "$STEPS" 2>/dev/null)
+        case "$STATUS" in
+          cancelled) result=cancelled ;;
+          failure) result=failed ;;
+          *) if [ -n "$MAIN" ] && [ "$main_outcome" = "skipped" ]; then result=skipped; else result=success; fi ;;
+        esac
+        [ "$PHASE" = "start" ] && result=running
+        body=$(jq -n \
+          --arg workflow "$(basename "${GITHUB_WORKFLOW_REF%%@*}")" --arg name "$GITHUB_WORKFLOW" \
+          --arg run_id "$GITHUB_RUN_ID" --arg attempt "$GITHUB_RUN_ATTEMPT" --arg event "$GITHUB_EVENT_NAME" \
+          --arg phase "$PHASE" --arg sha "${GITHUB_SHA:0:7}" --arg dry "${DRY_RUN:-}" \
+          --arg link "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+          --argjson started "$started" --arg result "$result" --arg failed "$failed" \
+          --argjson skipped "${skipped:-[]}" --slurpfile counts "$counts" \
+          '{workflow:$workflow, name:$name, run_id:$run_id, attempt:$attempt, event:$event, phase:$phase, sha:$sha,
+            dry_run:($dry == "true"), link:$link, started_at:$started, result:$result, failed_step:$failed,
+            skipped_steps:$skipped, counts:($counts[0] // {})}')
+        code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 15 -u "$WP_INGEST_USER:$WP_INGEST_APP_PASSWORD" \
+          -H 'Content-Type: application/json' -d "$body" "${WP_BASE_URL%/}/wp-json/aw/v1/worker-run")
+        echo "worker report ($PHASE, $result): HTTP $code"
+        exit 0

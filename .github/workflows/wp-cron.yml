@@ -19,8 +19,24 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 3
     steps:
+      - uses: actions/checkout@v5
+        with:
+          sparse-checkout: .github/actions
       - name: Run wp-cron.php
+        id: main
         run: |
           code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 90 "https://animalwrites.in/wp-cron.php?aw_tick=$(date +%s)")
           echo "wp-cron.php HTTP $code"
           test "$code" = "200"
+      - name: Report the end to the site (Settings → Sourcing → Workers)
+        if: always()
+        uses: ./.github/actions/report
+        env:
+          WP_BASE_URL: ${{ secrets.WP_BASE_URL }}
+          WP_INGEST_USER: ${{ secrets.WP_INGEST_USER }}
+          WP_INGEST_APP_PASSWORD: ${{ secrets.WP_INGEST_APP_PASSWORD }}
+        with:
+          phase: end
+          main: main
+          steps: ${{ toJSON(steps) }}
+          status: ${{ job.status }}

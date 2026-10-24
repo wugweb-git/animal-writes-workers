@@ -25,7 +25,7 @@ import os
 import re
 import sys
 
-from . import summarise
+from . import counts as run_counts, summarise
 
 log = logging.getLogger("aw_workers.headline_case")
 
@@ -202,6 +202,7 @@ def main(argv: list[str]) -> int:
     for r in out:
         counts[r["status"]] = counts.get(r["status"], 0) + 1
     log.info("%d %s titles read; %d rows written to %s: %s", len(rows), post_type, len(out), out_path, counts)
+    run_counts.write(read=len(rows), **{k: v for k, v in counts.items() if k})
     return 0
 
 
