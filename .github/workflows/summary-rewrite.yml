@@ -75,7 +75,10 @@ jobs:
           echo "BATCH=$b" >> "$GITHUB_ENV"
           echo "PAUSE_S=4" >> "$GITHUB_ENV"
           echo "MAX_MINUTES=40" >> "$GITHUB_ENV"
-      - run: python -m aw_workers.summary_rewrite
+      # MAX_MINUTES (40) is counted from the process start; the worker cuts every AI call's timeout to the time left
+      # and keeps a reserve, so it ends with its counts well before timeout-minutes (50). -u: each item's line shows
+      # as it is done (25 Oct 2026: cancelled runs lost every buffered line).
+      - run: python -u -m aw_workers.summary_rewrite
         id: main
       - name: More to do? Start the next run
         if: ${{ always() && inputs.ids == '' && !inputs.dry_run }}

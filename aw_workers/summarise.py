@@ -155,10 +155,13 @@ class ClaudeBackend:
     def ask(self, prompt: str) -> str:
         if self.budget_usd is not None and self.spent_usd >= self.budget_usd:
             raise BudgetExceeded(f"monthly Haiku budget ${self.budget_usd:.2f} reached")
+        # a caller with a deadline sets .timeout (seconds per attempt); otherwise the SDK's own default applies
+        extra = {"timeout": self.timeout} if getattr(self, "timeout", None) else {}
         msg = self.client.messages.create(
             model=self.model,
             max_tokens=300,
             messages=[{"role": "user", "content": prompt}],
+            **extra,
         )
         if getattr(msg, "stop_reason", "") == "max_tokens":
             raise CutOff(f"{self.name}: stopped at max_tokens")
@@ -223,7 +226,7 @@ class GeminiBackend:
             headers={"x-goog-api-key": self.api_key},
             # 4096: flash models think first, and the thinking counts against this limit (1024 cut answers off)
             json={"contents": [{"parts": [{"text": prompt}]}], "generationConfig": {"maxOutputTokens": 4096}},
-            timeout=30, sleep=self.sleep, min_interval=self.min_interval, state=self.state,
+            timeout=getattr(self, "timeout", 30), sleep=self.sleep, min_interval=self.min_interval, state=self.state,
         )
         cand = resp.json()["candidates"][0]
         if cand.get("finishReason") == "MAX_TOKENS":
