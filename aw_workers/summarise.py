@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import dataclasses
 import logging
+import os
 import re
 import time
 
@@ -259,8 +260,9 @@ class GroqBackend:
             self.session,
             self.URL,
             headers={"Authorization": f"Bearer {self.api_key}"},
-            # 800: gpt-oss models reason before answering, and 300 tokens could end before the answer (12 Oct 2026)
-            json={"model": self.model, "max_tokens": 800, "messages": [{"role": "user", "content": prompt}]},
+            # 2000: reasoning models (gpt-oss, nemotron) think before answering; 800 cut most research summaries off
+            # (24 Oct 2026). Free models, so the larger limit costs nothing.
+            json={"model": self.model, "max_tokens": 2000, "messages": [{"role": "user", "content": prompt}]},
             timeout=getattr(self, "timeout", 30), sleep=self.sleep, min_interval=self.min_interval, state=self.state,
         )
         body = resp.json()
@@ -395,7 +397,8 @@ def backends_from_env(env, ledger: dict | None = None) -> list:
 
 
 # Errors that mean "this key is unusable for the rest of the run" (not a bad summary).
-_DEAD_KEY_MARKERS = ("401", "402", "403", "credit balance", "budget", "quota", "insufficient", "no credits", "suspended")
+# 404/410: the model is not offered on this key (24 Oct 2026: Groq and NVIDIA models answered "not found" all run long)
+_DEAD_KEY_MARKERS = ("401", "402", "403", "404 client error", "410 client error", "credit balance", "budget", "quota", "insufficient", "no credits", "suspended")
 # A 429 (rate limit) is not a dead key: _post_with_retry already waited and retried; the key is dropped for the run only
 # after this many calls in a row still ended in 429 (12 Oct 2026: one 429 used to drop Groq, the only working key).
 
@@ -531,10 +534,15 @@ class Summariser:
     def _summarise(self, item: Item) -> str:
         prompt = prompt_for(item)
         reasons = []
+        tries, most = 0, int(os.environ.get("AW_MAX_TRIES_PER_ITEM") or 30)
         for _ in range(2):  # a second pass once a rate-limited key has rested
             for i, backend in enumerate(self.backends):
                 if not usable(self, i):
                     continue
+                if tries >= most:  # one hard item no longer walks ~150 key/model pairs (24 Oct 2026: Research ran 2 h)
+                    reasons.append(f"stopped after {most} tries; the next run tries again")
+                    raise SummaryError(" | ".join(reasons))
+                tries += 1
                 try:
                     summary = self._try(backend, prompt, item)
                 except ShortSummary:

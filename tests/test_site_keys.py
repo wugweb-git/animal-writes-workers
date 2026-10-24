@@ -122,3 +122,27 @@ def test_nvidia_keys_rotate_free_models_and_wait_longer():
     bs = summarise.backends_from_rows(rows)
     firsts = [next(b.model for b in bs if b.api_key == f"nvapi-{i}") for i in range(2)]
     assert firsts == summarise.EXTRA_MODELS["nvidia"][:2] and all(b.timeout == 60 for b in bs)
+
+
+def test_an_item_stops_after_the_try_limit(monkeypatch):
+    monkeypatch.setenv("AW_MAX_TRIES_PER_ITEM", "3")
+
+    class Bad:
+        name, api_key, model = "x", "k", "m"
+        calls = 0
+
+        def ask(self, prompt):
+            Bad.calls += 1
+            raise RuntimeError("stopped at max_tokens")
+
+    owner = summarise.Summariser([Bad() for _ in range(10)])
+    import pytest
+    from aw_workers.sources import Item, Source
+    item = Item(Source(id="s", name="S", kind="rss", type="news", url="https://x.test"), "A title", "https://x.test/a", None)
+    with pytest.raises(summarise.SummaryError, match="stopped after 3 tries"):
+        owner._summarise(item)
+    assert Bad.calls == 3
+
+
+def test_model_not_found_drops_that_backend_for_the_run():
+    assert summarise._is_dead_key_error(RuntimeError("404 Client Error: Not Found for url: https://api.groq.com/x"))
