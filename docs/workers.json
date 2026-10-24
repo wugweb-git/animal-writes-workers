@@ -17,6 +17,7 @@
     "press-gnews.yml": {"name": "Press search (one-off, Google News and Google Search)", "what": "One-off: press coverage of Animal Writes through Google Search", "crons": [], "timeout_min": 60, "late_after_h": null},
     "relevance-existing.yml": {"name": "Relevance check of existing items", "what": "One-off: checks published items against the relevance rules and stores a verdict", "crons": [], "timeout_min": 120, "late_after_h": null},
     "news-title-case.yml": {"name": "News and press titles: sentence case (dry run)", "what": "Dry run: a CSV of titles in sentence case; writes nothing to the site", "crons": [], "timeout_min": 60, "late_after_h": null},
-    "same-story-fold.yml": {"name": "Same story: fold duplicates into the first story", "what": "Folds a duplicate story into the first one (pairs given by hand)", "crons": [], "timeout_min": 30, "needs_input": true, "late_after_h": null}
+    "same-story-fold.yml": {"name": "Same story: fold duplicates into the first story", "what": "Folds a duplicate story into the first one (pairs given by hand)", "crons": [], "timeout_min": 30, "needs_input": true, "late_after_h": null},
+    "darpan-import.yml": {"name": "NGO Darpan import", "what": "Imports NGO Darpan CSVs downloaded by the owner into Directory → Enrichment review, after name, state and district checks", "crons": [], "timeout_min": 60, "needs_input": true, "late_after_h": null}
   }
 }
