@@ -147,6 +147,61 @@ def crossref(term: str, floor: date, get=requests.get) -> list[dict]:
     return out
 
 
+KNOWN_FILE = Path(os.environ.get("AW_RESEARCH_KNOWN", ".state/research-known.json"))
+EXISTS_BATCH = 500
+_DOI = re.compile(r"^https?://(?:dx\.)?doi\.org/(10\.[^\s?#]+)", re.I)
+
+
+def doi_of(url: str) -> str:
+    """The DOI of a doi.org link, lower case ('' otherwise)."""
+    m = _DOI.match(url or "")
+    return m.group(1).lower() if m else ""
+
+
+def load_known(path: Path = KNOWN_FILE) -> set[str]:
+    try:
+        return set(json.loads(path.read_text(encoding="utf-8")))
+    except (OSError, ValueError):
+        return set()
+
+
+def save_known(known: set[str], path: Path = KNOWN_FILE) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(sorted(known)), encoding="utf-8")
+
+
+def drop_existing(papers: list[dict], client, known: set[str]) -> tuple[list[dict], int]:
+    """Papers the site does not have yet, before any AI step (owner, 24 Oct 2026: a hand-started run summarised a year of
+    papers, most already on the site). Known DOIs from earlier runs first, then one aw/v1/exists call per 500 papers;
+    DOIs found on the site are added to `known`. If the site cannot answer, the papers are kept (the ingest still
+    refuses duplicates). Returns (papers to process, how many are already on the site)."""
+    fresh = [p for p in papers if not (doi_of(p["url"]) and doi_of(p["url"]) in known)]
+    already = len(papers) - len(fresh)
+    if client is None or not fresh:
+        return fresh, already
+    keep: list[dict] = []
+    for i in range(0, len(fresh), EXISTS_BATCH):
+        chunk = fresh[i:i + EXISTS_BATCH]
+        dois = [d for d in (doi_of(p["url"]) for p in chunk) if d]
+        try:
+            found = client.exists(dois, [p["url"] for p in chunk])
+        except ingest.AuthError:
+            raise
+        except Exception as exc:  # endpoint missing or the site busy: keep them, the ingest refuses duplicates anyway
+            log.warning("research: could not ask the site which papers it has (%s); checking them one by one", exc)
+            keep += fresh[i:]
+            break
+        have_dois = {str(d).lower() for d in found.get("dois") or []}
+        have_urls = {str(u) for u in found.get("urls") or []}
+        known |= have_dois
+        for p in chunk:
+            if doi_of(p["url"]) in have_dois or p["url"] in have_urls:
+                already += 1
+            else:
+                keep.append(p)
+    return keep, already
+
+
 def collect(floor: date, today: date) -> list[dict]:
     seen, keep = set(), []
     for words in SUBJECTS.values():
@@ -217,10 +272,13 @@ def main() -> int:
     gate = relevance.Gate.from_site(None if dry_run else summariser, client, dry_run=dry_run)
     summary_rules.use(client)
     papers = collect(floor, today)
-    log.info("research: %d India papers since %s", len(papers), floor)
+    known = load_known()
+    todo, already = drop_existing(papers, client, known)
+    log.info("research: %d India papers since %s; %d already on the site; %d to check", len(papers), floor, already, len(todo))
     src = Source(id="research", name="Research", kind="api", type="research", url="")
-    counts, rows = {"sent": 0, "duplicate": 0, "failed": 0, "rejected": 0, "classifier unavailable": 0}, []
-    for p in papers:
+    counts, rows = {"found": len(papers), "already on site": already, "summarised": 0, "sent": 0, "duplicate": 0, "failed": 0,
+                    "rejected": 0, "classifier unavailable": 0}, []
+    for p in todo:
         item = Item(source=src, title=p["title"], url=p["url"], date=date.fromisoformat(p["date"]),
                     text=p["abstract"] or p["title"], publisher=p["journal"])
         outcome, verdict = gate.admit(relevance.Candidate(kind="research", title=item.title, url=item.url, text=item.text,
@@ -231,6 +289,7 @@ def main() -> int:
             continue
         try:
             summary = summariser.summarise(item)
+            counts["summarised"] += 1
             cats = summarise.pick_categories(summariser, item, summary, sources.allowed_categories("research"))
             payload = dict(ingest.build_payload(item, summary, cats), backfill=True, study_title=p["title"],
                            authors=p.get("authors") or [], journal=p.get("journal") or "")  # the study's credit (Sources block)
@@ -251,9 +310,12 @@ def main() -> int:
             log.error("failed %s: %s", p["url"], exc)
             continue
         counts["duplicate" if result == "duplicate" else "sent"] += 1
+        if client and doi_of(p["url"]):
+            known.add(doi_of(p["url"]))  # on the site now (sent, held or a duplicate): never summarised again
         rows.append({"date": p["date"], "journal": p["journal"], "title": p["title"], "url": p["url"], "result": result})
     if not dry_run:
         gate.save()
+        save_known(known)
     Path("research-report.json").write_text(json.dumps({"floor": floor.isoformat(), "counts": counts, "items": rows}, ensure_ascii=False, indent=1))
     summary_file = os.environ.get("GITHUB_STEP_SUMMARY")
     if summary_file:
