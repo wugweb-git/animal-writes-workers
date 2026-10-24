@@ -223,6 +223,14 @@ class Client:
         body = {"items": items, "replace": True} if replace else {"items": items}
         return self._call("POST", "/seo-focus", json=body, timeout=90)
 
+    def search_insights(self) -> dict:
+        """Search Insights' lists for the rising-terms job: keywords, topics, species, watchlists and seeds."""
+        return self._call("GET", "/search-insights", timeout=60)
+
+    def search_insights_post(self, body: dict) -> dict:
+        """One source's rising terms and figures (aw/v1/search-insights); the site records the source's run."""
+        return self._call("POST", "/search-insights", json=body, timeout=90)
+
     def post(self, payload: dict) -> str:
         """Returns 'created', 'duplicate', or 'blocked' / 'filtered' (refused by the site's sourcing policy)."""
         if self.title_caser and payload.get("type") == "press" and payload.get("title"):

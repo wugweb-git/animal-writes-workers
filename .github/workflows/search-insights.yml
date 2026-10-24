@@ -1,0 +1,77 @@
+name: "Search Insights: rising terms"
+
+# Owner, 24 Oct 2026 (Search Insights plan §5.3, phase 3): free sources only, posted to aw/v1/search-insights with the
+# ingest user's application password; the site shows them in Tools → Search Insights → Rising (aw_workers/search_insights.py).
+# Daily 08:10 IST: Trends "Trending now" RSS, Wikipedia pageviews, GDELT. Weekly, Monday 08:30 IST: autocomplete (English)
+# and Trends rising related queries. Monthly, 1st 09:00 IST: Trends interest anchored on "animal welfare" = 100.
+# Trends and autocomplete get one paced attempt a run; a refusal is reported and the owner pastes on the Rising tab.
+on:
+  workflow_dispatch:
+    inputs:
+      job:
+        description: "Which sources"
+        type: choice
+        options: [daily, weekly, monthly, all]
+        default: daily
+      days:
+        description: "Days to look back (empty: 1 daily, 7 weekly)"
+        type: string
+        default: ""
+      dry_run:
+        description: "Dry run: fetch and list the top rising terms, send nothing"
+        type: boolean
+        default: true
+  schedule:
+    - cron: "40 2 * * *" # daily, 08:10 IST
+    - cron: "0 3 * * 1" # weekly, Monday 08:30 IST
+    - cron: "30 3 1 * *" # monthly, the 1st, 09:00 IST
+
+concurrency:
+  group: search-insights
+  cancel-in-progress: false
+
+jobs:
+  rising:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      # DRY_RUN stays ON for scheduled runs unless the repo variable DRY_RUN is set to "false", as in sourcing.
+      DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && (inputs.dry_run && 'true' || 'false') || vars.DRY_RUN || 'true' }}
+      AW_SI_JOB: ${{ github.event_name == 'workflow_dispatch' && inputs.job || (github.event.schedule == '0 3 * * 1' && 'weekly' || (github.event.schedule == '30 3 1 * *' && 'monthly' || 'daily')) }}
+      AW_SI_DAYS: ${{ inputs.days }}
+      WP_BASE_URL: ${{ secrets.WP_BASE_URL }}
+      WP_INGEST_USER: ${{ secrets.WP_INGEST_USER }}
+      WP_INGEST_APP_PASSWORD: ${{ secrets.WP_INGEST_APP_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Report the start to the site
+        uses: ./.github/actions/report
+        with:
+          phase: start
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Restore autocomplete snapshots
+        uses: actions/cache/restore@v4
+        with:
+          path: .state
+          key: search-insights-${{ github.run_id }}
+          restore-keys: search-insights-
+      - run: python -m aw_workers.search_insights
+        id: main
+      - name: Save autocomplete snapshots
+        if: always() && hashFiles('.state/**') != ''
+        uses: actions/cache/save@v4
+        with:
+          path: .state
+          key: search-insights-${{ github.run_id }}
+      - name: Report the end to the site (Settings → Sourcing → Workers)
+        if: always()
+        uses: ./.github/actions/report
+        with:
+          phase: end
+          main: main
+          steps: ${{ toJSON(steps) }}
+          status: ${{ job.status }}
