@@ -65,3 +65,11 @@ def test_every_workflow_reports_start_and_end():
         assert f == "wp-cron.yml" or phases[0] == "start", f
         main = steps[-1]["with"]["main"]
         assert any(s.get("id") == main for s in job["steps"]), f
+
+
+def test_late_limits_cover_the_schedule():
+    """Every workflow states its late limit; a scheduled one's limit is longer than its longest gap."""
+    for f, r in REG.items():
+        assert "late_after_h" in r, f
+        if r["late_after_h"] is not None:
+            assert r["late_after_h"] * 60 > r.get("interval_min", 0), f

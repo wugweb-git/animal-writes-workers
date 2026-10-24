@@ -50,10 +50,10 @@ runs:
           --arg run_id "$GITHUB_RUN_ID" --arg attempt "$GITHUB_RUN_ATTEMPT" --arg event "$GITHUB_EVENT_NAME" \
           --arg phase "$PHASE" --arg sha "${GITHUB_SHA:0:7}" --arg dry "${DRY_RUN:-}" \
           --arg link "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
-          --argjson started "$started" --arg result "$result" --arg failed "$failed" \
+          --argjson started "$started" --arg result "$result" --arg failed "$failed" --arg main "$MAIN" \
           --argjson skipped "${skipped:-[]}" --slurpfile counts "$counts" \
           '{workflow:$workflow, name:$name, run_id:$run_id, attempt:$attempt, event:$event, phase:$phase, sha:$sha,
-            dry_run:($dry == "true"), link:$link, started_at:$started, result:$result, failed_step:$failed,
+            dry_run:($dry == "true"), link:$link, started_at:$started, result:$result, failed_step:$failed, main_step:$main,
             skipped_steps:$skipped, counts:($counts[0] // {})}')
         code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 15 -u "$WP_INGEST_USER:$WP_INGEST_APP_PASSWORD" \
           -H 'Content-Type: application/json' -d "$body" "${WP_BASE_URL%/}/wp-json/aw/v1/worker-run")
