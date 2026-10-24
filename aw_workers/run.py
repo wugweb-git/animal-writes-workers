@@ -320,6 +320,8 @@ def default_enricher(url: str) -> tuple[str, str]:
     return real, enrich.og_image(real)
 
 
+# Mirrored on the site in aw-sourcing AW_SOURCING_EXTRA_SEARCHES (plugins/aw-sourcing/includes/keyword-stats.php in
+# wugweb-git/animalwrites): change both together, or the Sourcing keywords stats on the site miss or invent a search.
 EXTRA_SEARCHES = ("stray dogs",)  # owner, 12 Oct 2026
 SEARCH_MAX_ITEMS = 40  # new (unseen) items per Google News search and run; busy searches return 30-45 a day
 FAIL_SHARE = 0.5  # half the sources or more failing makes the run fail and the site alert the owner
