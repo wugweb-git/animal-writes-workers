@@ -14,6 +14,8 @@ import re
 
 import requests
 
+from .worker_id import ai_keys_params
+
 log = logging.getLogger(__name__)
 
 URL = "https://api.firecrawl.dev/v2/scrape"
@@ -26,7 +28,8 @@ def site_key(env=os.environ, session=None) -> str:
     if not (base and user and pw):
         return ""
     try:
-        resp = (session or requests).get(base.rstrip("/") + "/wp-json/aw/v1/ai-keys", auth=(user, pw), timeout=30)
+        resp = (session or requests).get(base.rstrip("/") + "/wp-json/aw/v1/ai-keys", params=ai_keys_params(env),
+                                             auth=(user, pw), timeout=30)
         resp.raise_for_status()
         tools = resp.json().get("tools") or []
     except Exception as exc:  # noqa: BLE001

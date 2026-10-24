@@ -12,6 +12,7 @@ import requests
 from datetime import datetime, timezone
 
 from . import ai_usage, event_dates, summary_rules
+from .worker_id import ai_keys_params
 from .sources import Item
 
 log = logging.getLogger(__name__)
@@ -313,7 +314,8 @@ def site_rows(env, session=None) -> list[dict]:
     if not (base and user and pw) or env.get("AW_SITE_KEYS") == "0":
         return []
     try:
-        resp = (session or requests).get(base.rstrip("/") + "/wp-json/aw/v1/ai-keys", auth=(user, pw), timeout=30)
+        resp = (session or requests).get(base.rstrip("/") + "/wp-json/aw/v1/ai-keys", params=ai_keys_params(env),
+                                             auth=(user, pw), timeout=30)
         resp.raise_for_status()
         rows = resp.json().get("rows") or []
     except Exception as exc:  # noqa: BLE001
