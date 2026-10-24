@@ -25,7 +25,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from . import sources
-from .summarise import MODEL as HAIKU_MODEL, _is_dead_key_error, note_failure, note_success, usable, wait_for_cooldown  # noqa: F401
+from .summarise import _is_dead_key_error, note_failure, note_success, usable, wait_for_cooldown  # noqa: F401
 
 log = logging.getLogger("aw_workers.relevance")
 
@@ -186,7 +186,7 @@ def parse(reply: str) -> dict | None:
 
 
 def backend_label(b) -> str:
-    return f"{b.name}:{getattr(b, 'model', HAIKU_MODEL)}"
+    return f"{b.name}:{getattr(b, 'model', '')}"
 
 
 def norm_name(s: str) -> str:

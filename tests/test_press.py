@@ -52,3 +52,12 @@ def test_formats_and_handles():
     assert press.handle_of("https://x.com/AnimalWrites/status/5", "x") == "@AnimalWrites"
     assert press.handle_of("https://www.reddit.com/r/india/comments/1/x", "reddit") == "r/india"
     assert press.handle_of("https://www.instagram.com/p/abc/", "instagram") == ""
+
+
+def test_press_web_search_never_uses_a_paid_openrouter_model():
+    from aw_workers import press_gemini
+
+    env = {"OPENROUTER_API_KEY": "o", "GEMINI_API_KEY": "g"}
+    assert press_gemini.web_keys(env) == ["g"]  # no model set: the old paid default is gone
+    assert press_gemini.web_keys({**env, "AW_PRESS_OPENROUTER_MODEL": "openai/gpt-4o-mini:online"}) == ["g"]
+    assert press_gemini.web_keys({**env, "AW_PRESS_OPENROUTER_MODEL": "google/gemma-4-31b-it:free:online"}) == ["or:o", "g"]

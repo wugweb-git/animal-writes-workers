@@ -24,7 +24,7 @@ Each run reports `fetched / new / duplicate / failed` in the job summary. A reje
 | `WP_BASE_URL` | Site address, e.g. `https://slategray-donkey-829925.hostingersite.com` |
 | `WP_INGEST_USER` | The `ingest` WordPress user (Editor role) |
 | `WP_INGEST_APP_PASSWORD` | That user's Application Password |
-| `ANTHROPIC_API_KEY` | Anthropic API key (Claude Haiku 4.5, paid, about $1–2/month) |
+| `ANTHROPIC_API_KEY` | Not used: paid models only (owner, 25 Oct 2026: no paid AI models) |
 | `GEMINI_API_KEY` | Google AI Studio key (Gemini, free tier) |
 | `GROQ_API_KEY` | Groq key (free tier) |
 
@@ -34,10 +34,11 @@ or rate-limited is skipped for the rest of the run and the next key is used.
 `python3 scripts/sort_keys.py --github` tests a list of keys and loads every working one.
 
 ## Summary providers
-Tried in the order of the repository **variable** `LLM_PROVIDERS` (default `haiku,gemini,groq`; this repo sets `gemini,groq,haiku` so the free tiers are used up first).
-Haiku comes first for quality, capped at an estimated **$4/month** (variable `HAIKU_MONTHLY_BUDGET_USD`);
-once the cap is reached it is skipped until the next month. Gemini, then Groq, are used only if the one before it errors, is over budget,
-or its summary still fails the checks after one retry. Every provider must pass the same checks.
+Tried in the order of the repository **variable** `LLM_PROVIDERS` (default `gemini,groq`), after the rows saved on the site
+(Settings → AI models). **No paid AI models, ever, not even as a fallback** (owner, 25 Oct 2026): providers that only sell
+paid models (Anthropic/Haiku, OpenAI, xAI, DeepSeek, Moonshot, MiniMax, Together) are skipped and never called, whatever
+`LLM_PROVIDERS` or the saved rows say; OpenRouter runs on `:free` models only. A provider is used only if the one before
+it errors or its summary still fails the checks after one retry. Every provider must pass the same checks.
 Optional variables: `GEMINI_MODEL` (default `gemini-flash-latest`), `GROQ_MODEL` (default `openai/gpt-oss-120b`).
 Each run logs how many summaries each provider wrote. Free tiers have rate limits, and on
 Gemini's free tier Google may use prompts to improve its models (the input here is public news).

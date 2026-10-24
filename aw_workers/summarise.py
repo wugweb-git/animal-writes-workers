@@ -19,7 +19,10 @@ log = logging.getLogger(__name__)
 
 MAX_RETRY_WAIT = 15.0  # seconds; longer waits skip to the next key
 
-MODEL = "claude-haiku-4-5"
+# No paid AI models, ever, not even as a fallback (owner, 25 Oct 2026). Providers that only sell paid models are skipped,
+# never called, whatever LLM_PROVIDERS or the site's saved rows say; OpenRouter is used on its free models only.
+PAID_ONLY = frozenset({"haiku", "anthropic", "openai", "xai", "deepseek", "moonshot", "minimax", "together"})
+OPENROUTER_FREE_DEFAULT = "nvidia/nemotron-3-ultra-550b-a55b:free"
 MAX_QUOTE_WORDS = summary_rules.DEFAULTS["max_quote_words"]  # kept for older callers; the rules decide
 LEGAL_NOTE = "[Needs legal review]"
 
@@ -132,12 +135,13 @@ class BudgetExceeded(Exception):
 
 
 class ClaudeBackend:
-    """Claude Haiku 4.5, capped by an estimated monthly spend (ledger persisted between runs)."""
+    """Anthropic's API, capped by an estimated monthly spend. Paid only: never built by backends_from_env/_rows
+    (PAID_ONLY); kept for its tests and the shared call accounting."""
 
     name = "haiku"
 
     def __init__(self, api_key: str, client=None, budget_usd: float | None = None,
-                 ledger: dict | None = None, month: str | None = None, model: str = MODEL):
+                 ledger: dict | None = None, month: str | None = None, *, model: str):
         self.model, self.api_key = model, api_key
         if client is None:
             import anthropic
@@ -291,14 +295,9 @@ for _cls in (ClaudeBackend, GeminiBackend, GroqBackend, OpenAICompatBackend):
     if "ask" in _cls.__dict__:
         _cls.ask = ai_usage.counted(_cls.__dict__["ask"])
 
-# name: (URL, key env var, model env var, default model)
+# name: (URL, key env var, model env var, default model). Free models only (PAID_ONLY providers are not listed).
 OPENAI_COMPAT = {
-    "deepseek": ("https://api.deepseek.com/chat/completions", "DEEPSEEK_API_KEY", "DEEPSEEK_MODEL", "deepseek-chat"),
-    "openai": ("https://api.openai.com/v1/chat/completions", "OPENAI_API_KEY", "OPENAI_MODEL", "gpt-4o-mini"),
-    "moonshot": ("https://api.moonshot.ai/v1/chat/completions", "MOONSHOT_API_KEY", "MOONSHOT_MODEL", "moonshot-v1-8k"),
-    "minimax": ("https://api.minimax.io/v1/chat/completions", "MINIMAX_API_KEY", "MINIMAX_MODEL", "MiniMax-M2"),
-    "xai": ("https://api.x.ai/v1/chat/completions", "XAI_API_KEY", "XAI_MODEL", "grok-3-mini"),
-    "openrouter": ("https://openrouter.ai/api/v1/chat/completions", "OPENROUTER_API_KEY", "OPENROUTER_MODEL", "openai/gpt-4o-mini"),
+    "openrouter": ("https://openrouter.ai/api/v1/chat/completions", "OPENROUTER_API_KEY", "OPENROUTER_MODEL", OPENROUTER_FREE_DEFAULT),
 }
 
 
@@ -332,8 +331,9 @@ def site_rows(env, session=None) -> list[dict]:
 EXTRA_MODELS = {
     "gemini": ["gemini-flash-lite-latest", "gemini-3-flash-preview", "gemini-flash-latest"],
     "groq": ["openai/gpt-oss-120b", "openai/gpt-oss-20b", "llama-3.3-70b-versatile", "llama-3.1-8b-instant"],
-    "openrouter": ["minimax/minimax-m3.1-flash:free", "nvidia/nemotron-3-ultra-550b-a55b:free", "google/gemma-4-31b-it:free",
-                   "xingchen-agi/xing4.0-29b-a4b:free", "openrouter/free"],  # openrouter/free: any free model OpenRouter has room on
+    # free ids on https://openrouter.ai/api/v1/models, 25 Oct 2026 (minimax-m3.1-flash:free answered 404 all run, 24 Oct)
+    "openrouter": ["nvidia/nemotron-3-ultra-550b-a55b:free", "google/gemma-4-31b-it:free", "nvidia/nemotron-3-super-120b-a12b:free",
+                   "poolside/laguna-s-2.1:free", "xingchen-agi/xing4.0-29b-a4b:free", "openrouter/free"],  # openrouter/free: any free model OpenRouter has room on
     "requesty": ["google/gemma-4-31b-it", "nvidia/nemotron-3-ultra-550b-a55b", "novita/ling-3.1-flash",
                  "nvidia/nemotron-3.5-lightning-30b-a3b", "nvidia/muse-glimmer-30b", "mistral/leanstral-1-5"],
     "cline": ["minimax/minimax-m3.1-flash:free", "nvidia/nemotron-3-ultra-550b-a55b:free"],
@@ -350,6 +350,9 @@ def backends_from_rows(rows: list[dict], budget: float | None = None, ledger: di
     out, seen = [], {}
     for r in rows:
         key, model, provider = r["key"].strip(), (r.get("model") or "").strip(), r.get("provider") or "other"
+        if provider in PAID_ONLY:
+            log.warning("AI model row skipped (%s): paid models only (owner: no paid models)", r.get("name") or provider)
+            continue
         extra = EXTRA_MODELS.get(provider, [])
         if provider in FREE_FIRST:
             # each key of a provider starts on the next free model, so busy free models are spread (owner, 22 Oct 2026)
@@ -360,9 +363,7 @@ def backends_from_rows(rows: list[dict], budget: float | None = None, ledger: di
             models = list(dict.fromkeys([m for m in [*free, model] if m and (m in extra or _free_model(m))]))
         else:
             models = list(dict.fromkeys([m for m in [model, *extra] if m]))
-        if provider == "anthropic":
-            out.append(ClaudeBackend(key, budget_usd=budget, ledger=ledger, model=model or MODEL))
-        elif provider == "gemini":
+        if provider == "gemini":
             out += [GeminiBackend(key, m) for m in models or ["gemini-flash-latest"]]
         elif r.get("url") and models:
             made = [OpenAICompatBackend(r.get("name") or provider, r["url"], key, m) for m in models]
@@ -376,22 +377,28 @@ def backends_from_rows(rows: list[dict], budget: float | None = None, ledger: di
 
 
 def backends_from_env(env, ledger: dict | None = None) -> list:
-    """Providers in LLM_PROVIDERS order (default haiku,gemini,groq), one backend per key.
-    Providers without a key are skipped. Haiku stops for the month once its estimated spend
-    reaches HAIKU_MONTHLY_BUDGET_USD (default 4), shared across all Haiku keys."""
+    """Providers in LLM_PROVIDERS order (default gemini,groq), one backend per key. Providers without a key are
+    skipped; so are PAID_ONLY providers (never called), and OpenRouter runs on a free model only."""
     budget = float(env.get("HAIKU_MONTHLY_BUDGET_USD") or 4)
     ledger = ledger if ledger is not None else {}
     makers = {
-        "haiku": lambda: [ClaudeBackend(k, budget_usd=budget, ledger=ledger) for k in _keys(env.get("ANTHROPIC_API_KEY"), env.get("ANTHROPIC_API_KEY_2"))],
         "gemini": lambda: [GeminiBackend(k, env.get("GEMINI_MODEL") or "gemini-flash-latest")
                            for k in _keys(env.get("GEMINI_API_KEY"), env.get("GEMINI_API_KEY_2"))],
         "groq": lambda: [GroqBackend(k, env.get("GROQ_MODEL") or "openai/gpt-oss-120b")
                          for k in _keys(env.get("GROQ_API_KEY"), env.get("GROQ_API_KEY_2"))],
     }
     for name, (url, key_var, model_var, model) in OPENAI_COMPAT.items():
-        makers[name] = (lambda n=name, u=url, kv=key_var, mv=model_var, m=model:
-                        [OpenAICompatBackend(n, u, k, env.get(mv) or m) for k in _keys(env.get(kv), env.get(kv + "_2"))])
-    order = [p.strip().lower() for p in (env.get("LLM_PROVIDERS") or "haiku,gemini,groq").split(",") if p.strip()]
+        chosen = env.get(model_var) or model
+        if not _free_model(chosen):  # a paid model set in the variable: the free default instead
+            log.warning("%s: %s is not a free model; %s is used", model_var, chosen, model)
+            chosen = model
+        makers[name] = (lambda n=name, u=url, kv=key_var, m=chosen:
+                        [OpenAICompatBackend(n, u, k, m) for k in _keys(env.get(kv), env.get(kv + "_2"))])
+    order = [p.strip().lower() for p in (env.get("LLM_PROVIDERS") or "gemini,groq").split(",") if p.strip()]
+    paid = [p for p in order if p in PAID_ONLY]
+    if paid:
+        log.warning("LLM_PROVIDERS: skipped (paid models only): %s", ", ".join(paid))
+        order = [p for p in order if p not in PAID_ONLY]
     unknown = [p for p in order if p not in makers]
     if unknown:
         raise ValueError(f"unknown LLM_PROVIDERS entries: {', '.join(unknown)}")
