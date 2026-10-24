@@ -11,6 +11,7 @@ Run: python -m aw_workers.research   (DRY_RUN=true by default)
 
 from __future__ import annotations
 
+import difflib
 import html
 import json
 import logging
@@ -170,6 +171,36 @@ def save_known(known: set[str], path: Path = KNOWN_FILE) -> None:
     path.write_text(json.dumps(sorted(known)), encoding="utf-8")
 
 
+SAME_STUDY = 0.9
+
+
+def norm_title(t: str) -> str:
+    """Lower case, letters and digits only, single spaces (an en dash and a hyphen read the same)."""
+    return " ".join(re.sub(r"[^a-z0-9]+", " ", html.unescape(t or "").lower()).split())
+
+
+def surname(name: str) -> str:
+    parts = re.sub(r"[^a-z\s-]", "", (name or "").lower()).split()
+    return parts[-1] if parts else ""
+
+
+def same_study(p: dict, studies: list[dict]) -> int:
+    """The site item that is this paper under another DOI or URL (a preprint and its journal version): normalised
+    titles alike at >= 0.9 and the same first author (surname) or year. 0 when none (owner, 24 Oct 2026: 20054 was
+    12573 again, once from Europe PMC and once from the journal's DOI)."""
+    title = norm_title(p.get("title", ""))
+    if not title:
+        return 0
+    first = surname((p.get("authors") or [""])[0])
+    year = str(p.get("date", ""))[:4]
+    for s in studies:
+        if difflib.SequenceMatcher(None, title, norm_title(s.get("title", ""))).ratio() < SAME_STUDY:
+            continue
+        if (first and first == surname(s.get("first_author", ""))) or (year and year == str(s.get("year", ""))):
+            return int(s.get("id") or 0) or -1
+    return 0
+
+
 def drop_existing(papers: list[dict], client, known: set[str]) -> tuple[list[dict], int]:
     """Papers the site does not have yet, before any AI step (owner, 24 Oct 2026: a hand-started run summarised a year of
     papers, most already on the site). Known DOIs from earlier runs first, then one aw/v1/exists call per 500 papers;
@@ -180,23 +211,31 @@ def drop_existing(papers: list[dict], client, known: set[str]) -> tuple[list[dic
     if client is None or not fresh:
         return fresh, already
     keep: list[dict] = []
+    studies: list[dict] = []
     for i in range(0, len(fresh), EXISTS_BATCH):
         chunk = fresh[i:i + EXISTS_BATCH]
         dois = [d for d in (doi_of(p["url"]) for p in chunk) if d]
         try:
-            found = client.exists(dois, [p["url"] for p in chunk])
+            found = client.exists(dois, [p["url"] for p in chunk], index=(i == 0))
         except ingest.AuthError:
             raise
         except Exception as exc:  # endpoint missing or the site busy: keep them, the ingest refuses duplicates anyway
             log.warning("research: could not ask the site which papers it has (%s); checking them one by one", exc)
             keep += fresh[i:]
             break
+        if i == 0:
+            studies = found.get("studies") or []
         have_dois = {str(d).lower() for d in found.get("dois") or []}
         have_urls = {str(u) for u in found.get("urls") or []}
         known |= have_dois
         for p in chunk:
             if doi_of(p["url"]) in have_dois or p["url"] in have_urls:
                 already += 1
+            elif same_study(p, studies):
+                already += 1
+                log.info("research: %s is the same study as site item %s; skipped", p["url"], same_study(p, studies))
+                if doi_of(p["url"]):
+                    known.add(doi_of(p["url"]))
             else:
                 keep.append(p)
     return keep, already
@@ -252,6 +291,19 @@ def headline_fields(summariser, p: dict, summary: str) -> dict:
     return {"title": t["headline"], "seo_title": t["seo_title"], "focus_keyword": t["keyphrase"], "slug": t["slug"]}
 
 
+NO_HEADLINE = "no headline (the paper's own title would be published as the headline)"
+
+
+def with_headline(payload: dict, fields: dict) -> dict:
+    """The three-field model (owner, 24 Oct 2026): study title in Sources, a headline of at most 70 characters, an SEO
+    title. Without a headline that keeps every rule the item is held for a person, never published under the paper's
+    raw title (20054 and 20139 went out that way)."""
+    payload.update(fields)
+    if not (fields.get("title") and fields.get("slug") and fields.get("seo_title")):
+        payload["hold"] = "; ".join(filter(None, [payload.get("hold", ""), NO_HEADLINE]))
+    return payload
+
+
 def main() -> int:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     dry_run = truthy(os.environ.get("DRY_RUN"), default=True)
@@ -293,7 +345,7 @@ def main() -> int:
             cats = summarise.pick_categories(summariser, item, summary, sources.allowed_categories("research"))
             payload = dict(ingest.build_payload(item, summary, cats), backfill=True, study_title=p["title"],
                            authors=p.get("authors") or [], journal=p.get("journal") or "")  # the study's credit (Sources block)
-            payload.update(headline_fields(summariser, p, summary))
+            with_headline(payload, headline_fields(summariser, p, summary))
             if doubt:  # India not confirmed: sent for review, never published by itself (owner, 20 Oct 2026)
                 payload["hold"] = "; ".join(filter(None, [payload.get("hold", ""), doubt]))
             if getattr(summariser, "last_numbers", None):  # a number not in the source: held for review (owner, 20 Oct 2026)

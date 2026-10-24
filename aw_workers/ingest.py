@@ -169,9 +169,10 @@ class Client:
         """Several rejections in one request (the site takes {"entries": [...]})."""
         return self._call("POST", "/relevance-rejected", json={"entries": entries})
 
-    def exists(self, dois: list[str], urls: list[str]) -> dict:
-        """Which of these research papers the site already has (aw/v1/exists, owner 24 Oct 2026): {dois: [...], urls: [...]}."""
-        return self._call("POST", "/exists", json={"dois": dois, "urls": urls}, timeout=60)
+    def exists(self, dois: list[str], urls: list[str], index: bool = False) -> dict:
+        """Which of these research papers the site already has (aw/v1/exists, owner 24 Oct 2026): {dois: [...], urls: [...]};
+        with index=True also "studies": [{id, title, first_author, year}] for the same-study check."""
+        return self._call("POST", "/exists", json={"dois": dois, "urls": urls, "index": index}, timeout=60)
 
     def story(self, story_id: int) -> dict:
         """A story already on the site, for the same-event merge: title, summary, credits and added facts."""
