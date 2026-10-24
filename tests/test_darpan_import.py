@@ -39,3 +39,29 @@ def test_proposals_carry_source_and_confidence():
     assert got["email"]["value"] == "care@jeevanjyoti.org" and got["phone"]["value"] == "98765 43210" and got["phone"]["confidence"] == "high"
     assert all(p["sources"][0]["fetched_at"] for p in got.values())
     assert "darpan_id" not in {p["field"] for p in di.proposals(row, {"darpan_id": "DL/2019/0123456"}, 0.95, src)}
+
+
+def test_a_refused_listing_does_not_stop_the_import(tmp_path, monkeypatch):
+    p = tmp_path / "d.csv"
+    p.write_text(CSV)
+    sent = []
+
+    class Client:
+        def __init__(self, *a):
+            pass
+
+        def _call(self, method, path, **kw):
+            if path == "/enrich/index":
+                return {"items": [{"id": 1, "name": "Jeevan Jyoti Animal Welfare Society", "district": "South", "darpan_id": ""},
+                                  {"id": 2, "name": "Karuna Trust", "district": "North", "darpan_id": ""}]}
+            sent.append(kw["json"]["listing_id"])
+            if kw["json"]["listing_id"] == 1:
+                raise RuntimeError("HTTP 500")
+            return {}
+
+    monkeypatch.setattr(di.ingest, "Client", Client)
+    env = {"WP_BASE_URL": "x", "WP_INGEST_USER": "x", "WP_INGEST_APP_PASSWORD": "x", "DRY_RUN": "false", "REPORT_DIR": str(tmp_path / "r")}
+    assert di.main([str(p)], env) == 1
+    assert sent == [1, 2]  # the second listing was still sent after the first failed
+    report = (tmp_path / "r" / "report.md").read_text()
+    assert "failed 1" in report and "- failed: Jeevan Jyoti" in report

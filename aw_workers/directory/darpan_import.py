@@ -150,21 +150,28 @@ def main(argv=None, env=None) -> int:
             stats["proposals"] += len(props)
             lines.append(f"- {r['name']} -> [{L['name']}](listing {L['id']}) sim {sim:.2f}: " + (", ".join(p["field"] for p in props) or "nothing new"))
             if props and not dry:
-                client._call("POST", "/enrich/results", timeout=120, json={
-                    "listing_id": L["id"], "run": f"darpan-{f.stem}", "import": True, "force_review": True, "google_cost": 0,
-                    "sources_used": ["darpan"], "proposals": props})
+                try:  # one refused listing must not stop the import or lose the report
+                    client._call("POST", "/enrich/results", timeout=120, json={
+                        "listing_id": L["id"], "run": f"darpan-{f.stem}", "import": True, "force_review": True, "google_cost": 0,
+                        "sources_used": ["darpan"], "proposals": props})
+                except ingest.AuthError:
+                    raise
+                except Exception as exc:  # noqa: BLE001
+                    stats["failed"] += 1
+                    lines.append(f"- failed: {r['name']} -> listing {L['id']}: {type(exc).__name__}: {str(exc)[:160]}")
+                    log.warning("listing %s not sent: %s", L["id"], exc)
     out = Path(env.get("REPORT_DIR") or "darpan-report")
     out.mkdir(parents=True, exist_ok=True)
     md = [f"# NGO Darpan import {'(dry run) ' if dry else ''}{now_ist()[:16].replace('T', ' ')} IST", "", f"Files: {', '.join(f.name for f in files)}", "",
-          f"Rows {stats['rows']} · matched {stats['ok']} · no match {stats['none']} · other district {stats['other district']} · ambiguous {stats['ambiguous']} · proposals {stats['proposals']}", "",
+          f"Rows {stats['rows']} · matched {stats['ok']} · no match {stats['none']} · other district {stats['other district']} · ambiguous {stats['ambiguous']} · proposals {stats['proposals']}" + (f" · failed {stats['failed']}" if stats['failed'] else ""), "",
           "| State | Rows | Matched | No match | Other district | Ambiguous |", "|---|---|---|---|---|---|"]
     for st, c in sorted(per_state.items()):
         md.append(f"| {st} | {sum(c.values())} | {c['ok']} | {c['none']} | {c['other district']} | {c['ambiguous']} |")
     md += ["", "## Rows", ""] + lines
     (out / "report.md").write_text("\n".join(md) + "\n")
     print("\n".join(md[:14]))
-    counts.write(rows=stats["rows"], matched=stats["ok"], no_match=stats["none"], proposals=stats["proposals"], dry_run=dry)
-    return 0
+    counts.write(rows=stats["rows"], matched=stats["ok"], no_match=stats["none"], proposals=stats["proposals"], failed=stats["failed"], dry_run=dry)
+    return 1 if stats["failed"] else 0  # red in Actions when a listing was not sent; the report lists which
 
 
 if __name__ == "__main__":
