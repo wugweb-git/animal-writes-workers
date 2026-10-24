@@ -32,3 +32,9 @@ def _fresh_section_lists():
     yield
     sources.SECTIONS.clear()
     relay.configure(None, ())
+
+
+@pytest.fixture(autouse=True)
+def _no_run_counts(monkeypatch):
+    """Tests never write this run's counts (aw_workers/counts.py) into the real Actions run's report."""
+    monkeypatch.delenv("RUNNER_TEMP", raising=False)
