@@ -56,6 +56,15 @@ Notes:
 ## Summary rules (checked in code, one retry, otherwise the item fails)
 2–3 sentences, at most 80 words, no quote over 15 words, no run of more than 15 words copied from the source.
 
+## Search Insights: rising terms
+`search-insights.yml` runs `aw_workers/search_insights.py` (Search Insights plan §5.3, phase 3). Free sources only:
+- daily 08:10 IST: Google Trends "Trending now" RSS (India; kept only when the term or its news names one of the site's keywords, topics or species), Wikipedia pageviews for a watchlist (2× the 30-day average; at most one request a second, user-agent with a contact), GDELT timelines of Indian news (3× the 14-day average; 5 s between requests);
+- weekly, Monday 08:30 IST: Google autocomplete in English, gl=in (2–4 s between requests; snapshots in `.state/search-insights/`, a new suggestion is rising), Trends rising related queries;
+- monthly, the 1st, 09:00 IST: Trends interest over 12 months, "animal welfare" = 100.
+
+Trends and autocomplete get one paced attempt a run; a refusal is reported to the site and the owner pastes the figures on the Rising tab. The lists come from `GET aw/v1/search-insights`; each source's results go to `POST aw/v1/search-insights`. Scheduled runs stay dry until the repository variable `SI_LIVE` is `true` (set it once the site route is live).
+`DRY_RUN=true python -m aw_workers.search_insights all --days 7 --top 10` prints the top rising terms.
+
 ## Local
 ```
 pip install -r requirements-dev.txt
