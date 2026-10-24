@@ -22,7 +22,7 @@ import sys
 from collections import Counter
 from pathlib import Path
 
-from .. import ingest
+from .. import counts, ingest
 from .model import fold, name_similarity, norm_phone, norm_url, now_ist
 
 log = logging.getLogger("aw_workers.directory.darpan")
@@ -163,6 +163,7 @@ def main(argv=None, env=None) -> int:
     md += ["", "## Rows", ""] + lines
     (out / "report.md").write_text("\n".join(md) + "\n")
     print("\n".join(md[:14]))
+    counts.write(rows=stats["rows"], matched=stats["ok"], no_match=stats["none"], proposals=stats["proposals"], dry_run=dry)
     return 0
 
 

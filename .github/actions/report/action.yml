@@ -55,7 +55,13 @@ runs:
           '{workflow:$workflow, name:$name, run_id:$run_id, attempt:$attempt, event:$event, phase:$phase, sha:$sha,
             dry_run:($dry == "true"), link:$link, started_at:$started, result:$result, failed_step:$failed, main_step:$main,
             skipped_steps:$skipped, counts:($counts[0] // {})}')
-        code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 15 -u "$WP_INGEST_USER:$WP_INGEST_APP_PASSWORD" \
+        # The password goes in a curl config file (mode 600, removed after), never on the command line, where other
+        # processes on the runner could read it. A config file, not .netrc: application passwords contain spaces.
+        cfg=$(umask 077; mktemp "$RUNNER_TEMP/aw-curl.XXXXXX")
+        esc() { printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'; }
+        printf 'user = "%s:%s"\n' "$(esc "$WP_INGEST_USER")" "$(esc "$WP_INGEST_APP_PASSWORD")" > "$cfg"
+        code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 15 -K "$cfg" \
           -H 'Content-Type: application/json' -d "$body" "${WP_BASE_URL%/}/wp-json/aw/v1/worker-run")
+        rm -f "$cfg"
         echo "worker report ($PHASE, $result): HTTP $code"
         exit 0

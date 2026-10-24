@@ -31,16 +31,30 @@ jobs:
       WP_INGEST_APP_PASSWORD: ${{ secrets.WP_INGEST_APP_PASSWORD }}
     steps:
       - uses: actions/checkout@v5
+      - name: Report the start to the site
+        uses: ./.github/actions/report
+        with:
+          phase: start
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
           cache: pip
       - run: pip install -r requirements-dev.txt
       - run: pytest -q tests/test_darpan_import.py
+        id: tests
       - run: python -m aw_workers.directory.darpan_import $(echo "${{ inputs.files }}" | tr ',' ' ')
+        id: main
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: darpan-report-${{ github.run_id }}
           path: darpan-report/
           retention-days: 90
+      - name: Report the end to the site (Settings → Sourcing → Workers)
+        if: always()
+        uses: ./.github/actions/report
+        with:
+          phase: end
+          main: main
+          steps: ${{ toJSON(steps) }}
+          status: ${{ job.status }}
