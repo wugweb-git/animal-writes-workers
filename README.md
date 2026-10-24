@@ -5,7 +5,12 @@ and sends them to the Animal Writes site, where they land as **Pending Review**.
 
 ## How it runs
 GitHub Actions (`.github/workflows/sourcing.yml`): every 6 hours, plus **Run workflow** by hand.
-Tests run first; the worker only runs if they pass.
+Tests run separately (`tests.yml`, on every push and after Sources sync) and do not block sourcing: a failing test
+opens an issue assigned to the owner (since 22 Oct 2026).
+
+Every workflow reports its start and end to the site (`.github/actions/report`, `POST aw/v1/worker-run`): result,
+failed or skipped step, counts, commit. The site shows them in Settings → Sourcing → Workers and emails the owner
+when a run fails or a scheduled one has not reported for twice its interval. The list is `docs/workers.json`.
 
 **DRY_RUN is ON by default.** It fetches and summarises but sends nothing.
 - Scheduled runs: go live by setting the repository **variable** `DRY_RUN` = `false`.

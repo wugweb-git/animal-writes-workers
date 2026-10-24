@@ -24,6 +24,10 @@ jobs:
       WP_INGEST_APP_PASSWORD: ${{ secrets.WP_INGEST_APP_PASSWORD }}
     steps:
       - uses: actions/checkout@v5
+      - name: Report the start to the site
+        uses: ./.github/actions/report
+        with:
+          phase: start
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
@@ -41,3 +45,11 @@ jobs:
           git commit -m "Sources: copied from the site (Settings → Sourcing)" -m "Co-Authored-By: Wugweb <admin@wugweb.com>"
           git pull --rebase -q origin "${GITHUB_REF_NAME}"
           git push -q origin "HEAD:${GITHUB_REF_NAME}"
+      - name: Report the end to the site (Settings → Sourcing → Workers)
+        if: always()
+        uses: ./.github/actions/report
+        with:
+          phase: end
+          main: sync
+          steps: ${{ toJSON(steps) }}
+          status: ${{ job.status }}

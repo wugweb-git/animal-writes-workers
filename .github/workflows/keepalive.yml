@@ -21,7 +21,16 @@ jobs:
       GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v5
+      - name: Report the start to the site
+        uses: ./.github/actions/report
+        env:
+          WP_BASE_URL: ${{ secrets.WP_BASE_URL }}
+          WP_INGEST_USER: ${{ secrets.WP_INGEST_USER }}
+          WP_INGEST_APP_PASSWORD: ${{ secrets.WP_INGEST_APP_PASSWORD }}
+        with:
+          phase: start
       - name: Enable every scheduled workflow (never one switched off by hand)
+        id: main
         run: |
           for f in .github/workflows/*.yml; do
             if grep -q "^  schedule:" "$f"; then
@@ -43,3 +52,15 @@ jobs:
           else
             echo "last commit $(( ( $(date +%s) - last ) / 86400 )) days ago: no commit needed"
           fi
+      - name: Report the end to the site (Settings → Sourcing → Workers)
+        if: always()
+        uses: ./.github/actions/report
+        env:
+          WP_BASE_URL: ${{ secrets.WP_BASE_URL }}
+          WP_INGEST_USER: ${{ secrets.WP_INGEST_USER }}
+          WP_INGEST_APP_PASSWORD: ${{ secrets.WP_INGEST_APP_PASSWORD }}
+        with:
+          phase: end
+          main: main
+          steps: ${{ toJSON(steps) }}
+          status: ${{ job.status }}

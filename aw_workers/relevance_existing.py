@@ -18,7 +18,7 @@ from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-from . import ingest, relevance, summarise
+from . import counts as run_counts, ingest, relevance, summarise
 from .run import truthy
 
 log = logging.getLogger("aw_workers.relevance_existing")
@@ -113,6 +113,7 @@ def main() -> int:
     summary = {"items": len(rows), **counts, "minutes": round(minutes, 1), "estimated_usd": round(cost, 4), "models": dict(used)}
     Path("relevance-existing-report.json").write_text(json.dumps({"summary": summary, "items": out_rows}, ensure_ascii=False, indent=1))
     print(json.dumps(summary))
+    run_counts.write(**{k.replace(" ", "_"): v for k, v in summary.items() if k != "models"})
     step = os.environ.get("GITHUB_STEP_SUMMARY")
     if step:
         with open(step, "a") as fh:

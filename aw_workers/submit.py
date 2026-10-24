@@ -24,7 +24,7 @@ from xml.sax.saxutils import escape
 
 import requests
 
-from . import ingest, relevance, sources, summarise, summary_rules
+from . import counts, ingest, relevance, sources, summarise, summary_rules
 from . import policy as policy_mod
 from .backfill import BackfillClient, report
 from .run import SEEN_FILE, default_enricher, load_seen, run, save_seen, truthy
@@ -118,6 +118,7 @@ def main() -> int:
         save_seen(SEEN_FILE, load_seen(SEEN_FILE) | seen)
         gate.save()
     out = report(client.rows, stats, floor)
+    counts.write(submitted=len(client.rows), sent=out["sent"], duplicate=len(out["duplicates_exact"]), failed=len(stats.errors))
     for r in client.rows:
         log.info("%s | %s | %s | %s", r["result"], r["date"], r["title"], r["url"])
     print(json.dumps({k: (v if not isinstance(v, list) else len(v)) for k, v in out.items()}, ensure_ascii=False))

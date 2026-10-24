@@ -12,7 +12,7 @@ import logging
 import os
 import sys
 
-from . import ingest, merge, summarise, summary_rules
+from . import counts, ingest, merge, summarise, summary_rules
 
 log = logging.getLogger("aw_workers.fold_existing")
 
@@ -52,6 +52,7 @@ def main(env=os.environ) -> int:
                   f"\n  FACTS:  {body['added_text']}")
         else:
             print(f"#{dup} -> #{keep}: text from {where}; credit only")
+    counts.write(pairs=len(pairs(env.get("AW_PAIRS", ""))), failed=failed)
     return 1 if failed else 0
 
 

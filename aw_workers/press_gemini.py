@@ -23,7 +23,7 @@ from pathlib import Path
 import requests
 import yaml
 
-from . import enrich, headline_case, ingest, press, relevance
+from . import counts as run_counts, enrich, headline_case, ingest, press, relevance
 from .run import truthy
 from .summarise import _keys
 
@@ -178,6 +178,7 @@ def main() -> int:
         with open(summary, "a") as fh:
             fh.write("\n".join(lines) + "\n")
     print(json.dumps(counts))
+    run_counts.write(**{k.replace(" ", "_"): v for k, v in counts.items()})
     return 0
 
 
