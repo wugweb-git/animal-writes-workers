@@ -23,6 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
+      DRY_RUN: "true" # always a dry run: the site's Workers tab labels it so (report action)
       WP_BASE_URL: ${{ secrets.WP_BASE_URL }}
       WP_INGEST_USER: ${{ secrets.WP_INGEST_USER }}
       WP_INGEST_APP_PASSWORD: ${{ secrets.WP_INGEST_APP_PASSWORD }}

@@ -1,10 +1,11 @@
 name: Sources sync
 
-# The site's lists (Settings → Sourcing) copied into sources.yaml every hour while "Workers use these lists" is on,
-# so the fallback file is never stale (owner, 20 Oct 2026). Nothing is written while the switch is off.
+# The site's lists (Settings → Sourcing) copied into sources.yaml while "Workers use these lists" is on, so the fallback
+# file is never stale (owner, 20 Oct 2026). Nothing is written while the switch is off. Since 25 Oct 2026 (owner): the
+# site starts this run 2 minutes after the lists or keywords are saved, and the schedule is once a day (07:53 IST).
 on:
   schedule:
-    - cron: "23 * * * *"
+    - cron: "23 2 * * *"
   workflow_dispatch:
 
 concurrency:
