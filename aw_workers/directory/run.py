@@ -130,7 +130,7 @@ def main(env=None) -> int:
         summariser = None
     http = Polite(gap=1.0)
     report, run_id, spent_run, done = Report(dry), env.get("GITHUB_RUN_ID") or f"local-{int(time.time())}", 0.0, 0
-    reason = ""
+    reason, google_note = "", ""
     sweeps, taken, carry = {}, {}, 0.0
     while done < batch and time.time() < stop_at:
         params = {"limit": min(200, batch) if dry else min(25, batch - done)}  # a dry run marks nothing done: one fetch
@@ -138,6 +138,7 @@ def main(env=None) -> int:
             params["ids"] = env["AW_IDS"]
         if env.get("GROUP"):
             params["group"] = env["GROUP"]
+        params["google"] = 1 if env.get("GOOGLE_PLACES_KEY") else 0  # listings checked while Google was off come back first once it is on
         q = client._call("GET", "/enrich/queue", params=params, timeout=120)
         items = q.get("items") or []
         if dry and done:
@@ -164,10 +165,10 @@ def main(env=None) -> int:
             listing["_taken"] = taken.setdefault((listing.get("state"), listing.get("district")), set())
             listing["_asked"] = asked.get(listing["id"], {})
             if env.get("GOOGLE_PLACES_KEY") and float(q.get("google_spent") or 0) + spent_run + google_places.COST_USD > limit + 1e-9:
-                reason = (f"Google free quota ({free} requests) used for this month" if budget <= 0
-                          else f"Google limit ({free} free requests + ${budget:.0f}) reached for this month")
+                google_note = (f"Google free quota ({free} requests) used for this month" if budget <= 0
+                               else f"Google limit ({free} free requests + ${budget:.0f}) reached for this month")
                 env["GOOGLE_PLACES_KEY"] = ""  # the run goes on without Google (the other sources still work); it is back next month
-                log.info("%s: carrying on without Google", reason)
+                log.info("%s: carrying on without Google", google_note)
             ctx = enrich_one(listing, env, http, on, summariser, services)
             ctx.google_cost += carry
             carry = 0.0
@@ -183,6 +184,7 @@ def main(env=None) -> int:
             else:
                 outcome = client._call("POST", "/enrich/results", timeout=120, json={
                     "listing_id": listing["id"], "run": run_id, "google_cost": ctx.google_cost,
+                    "google_skipped": not env.get("GOOGLE_PLACES_KEY") and bool(cfg.get("sources", {}).get("google_places", True)),
                     "sources_used": [k for k, v in ctx.status.items() if v != "off"],
                     "proposals": [{k: p[k] for k in ("field", "value", "confidence", "sources")} for p in props], "flags": flags})
             report.add(listing, ctx, props, invite, outcome)
@@ -193,7 +195,7 @@ def main(env=None) -> int:
     out = Path(env.get("REPORT_DIR") or "enrich-report")
     out.mkdir(parents=True, exist_ok=True)
     google_n = round(spent_run / google_places.COST_USD)
-    md = report.markdown(f"Google requests this run: {google_n}" + (" (free quota, no charge)." if budget <= 0 else f" (${spent_run:.2f}).") + (f" Stopped: {reason}." if reason and reason != "queue empty" else ""))
+    md = report.markdown(f"Google requests this run: {google_n}" + (" (free quota, no charge)." if budget <= 0 else f" (${spent_run:.2f}).") + (f" {google_note}: the rest of the run went on without Google." if google_note else "") + (f" Stopped: {reason}." if reason and reason != "queue empty" else ""))
     (out / "report.md").write_text(md)
     (out / "report.json").write_text(json.dumps({"dry_run": dry, "listings": report.listings,
                                                  "fields": report.field, "sources": report.source}, indent=1, default=dict))
