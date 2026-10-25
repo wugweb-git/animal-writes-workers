@@ -131,6 +131,7 @@ def main(env=None) -> int:
     client = ingest.Client(env["WP_BASE_URL"], env["WP_INGEST_USER"], env["WP_INGEST_APP_PASSWORD"])
     cfg = client._call("GET", "/enrich/config", timeout=60)
     on, services = cfg.get("sources") or {}, cfg.get("services") or {}
+    merge.use_config(cfg)  # the site's field rules and trust order (Rules → Directory enrichment); merge.py's constants without them
     try:
         summariser = summarise.Summariser(summarise.backends_from_env(env))
     except ValueError:
