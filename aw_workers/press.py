@@ -1,23 +1,17 @@
 """Press discovery: coverage of Animal Writes on the web and social platforms.
 
 Weekly, through Google: Google News (press_gnews) and Google Search via Gemini's search tool (press_gemini), the last
-two weeks each time (owner, 10 Oct 2026: Brave has no free plan, so no Brave key). The notes below describe the
-original Brave design; the platform, format and handle helpers are still used.
+two weeks each time. Brave Search is gone (owner, 25 Oct 2026, sourcing phase 2: no Brave key, no Brave code); there
+are no request budgets or "press sites" any more.
 
-
-One source only (owner's decision, 8 Oct 2026: Brave instead of Google): web search, each query once per site filter
-(instagram.com, facebook.com, fb.watch, x.com, twitter.com, youtube.com, threads.net, linkedin.com, reddit.com) plus
-the open web. Weekly; at most 900 requests a month (owner's budget, S4.2) and a one-time backfill of up to 300;
-queries rotate across runs; usage is logged. Every candidate that mentions
-Animal Writes or the 29 November letter campaign is sent to the site as a "Press: to review" draft; nothing is
-published automatically, duplicates are refused by URL (rejected items too), and no caption text is copied.
+The queries are the site's Press keywords (the `queries` of the keywords with the Press role, keywords.press_config),
+or the v1 `press.queries` when the site sends no keyword table. Every candidate that mentions Animal Writes or the
+29 November letter campaign is sent to the site as a "Press: to review" draft; nothing is published automatically,
+duplicates are refused by URL (rejected items too), and no caption text is copied.
 
 Per candidate: platform, format (Article, Video, TV, Podcast, Instagram post, Instagram reel, Facebook post, Facebook
-video, X post, YouTube video, Reddit thread) and account handle. Metadata: YouTube and X oEmbed (no key), Reddit's own
-.json, Instagram/Facebook via Meta oEmbed only when META_ACCESS_TOKEN is set (else the platform icon); news sites give
-og and JSON-LD tags, which the site reads. The site hosts thumbnails and refuses duplicates of Press and News items.
-
-Off until BRAVE_SEARCH_KEY exists: the job logs "disabled: no credentials" and the run carries on.
+video, X post, YouTube video, Reddit thread) and account handle, from the URL. News sites give og and JSON-LD tags,
+which the site reads. The site hosts thumbnails and refuses duplicates of Press and News items.
 """
 
 from __future__ import annotations
@@ -26,7 +20,6 @@ import json
 import logging
 import os
 import re
-import time
 from datetime import date, datetime, timezone
 from pathlib import Path
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
@@ -53,7 +46,6 @@ def gated(gate, payload: dict, counts: dict) -> bool:
     counts[key] = counts.get(key, 0) + 1
     return False
 
-API = "https://api.search.brave.com/res/v1/web/search"
 STATE_FILE = Path(os.environ.get("AW_PRESS_STATE", ".state/press.json"))
 TIMEOUT = 30
 UA = "AnimalWritesWorkers/1.0 (+https://animalwrites.in)"
@@ -151,40 +143,6 @@ def reddit_meta(url: str, get=requests.get) -> dict:
                 "image": thumb if thumb.startswith("https://") else "", "handle": "u/" + post["author"] if post.get("author") else ""}
     except Exception:
         return {}
-
-
-def result_date(item: dict) -> str:
-    """The page's own date from Brave (page_age, ISO), else a date written in the age text (YYYY-MM-DD)."""
-    m = re.match(r"(\d{4}-\d{2}-\d{2})", str(item.get("page_age") or ""))
-    if m:
-        return m.group(1)
-    m = re.match(r"([A-Z][a-z]+ \d{1,2}, \d{4})", str(item.get("age") or ""))
-    if m:
-        for fmt in ("%B %d, %Y", "%b %d, %Y"):
-            try:
-                return datetime.strptime(m.group(1), fmt).date().isoformat()
-            except ValueError:
-                continue
-    return ""
-
-
-def thumbnail(url: str, platform: str, item: dict, get=requests.get) -> str:
-    try:
-        if platform == "youtube":
-            r = get("https://www.youtube.com/oembed", params={"url": url, "format": "json"}, timeout=TIMEOUT)
-            if r.ok:
-                return r.json().get("thumbnail_url", "")
-        if platform in ("instagram", "facebook") and os.environ.get("META_ACCESS_TOKEN"):
-            endpoint = "instagram_oembed" if platform == "instagram" else "oembed_post"
-            r = get(f"https://graph.facebook.com/v19.0/{endpoint}", params={"url": url, "access_token": os.environ["META_ACCESS_TOKEN"], "fields": "thumbnail_url"}, timeout=TIMEOUT)
-            if r.ok:
-                return r.json().get("thumbnail_url", "")
-        if platform == "x":
-            return ""  # X oEmbed gives HTML only, no image; the card shows the platform icon
-    except requests.RequestException:
-        return ""
-    src = str(((item.get("thumbnail") or {}).get("original")) or ((item.get("thumbnail") or {}).get("src")) or "")
-    return src if src.startswith("https://") else ""
 
 
 def run(cfg: dict, client, *, dry_run: bool, env=os.environ, today: date | None = None,
