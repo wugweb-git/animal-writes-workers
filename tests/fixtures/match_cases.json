@@ -1,5 +1,5 @@
 {
-  "about": "Shared keyword matcher cases (sourcing restructure, owner 25 Oct 2026). Word mode: Latin words match whole words with a plural (s/es) allowed; a trailing * matches the start of a word; other scripts match as substrings; case and repeated spaces do not matter. Tested in animal-writes-workers (tests/test_matcher.py) and aw-wordpress (plugins/aw-sourcing/tests/match-cases.php). Change both copies together.",
+  "about": "Shared keyword matcher cases (sourcing restructure, owner 25 Oct 2026). Word mode: Latin words match whole words with a plural (s/es) allowed; a trailing * matches the start of a word; other scripts match as substrings; case and repeated spaces do not matter. Tested in animal-writes-workers (tests/test_matcher.py) and aw-wordpress (plugins/aw-sourcing/tests/run.php, copy in plugins/aw-sourcing/tests/fixtures/). Change both copies together.",
   "cases": [
     {"text": "Stray dogs attacked a child", "term": "dog", "word": true, "note": "plural s"},
     {"text": "The old dogma of the party", "term": "dog", "word": false, "note": "not inside a longer word"},
