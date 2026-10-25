@@ -46,6 +46,14 @@ def test_pin_in_another_state_is_low():
     assert f["confidence"] == "low" and f["value"] == {"state": 36, "district": 600}
 
 
+def test_pin_against_the_listings_own_name_or_address_is_low():
+    book = FakeBook({"500094": [("Telangana", "Hyderabad")]})
+    f = cleanup.place_finding(L(9, name="Dog rescue, Karnataka", address="Plot 4, 500094"), P, book)
+    assert f["confidence"] == "low" and "own name or address says Karnataka" in f["why"]
+    f = cleanup.place_finding(L(10, address="Sainikpuri, Hyderabad, Telangana 500094"), P, book)
+    assert f["confidence"] == "high"  # the address agrees with the PIN
+
+
 def test_address_names_one_district_medium_and_aliases():
     f = cleanup.place_finding(L(3, states=[29], address="12 MG Road, Mysore"), P, FakeBook({}))
     assert f["value"] == {"state": 29, "district": 536} and f["confidence"] == "medium"
