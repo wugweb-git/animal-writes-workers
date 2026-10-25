@@ -5,7 +5,7 @@
        GOOGLE_PLACES_FREE_REQUESTS (Google's free monthly requests we may use, no charge; default 0),
        GOOGLE_PLACES_MONTHLY_BUDGET_USD (paid spend on top; default 0: free quota only, owner 20 Oct 2026), DRY_RUN (default true), BATCH (50), GROUP
        ("awbi-bare" = only AWBI listings with no phone, email or website), AW_IDS (1,2,3), MAX_MINUTES (150),
-       REPORT_DIR (enrich-report)
+       REPORT_DIR (enrich-report), CLEANUP ("true" = the clean-up pass instead, cleanup.py)
 
 The site picks the listings (aw/v1/enrich/queue: new or claimed first, then AWBI address-only, then the rest, then any
 not checked for 90 days) and keeps which are done, so every run continues where the last stopped. Per listing: each
@@ -25,7 +25,7 @@ from collections import Counter, defaultdict
 from pathlib import Path
 
 from .. import counts, ingest, summarise
-from . import ai, lead_finder, merge
+from . import ai, cleanup, lead_finder, merge
 from .model import Context, Polite, now_ist
 from .sources import REGISTRY, google_places
 
@@ -111,6 +111,8 @@ class Report:
 
 def main(env=None) -> int:
     env = dict(env or os.environ)
+    if truthy(env.get("CLEANUP"), False):  # the clean-up pass (cleanup.py): missing places and true duplicates, as proposals
+        return cleanup.main(env)
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     dry = truthy(env.get("DRY_RUN"), True)
     batch = int(env.get("BATCH") or 50)
