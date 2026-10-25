@@ -16,7 +16,7 @@ ROWS = """<table><tr><th>S.No.</th><th>What's New</th><th>File</th></tr>
 
 
 def _lists():
-    return yaml.safe_load(Path(__file__).resolve().parents[1].joinpath("sources.yaml").read_text(encoding="utf-8"))
+    return yaml.safe_load(Path(__file__).resolve().parent.joinpath("fixtures", "sources_frozen.yaml").read_text(encoding="utf-8"))
 
 
 def test_ccsea_rows_and_baseline():

@@ -17,7 +17,7 @@ from aw_workers.directory.model import CHECK, Context, Fact
 
 ROOT = Path(__file__).resolve().parent.parent
 SEED = json.loads((ROOT / "tests" / "fixtures" / "enrich_field_rules_seed.json").read_text(encoding="utf-8"))
-YAML = yaml.safe_load((ROOT / "sources.yaml").read_text(encoding="utf-8"))
+YAML = yaml.safe_load((ROOT / "tests" / "fixtures" / "sources_frozen.yaml").read_text(encoding="utf-8"))  # sources.yaml as of 25 Oct (phase 1)
 WORKER_TYPES = {"aw_news": "news", "aw_legal": "legal", "post": "research", "aw_opportunity": "opportunity",
                 "aw_press": "press"}
 

@@ -1,4 +1,5 @@
 from datetime import date
+from pathlib import Path
 
 import pytest
 
@@ -10,7 +11,7 @@ TODAY = date(2026, 10, 5)
 
 def all_sources():
     """Feed sources from sources.yaml (document sources fetch their own data and have their own tests)."""
-    loaded, defaults = sources.load_sources("sources.yaml")
+    loaded, defaults = sources.load_sources(Path(__file__).parent / "fixtures" / "sources_frozen.yaml")  # fixed: sources.yaml is copied from the site
     return [s for s in loaded if s.kind not in sources.SELF_FETCH], defaults
 
 

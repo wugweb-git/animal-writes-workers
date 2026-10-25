@@ -479,10 +479,12 @@ def main() -> int:
             log.info("policy: %d blocked publisher(s), relevance filter %s", len(policy.blocked), "on" if policy.relevance_on else "off")
             # The lists (feeds, Library and opportunity sources, categories, press queries) come from Settings → Sourcing
             # once "Workers use these lists" is on there; otherwise, or if the site is unreachable, from sources.yaml.
-            if isinstance(raw.get("config"), dict) and raw["config"].get("sources"):
-                lists = sources.with_v2_blocks(raw["config"], raw)
+            # From phase 4 the site sends them in the v2 shape only (no config.sources): sources.site_lists takes both.
+            site = sources.site_lists(raw)
+            if site is not None:
+                lists = site
                 lists_from = "site"
-                log.info("lists: from the site (%d sources%s)", len(lists["sources"]),
+                log.info("lists: from the site (%d sources%s)", len(lists.get("sources") or lists.get("sources_v2") or []),
                          ", sources_v2" if sources.v2_sources(lists) is not None else "")
             else:
                 log.info("lists: from sources.yaml")

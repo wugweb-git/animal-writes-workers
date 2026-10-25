@@ -12,7 +12,7 @@ import yaml
 from aw_workers import relay, relevance, run, sources
 
 ROOT = Path(__file__).resolve().parent.parent
-YAML = yaml.safe_load((ROOT / "sources.yaml").read_text(encoding="utf-8"))
+YAML = yaml.safe_load((ROOT / "tests" / "fixtures" / "sources_frozen.yaml").read_text(encoding="utf-8"))  # sources.yaml as of 25 Oct (phase 1)
 CODE_KINDS = {"awbi", "zoho", "sjm", "ccsea", "egazette", "judgments-sc", "judgments-hc"}
 
 

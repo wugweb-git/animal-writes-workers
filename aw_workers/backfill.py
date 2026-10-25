@@ -175,8 +175,7 @@ def main() -> int:
         try:
             raw = inner.policy()
             policy = policy_mod.Policy.from_json(raw)
-            if isinstance(raw.get("config"), dict) and raw["config"].get("sources"):
-                lists = sources.with_v2_blocks(raw["config"], raw)
+            lists = sources.site_lists(raw) or lists
         except Exception as exc:  # the site applies the policy too
             log.warning("policy unavailable: %s", exc)
     source_list, defaults = sources.load_sources_data(lists, relevance=raw.get("relevance") if policy is not None else None)

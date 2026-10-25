@@ -29,11 +29,12 @@ SCHEMA_KEYS = ("schema", "priority", "field_rules")
 
 
 def sync_lists(raw: dict) -> bool | None:
-    """sources.yaml from the policy: True changed, False unchanged, None when the lists' switch is off."""
-    # The new blocks (sources_v2, category_names, match, schema, the keyword table as keywords_v2 from phase 2,
-    # sections_v2 from phase 3) may come beside `config`: keep them in the copy too.
-    config = sources.with_v2_blocks(raw["config"], raw) if isinstance(raw.get("config"), dict) else raw.get("config")
-    if not isinstance(config, dict) or not config.get("sources"):
+    """sources.yaml from the policy: True changed, False unchanged, None when the lists' switch is off. The blocks
+    (sources_v2, category_names, match, schema, the keyword table as keywords_v2, sections_v2) may come beside
+    `config`: they are kept in the copy too. From phase 4 they are all the lists the site sends (no `config.sources`),
+    and sources.site_lists accepts that shape as well as the v1 one."""
+    config = sources.site_lists(raw)
+    if config is None:
         return None
     path = Path(os.environ.get("AW_SOURCES", "sources.yaml"))
     old = yaml.safe_load(path.read_text(encoding="utf-8")) if path.exists() else None

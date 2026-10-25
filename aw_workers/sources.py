@@ -202,6 +202,26 @@ def v2_sources(data: dict) -> list[dict] | None:
     return v2
 
 
+def is_v2(data: dict | None) -> bool:
+    """Whether the lists carry the site's v2 blocks: `sources_v2` and the keyword table (phase 2 on). From phase 4
+    (owner, 25 Oct 2026) the site sends only these, without the v1 `sources`, `categories`, `keywords` and `sections`."""
+    return isinstance(data, dict) and v2_sources(data) is not None and _keywords.from_data(data) is not None
+
+
+def site_lists(raw: dict | None) -> dict | None:
+    """The lists in the site's policy (its `config` with the blocks beside it), or None when it sent none the workers
+    can read ("Workers use these lists" is off): sources.yaml is read then. The v2 shape is preferred and is enough on
+    its own (phase 4: no `config.sources`); the v1 `sources` list alone still counts (a site rolled back before phase 2)."""
+    config = (raw or {}).get("config")
+    if not isinstance(config, dict):
+        return None
+    lists = with_v2_blocks(config, raw)
+    if is_v2(lists) or lists.get("sources"):
+        return lists
+    log.warning("the site's lists have neither sources_v2 with the keyword table nor a sources list: sources.yaml is read")
+    return None
+
+
 def check_words(s: dict, data: dict, relevance: dict | None = None, kws: list[dict] | None = None) -> list[str] | None:
     """The words a `sources_v2` keyword check names (`check: {roles: [...], categories: [...]}`), or None when the
     check names nothing (or nothing it names has words): the source's own `filter` / `keywords` then apply, as in v1.
@@ -283,6 +303,9 @@ def load_sources_data(data: dict, relevance: dict | None = None) -> tuple[list[S
         elif s.get("filter"):
             s = {**s, "keywords": filter_words}
         sources.append(source_from_dict(s))
+    if not sources and data.get("sources_v2") and not data.get("sources"):
+        # Phase 4 sends no v1 `sources`: an unusable sources_v2 (one incomplete entry) leaves nothing to fetch.
+        log.error("sources_v2 could not be read and there is no v1 sources list: no sources this run")
     return sources, data.get("defaults", {})
 
 
