@@ -324,9 +324,8 @@ def default_enricher(url: str) -> tuple[str, str]:
     return real, enrich.og_image(real)
 
 
-# Mirrored on the site in aw-sourcing AW_SOURCING_EXTRA_SEARCHES (plugins/aw-sourcing/includes/keyword-stats.php in
-# wugweb-git/animalwrites): change both together, or the Sourcing keywords stats on the site miss or invent a search.
-# v1 only: with the keyword table (phase 2) "stray dogs" is a keyword with the Search role (feed gnews-kw-stray-dogs).
+# Only for a sources.yaml from before phase 2 (the fallback, read the old way): from phase 2 "stray dogs" is a keyword with
+# the Search role (feed gnews-kw-stray-dogs), and from phase 4 the site has no copy of this list.
 EXTRA_SEARCHES = ("stray dogs",)  # owner, 12 Oct 2026
 SEARCH_MAX_ITEMS = 40  # new (unseen) items per Google News search and run; busy searches return 30-45 a day
 FAIL_SHARE = 0.5  # half the sources or more failing makes the run fail and the site alert the owner
@@ -345,7 +344,7 @@ def keyword_feeds(lists: dict, have=()) -> list:
         s = {**spec, "id": str(spec.get("feed") or spec.get("id") or "")}
         if not s["id"] or s["id"] in have:
             continue
-        words = sources.check_words(s, lists, kws=table)
+        words = sources.check_words(s, table)
         if words is not None:
             s["keywords"] = words
         elif s.get("filter"):  # the "Keyword check" switch without a named check: the Include words, as for a feed
@@ -408,7 +407,7 @@ def keyword_searches(source_list: list, lists: dict) -> list:
         out.append(src)
 
     table = keywords_mod.from_data(lists)
-    if table is None:  # v1: the Include words (`keywords`) plus the fixed extra searches
+    if table is None:  # a sources.yaml from before phase 2: its Include words (`keywords`) plus the fixed extra searches
         kws = [k for k in (lists.get("keywords") or []) if isinstance(k, str) and k.isascii() and k.strip()]
         plain = [({"categories": []}, {"q": kw}) for kw in dict.fromkeys([*kws, *EXTRA_SEARCHES])]
     else:
@@ -477,13 +476,15 @@ def main() -> int:
             raw = policy_client.policy()
             policy = policy_mod.Policy.from_json(raw)
             log.info("policy: %d blocked publisher(s), relevance filter %s", len(policy.blocked), "on" if policy.relevance_on else "off")
-            # The lists (feeds, Library and opportunity sources, categories, press queries) come from Settings → Sourcing
-            # once "Workers use these lists" is on there; otherwise, or if the site is unreachable, from sources.yaml.
-            if isinstance(raw.get("config"), dict) and raw["config"].get("sources"):
-                lists = sources.with_v2_blocks(raw["config"], raw)
+            # The lists (feeds, Library and opportunity sources, keywords, sections) come from Settings → Sourcing
+            # once "Workers use these lists" is on there, in the site's shape (sources_v2 and the keyword table; phase
+            # 4 reads nothing else); otherwise, or if the site is unreachable, from sources.yaml.
+            site = sources.site_lists(raw)
+            if site is not None:
+                lists = site
                 lists_from = "site"
-                log.info("lists: from the site (%d sources%s)", len(lists["sources"]),
-                         ", sources_v2" if sources.v2_sources(lists) is not None else "")
+                log.info("lists: from the site (%d sources, %d keywords)", len(lists["sources_v2"]),
+                         len(keywords_mod.from_data(lists) or []))
             else:
                 log.info("lists: from sources.yaml")
             hosts = sources.relay_hosts(lists, raw.get("relay_hosts"))
@@ -496,7 +497,7 @@ def main() -> int:
             return 3
         except Exception as exc:  # the site enforces the policy too, so carry on without the pre-filter
             log.warning("policy unavailable, relying on the site to enforce it: %s", exc)
-    source_list, defaults = sources.load_sources_data(lists, relevance=(raw or {}).get("relevance"))
+    source_list, defaults = sources.load_sources_data(lists)
     source_list = keyword_searches(source_list, lists)
     # Opportunities are not fetched (owner, 9 Oct 2026). AW_FETCH_OPPORTUNITIES=1 would turn them back on.
     if not truthy(os.environ.get("AW_FETCH_OPPORTUNITIES"), default=False):

@@ -1,6 +1,7 @@
 """Sourcing restructure phase 1 (owner, 25 Oct 2026): the site sends `sources_v2` (each source with its publisher host,
-relay switch, "read by" marker and keyword check) beside the unchanged v1 lists. Workers read v2 when it is there and
-v1 otherwise, and must build exactly the same sources and searches from either."""
+relay switch, "read by" marker and keyword check). From phase 4 the site's lists are read only with the keyword table
+beside it (sources.is_v2); `sources_v2` alone (a sources.yaml from phase 1) is read the old way, and must build exactly
+the same sources and searches."""
 
 import copy
 from pathlib import Path
@@ -29,6 +30,11 @@ def as_v2(config: dict, relay_hosts=()) -> dict:
     return out
 
 
+def kw(label, roles, categories=()):
+    return {"id": label, "label": label, "variants": [], "roles": list(roles), "lang": "en", "searches": [],
+            "categories": list(categories), "sections": []}
+
+
 def fields(src_list):
     return [vars(s) for s in src_list]
 
@@ -51,7 +57,9 @@ def test_identical_searches_from_v1_and_v2():
 
 def test_a_switched_off_source_stays_off_in_v2():
     lists = as_v2(YAML)
+    lists["keywords_v2"] = [kw("stray dog", ["include"])]
     lists["sources_v2"][0]["on"] = False
+    assert sources.is_v2(lists)
     got = [s.id for s in sources.load_sources_data(lists)[0]]
     assert lists["sources_v2"][0]["id"] not in got and len(got) == len(YAML["sources"]) - 1
 
@@ -63,19 +71,21 @@ def test_keyword_check_filter_switch_still_applies_in_v2():
 
 
 def test_keyword_check_by_role_and_category():
-    lists = as_v2({"keywords": ["seed"], "categories": {"animal-experimentation": ["vivisection", "lab animal"]},
+    lists = as_v2({"keywords": ["seed"], "categories": {"animal-experimentation": ["old word"]},
                    "sources": [{"id": "a", "name": "A", "kind": "rss", "type": "news", "url": "https://a.example/feed",
                                 "filter": True, "keywords": ["old"]}]})
+    lists["keywords_v2"] = [kw("animal welfare", ["include"]), kw("vivisection", ["include", "category"], ["animal-experimentation"]),
+                            kw("lab animal", ["category"], ["animal-experimentation"])]
     lists["sources_v2"][0]["check"] = {"roles": ["include"], "categories": ["animal-experimentation"]}
-    got = sources.load_sources_data(lists, relevance={"strong": ["animal welfare", "vivisection"]})[0][0]
-    assert got.keywords == ["animal welfare", "vivisection", "lab animal"]
-    # without the relevance lists (sources.yaml fallback) Include reads the lists' keywords
-    assert sources.load_sources_data(lists)[0][0].keywords == ["seed", "vivisection", "lab animal"]
+    got = sources.load_sources_data(lists)[0][0]
+    assert got.keywords == ["animal welfare", "vivisection", "lab animal"]  # the old `keywords` and `categories` unread
     lists["sources_v2"][0]["check"] = {"roles": ["include"], "categories": []}
-    assert sources.load_sources_data(lists)[0][0].keywords == ["seed"]  # filter: True -> the v1 filter words
+    assert sources.load_sources_data(lists)[0][0].keywords == ["animal welfare", "vivisection"]
+    lists["sources_v2"][0]["check"] = {"roles": [], "categories": []}
+    assert sources.load_sources_data(lists)[0][0].keywords == ["animal welfare", "vivisection"]  # filter: the Include role
 
 
-def test_incomplete_v2_falls_back_to_v1():
+def test_incomplete_v2_is_read_the_old_way():
     lists = as_v2(YAML)
     del lists["sources_v2"][3]["url"]
     v1 = sources.load_sources_data(copy.deepcopy(YAML))[0]
@@ -124,14 +134,15 @@ def test_keyword_check_respects_the_switch_and_never_uses_exclude():
             "sources": [{"id": "a", "name": "A", "kind": "rss", "type": "news", "url": "https://a.example/feed",
                          "filter": False, "keywords": ["own"]}]}
     lists = as_v2(base)
+    lists["keywords_v2"] = [kw("animal welfare", ["include"]), kw("bull market", ["exclude"]), kw("tiger", ["category"], ["wildlife"])]
     lists["sources_v2"][0]["check"] = {"roles": ["include"], "categories": ["wildlife"]}
-    rel = {"strong": ["animal welfare"], "exclude": ["bull market"]}
-    assert sources.load_sources_data(lists, relevance=rel)[0][0].keywords == ["own"]  # switch off: no check
+    assert sources.load_sources_data(lists)[0][0].keywords == ["own"]  # switch off: no check
     lists["sources_v2"][0]["filter"] = True
     lists["sources_v2"][0]["check"] = {"roles": ["include", "exclude"], "categories": []}
-    assert sources.load_sources_data(lists, relevance=rel)[0][0].keywords == ["animal welfare"]  # exclude ignored
-    # no relevance lists (sources.yaml fallback): Include reads the lists' keywords, which the site fills with it
-    assert sources.load_sources_data(lists)[0][0].keywords == ["seed"]
+    assert sources.load_sources_data(lists)[0][0].keywords == ["animal welfare"]  # exclude ignored
+    # without the keyword table (a phase 1 sources.yaml) the old way: its `sources` list, as it is
+    del lists["keywords_v2"]
+    assert sources.load_sources_data(lists)[0][0].keywords == ["own"]
 
 
 def test_gate_prefers_the_lists_category_names(monkeypatch):

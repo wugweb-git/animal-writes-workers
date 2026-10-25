@@ -5,7 +5,7 @@ two weeks each time. Brave Search is gone (owner, 25 Oct 2026, sourcing phase 2:
 are no request budgets or "press sites" any more.
 
 The queries are the site's Press keywords (the `queries` of the keywords with the Press role, keywords.press_config),
-or the v1 `press.queries` when the site sends no keyword table. Every candidate that mentions Animal Writes or the
+or the `press.queries` of a sources.yaml from before phase 2. Every candidate that mentions Animal Writes or the
 29 November letter campaign is sent to the site as a "Press: to review" draft; nothing is published automatically,
 duplicates are refused by URL (rejected items too), and no caption text is copied.
 

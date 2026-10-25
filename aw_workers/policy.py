@@ -6,9 +6,12 @@ summarised. The site checks again on arrival, so a stale policy can only cost a 
 
 from __future__ import annotations
 
+import logging
 import re
 from dataclasses import dataclass, field
 from urllib.parse import urlparse
+
+log = logging.getLogger(__name__)
 
 AGGREGATOR = re.compile(r"^(gnews|applenews|agg)-")
 
@@ -91,16 +94,20 @@ class Policy:
 
     @classmethod
     def from_json(cls, data: dict) -> "Policy":
-        """The site's policy. With the keyword table (phase 2: top-level `keywords`, or `config.keywords_v2`) the four
-        lists are the spellings of the keywords with the Include, Animal, Context and Exclude roles; the switches stay
-        in `relevance`. Without it, the v1 lists in `relevance`."""
+        """The site's policy. The four lists are the spellings of the keywords (top-level `keywords`, or
+        `config.keywords_v2`) with the Include, Animal, Context and Exclude roles; `relevance` holds only the switch
+        (from phase 4 the site sends no lists there, and lists it might still send are not read). A policy without the
+        keyword table (a site before phase 2) gives empty lists and no relevance pre-filter: the site still checks every
+        item on arrival, so this can only cost a summary."""
         from . import keywords
 
         pub = data.get("publishers") or {}
-        rel = data.get("relevance") or {}
         table = keywords.from_data(data)
-        if table is not None:
-            rel = {**rel, **keywords.relevance_lists(table)}
+        if table is None:
+            log.warning("the policy has no keyword table: no relevance pre-filter here (the site checks every item)")
+            rel = {"enabled": False}
+        else:
+            rel = {"enabled": (data.get("relevance") or {}).get("enabled"), **keywords.relevance_lists(table)}
         return cls(
             blocked=set(pub.get("blocked") or []),
             allowed=set(pub.get("allowed") or []),

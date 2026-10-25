@@ -2,7 +2,9 @@ from aw_workers.policy import Policy
 
 
 def _policy():
-    return Policy.from_json({"publishers": {}, "relevance": {"enabled": False, "exclude": ["cattle theft", "stealing cattle"]}})
+    kws = [{"id": i, "label": w, "variants": [], "roles": ["exclude"], "lang": "en", "searches": [], "categories": [], "sections": []}
+           for i, w in enumerate(("cattle theft", "stealing cattle"))]
+    return Policy.from_json({"publishers": {}, "relevance": {"enabled": False}, "keywords": kws})
 
 
 def test_exclude_applies_with_filter_off():

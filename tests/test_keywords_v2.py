@@ -34,7 +34,7 @@ def lists_of(raw: dict) -> dict:
 
 def searches(raw: dict) -> list:
     lists = lists_of(raw)
-    return run.keyword_searches(sources.load_sources_data(lists, relevance=raw.get("relevance"))[0], lists)
+    return run.keyword_searches(sources.load_sources_data(lists)[0], lists)
 
 
 def gnews(src_list) -> list[tuple[str, str]]:
@@ -124,8 +124,11 @@ def test_policy_lists_come_from_the_roles():
     assert "cattle smugglers" in p.exclude and "cattle smuggler" in p.exclude  # merged record, both spellings kept
     assert p.relevance_on is bool(raw["relevance"]["enabled"])
     assert p.verdict("https://a.example/x", "gnews-kw-x", "Cattle smugglers held") == "filtered"  # Exclude always
-    v1 = policy.Policy.from_json({"relevance": raw["relevance"]})
-    assert v1.strong == raw["relevance"]["strong"]  # no keyword table: the v1 lists
+    # phase 4: the old lists in `relevance` are never read, with or without the keyword table
+    stale = {**raw, "relevance": {**raw["relevance"], "strong": ["old word"], "exclude": ["old exclude"]}}
+    assert policy.Policy.from_json(stale).strong == p.strong and "old exclude" not in policy.Policy.from_json(stale).exclude
+    v1 = policy.Policy.from_json({"relevance": {**raw["relevance"], "enabled": True}})
+    assert v1.strong == [] and not v1.relevance_on  # no keyword table: no lists and no pre-filter (the site checks)
 
 
 def test_match_word_switches_the_matcher_on_and_v1_stays_legacy():
@@ -168,10 +171,13 @@ def test_a_hindi_keyword_with_a_sourcing_role_is_ignored():
     assert "पशु क्रूरता" not in policy.Policy.from_json(raw).strong
     assert "पशु क्रूरता" not in sources.CATEGORIES["cruelty-prosecution"]
     assert "पशु क्रूरता" not in keywords.press_config(lists)["queries"]
-    # a record without a language is not trusted either; a table with nothing usable leaves the v1 lists in force
+    # a record without a language is not trusted either; a table with nothing usable is no table: the site's old lists
+    # are not read (phase 4), the policy has no lists and no pre-filter, and the lists come from sources.yaml
     assert keywords.from_data({"keywords_v2": [{**HINDI, "lang": ""}]}) is None
     only_hindi = {**raw, "keywords": [copy.deepcopy(HINDI)], "config": {**raw["config"], "keywords_v2": [copy.deepcopy(HINDI)]}}
-    assert policy.Policy.from_json(only_hindi).strong == raw["relevance"]["strong"]
+    p = policy.Policy.from_json(only_hindi)
+    assert p.strong == [] and p.exclude == [] and not p.relevance_on
+    assert sources.site_lists(only_hindi) is None
 
 
 # ---- press: queries from the Press role, no Brave ----

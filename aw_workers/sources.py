@@ -110,8 +110,9 @@ def keyword_table_on() -> bool:
 
 
 def set_sections(data, v2=None) -> None:
-    """Each section's allowed categories and tags: the site's `sections_v2` (phase 3) when it is there, else the v1
-    `sections` dict (post type => {categories, tags})."""
+    """Each section's allowed categories and tags: the site's `sections_v2` (phase 3) when it is there, else `data`, a
+    dict post type => {categories, tags} (GET relevance-config's `sections`, or an old sources.yaml), which never
+    replaces sections_v2 once that is in force."""
     if v2 is not None and sections_mod.use(v2):
         data = sections_mod.allowed(v2)
     elif v2 is None and sections_mod.active():
@@ -163,20 +164,22 @@ def load_sources(path: str | Path = "sources.yaml") -> tuple[list[Source], dict]
     return load_sources_data(yaml.safe_load(Path(path).read_text(encoding="utf-8")))
 
 
-# The relevance lists a keyword check by role reads (sourcing policy `relevance`): "include" is the strong list. A check
-# keeps items that have one of its words, so the Exclude role can never be one (it would keep what it should drop).
-ROLE_LISTS = {"include": "strong", "strong": "strong", "animal": "animal", "context": "context"}
+# The roles a keyword check can name (`check.roles` of a `sources_v2` entry). A check keeps items that have one of its
+# words, so the Exclude role can never be one (it would keep what it should drop).
+CHECK_ROLES = {"include": "include", "strong": "include", "animal": "animal", "context": "context"}
 _warned: set[str] = set()  # each malformed-block warning once per run
 
 
-V2_BLOCKS = ("schema", "match", "sources_v2", "category_names", "keywords_v2", "sections_v2")  # sourcing restructure: beside the v1 keys
+# Sourcing restructure: the blocks the site sends (top level or inside `config`). From phase 4 (owner, 25 Oct 2026) the
+# site sends only these beside `defaults`, `press` (its switches) and `topic_tags` (the tag rules), and the workers read
+# only these from the site.
+V2_BLOCKS = ("schema", "match", "sources_v2", "category_names", "keywords_v2", "sections_v2")
 
 
 def with_v2_blocks(config: dict, raw: dict) -> dict:
-    """The site's lists with the new blocks the policy sends beside them (top level or inside `config`); `config`
-    wins when both have one. Old workers ignore these keys; sources.yaml gets them through Sources sync. The keyword
-    table (phase 2) comes as top-level `keywords` (objects) and as `config.keywords_v2`; inside the lists it is always
-    `keywords_v2`, because `keywords` there is the v1 list of Include words."""
+    """The site's lists with the blocks the policy sends beside them (top level or inside `config`); `config` wins when
+    both have one. The keyword table comes as top-level `keywords` (objects) and as `config.keywords_v2`; inside the
+    lists it is always `keywords_v2` (in sources.yaml from before phase 4, `keywords` is the old list of Include words)."""
     out = dict(config)
     for k in V2_BLOCKS:
         if k not in out and k in (raw or {}):
@@ -187,8 +190,7 @@ def with_v2_blocks(config: dict, raw: dict) -> dict:
 
 
 def v2_sources(data: dict) -> list[dict] | None:
-    """The site's `sources_v2` list when it is there and every entry has the keys a source needs; None otherwise
-    (sources.yaml from before phase 1, or a malformed block), so the v1 `sources` list is read."""
+    """The site's `sources_v2` list when it is there and every entry has the keys a source needs; None otherwise."""
     v2 = (data or {}).get("sources_v2")
     if not isinstance(v2, list) or not v2:
         return None
@@ -197,18 +199,36 @@ def v2_sources(data: dict) -> list[dict] | None:
             what = repr(s if isinstance(s, dict) else type(s))[:200]
             if what not in _warned:
                 _warned.add(what)
-                log.warning("sources_v2 has an incomplete entry (%s): reading the v1 sources list", what)
+                log.warning("sources_v2 has an incomplete entry (%s): these lists are not used", what)
             return None
     return v2
 
 
-def check_words(s: dict, data: dict, relevance: dict | None = None, kws: list[dict] | None = None) -> list[str] | None:
-    """The words a `sources_v2` keyword check names (`check: {roles: [...], categories: [...]}`), or None when the
-    check names nothing (or nothing it names has words): the source's own `filter` / `keywords` then apply, as in v1.
-    The source's "Keyword check" switch still decides: `filter: false` means no check, whatever `check` names.
-    With the keyword table (`kws`, phase 2) a role reads the spellings of the keywords with that role and a category
-    the spellings of the `category` keywords mapped to it. Without it, the relevance lists; without those
-    (sources.yaml fallback) the Include role reads the lists' `keywords`, which the site fills with the Include list."""
+def is_v2(data: dict | None) -> bool:
+    """Whether the lists have the shape the site sends from phase 2 on: `sources_v2` and the keyword table. The site's
+    lists are read only in this shape (phase 4, owner 25 Oct 2026); a sources.yaml without it is read the old way."""
+    return isinstance(data, dict) and v2_sources(data) is not None and _keywords.from_data(data) is not None
+
+
+def site_lists(raw: dict | None) -> dict | None:
+    """The lists in the site's policy (its `config` with the blocks beside it), or None when the site sent none in the
+    shape the workers read (is_v2): "Workers use these lists" is off, or the site is from before phase 2. Then
+    sources.yaml is read."""
+    config = (raw or {}).get("config")
+    if not isinstance(config, dict):
+        return None
+    lists = with_v2_blocks(config, raw)
+    if is_v2(lists):
+        return lists
+    log.warning("the site's lists have no sources_v2 or keyword table: sources.yaml is read instead")
+    return None
+
+
+def check_words(s: dict, kws: list[dict]) -> list[str] | None:
+    """The words a `sources_v2` keyword check names (`check: {roles: [...], categories: [...]}`): a role reads the
+    spellings of the keywords with that role, a category the spellings of the `category` keywords mapped to it. None
+    when the check names nothing (or nothing it names has words): the source's own `filter` / `keywords` then apply.
+    The source's "Keyword check" switch still decides: `filter: false` means no check, whatever `check` names."""
     if s.get("filter") is False:
         return None
     check = s.get("check") if isinstance(s.get("check"), dict) else {}
@@ -216,18 +236,14 @@ def check_words(s: dict, data: dict, relevance: dict | None = None, kws: list[di
     cats = [str(c) for c in check.get("categories") or []]
     if not roles and not cats:
         return None
-    rel = _keywords.relevance_lists(kws) if kws is not None else (relevance or {})
     words: list[str] = []
     for r in roles:
-        key = ROLE_LISTS.get(r)
-        if key is None:
+        role = CHECK_ROLES.get(r)
+        if role is None:
             log.warning("source %s: keyword check role %r is not one a check can use; ignored", s.get("id"), r)
             continue
-        found = rel.get(key)
-        if not found and key == "strong" and kws is None:
-            found = data.get("filter_words") or data.get("keywords")
-        words += [str(w) for w in found or []]
-    cat_words = _keywords.category_words(kws) if kws is not None else (data.get("categories") or {})
+        words += _keywords.role_words(kws, role)
+    cat_words = _keywords.category_words(kws)
     for c in cats:
         words += [str(w) for w in cat_words.get(c) or []]
     words = list(dict.fromkeys(w for w in words if w.strip()))
@@ -249,41 +265,67 @@ def relay_hosts(data: dict, v1_hosts) -> list[str]:
     return list(dict.fromkeys(hosts))
 
 
-def load_sources_data(data: dict, relevance: dict | None = None) -> tuple[list[Source], dict]:
-    """Sources from the lists' dict: sources.yaml, or the site's copy (Settings → Sourcing), which has the same shape.
-    The site's `sources_v2` block is read when it is there (each entry is a v1 source plus `host`, `relay`, `read_by`
-    and `check`), the v1 `sources` list otherwise. `match: "word"` switches every keyword check to whole words. With
-    the keyword table (`keywords_v2`, phase 2) the category words come from the `category` keywords and keyword checks
-    from the roles; without it, from the v1 lists."""
+def load_sources_data(data: dict) -> tuple[list[Source], dict]:
+    """Sources from the lists' dict: the site's copy (Settings → Sourcing) or sources.yaml, which has the same shape.
+    Lists in the site's shape (`sources_v2` and the keyword table, is_v2) are read from those blocks only; the old
+    keys beside them (`sources`, `categories`, `keywords`, `sections`) are never read. A sources.yaml from before the
+    site sent them is read the old way (load_v1_lists), so the fallback keeps working whatever its age."""
+    data = data or {}
+    if not is_v2(data):
+        return load_v1_lists(data)
     kws = _keywords.from_data(data)
-    KEYWORD_TABLE["on"] = kws is not None
-    # The keyword table's spellings may end in "*" (start of a word), which only word mode reads: the table always
-    # comes with `match: "word"`, and switches word mode on even if that key is missing.
-    matcher.set_mode(matcher.WORD if kws is not None else data.get("match"))
+    KEYWORD_TABLE["on"] = True
+    # The keyword table always comes with whole-word matching (its spellings may end in "*", the start of a word).
+    matcher.set_mode(matcher.WORD)
     CATEGORIES.clear()
-    if kws is not None:
-        CATEGORIES.update(_keywords.category_words(kws, slugs=list(data.get("category_names") or {})))
-    else:
-        CATEGORIES.update({k: [str(w) for w in v] for k, v in (data.get("categories") or {}).items()})
-    set_sections(data.get("sections"), data.get("sections_v2") or [])  # [] resets to the fallback map
+    CATEGORIES.update(_keywords.category_words(kws, slugs=list(data.get("category_names") or {})))
+    if sections_mod.use(data.get("sections_v2")):  # phase 3: each section's allowed categories and tags
+        SECTIONS.clear()
+        SECTIONS.update(sections_mod.allowed(data["sections_v2"]))
+    else:  # a site before phase 3: the item types' code map, and every category until relevance-config sends its lists
+        SECTIONS.clear()
     TOPIC_TAGS.clear()
     TOPIC_TAGS.update({str(k): v for k, v in (data.get("topic_tags") or {}).items() if isinstance(v, dict)})
-    sources = []
-    filter_words = (_keywords.role_words(kws, "include") if kws is not None
-                    else list(data.get("filter_words") or data.get("keywords") or []))
-    v2 = v2_sources(data)
-    for s in v2 if v2 is not None else data.get("sources", []):
-        # Settings → Sourcing switches (the site applies them too): a source switched off is not fetched; "Keyword
-        # check" gives it the keyword list. Lists without the switches (sources.yaml) are read as they are.
+    include = _keywords.role_words(kws, "include")
+    out = []
+    for s in v2_sources(data):
+        # Settings → Sourcing switches (the site applies them too): a source switched off is not fetched; its keyword
+        # check gives it the words of the roles or categories it names, "Keyword check" alone the Include words.
         if s.get("on") is False:
             continue
-        words = check_words(s, data, relevance, kws) if v2 is not None else None
+        words = check_words(s, kws)
         if words is not None:
             s = {**s, "keywords": words}
         elif s.get("filter"):
+            s = {**s, "keywords": include}
+        out.append(source_from_dict(s))
+    return out, data.get("defaults", {})
+
+
+def load_v1_lists(data: dict) -> tuple[list[Source], dict]:
+    """A sources.yaml from before the site sent its lists in the new shape (the workers' fallback only; the site's own
+    lists are never read this way from phase 4): `sources`, `categories` (slug => words), `keywords` (the Include
+    words, the "Keyword check" list), `sections` (post type => allowed categories and tags) and `topic_tags`."""
+    KEYWORD_TABLE["on"] = False
+    matcher.set_mode(data.get("match"))
+    CATEGORIES.clear()
+    CATEGORIES.update({k: [str(w) for w in v] for k, v in (data.get("categories") or {}).items()})
+    sections_mod.use(None)
+    SECTIONS.clear()
+    secs = data.get("sections")
+    if isinstance(secs, dict):
+        SECTIONS.update({str(k): v for k, v in secs.items() if isinstance(v, dict)})
+    TOPIC_TAGS.clear()
+    TOPIC_TAGS.update({str(k): v for k, v in (data.get("topic_tags") or {}).items() if isinstance(v, dict)})
+    filter_words = list(data.get("filter_words") or data.get("keywords") or [])
+    out = []
+    for s in data.get("sources") or []:
+        if s.get("on") is False:
+            continue
+        if s.get("filter"):
             s = {**s, "keywords": filter_words}
-        sources.append(source_from_dict(s))
-    return sources, data.get("defaults", {})
+        out.append(source_from_dict(s))
+    return out, data.get("defaults", {})
 
 
 def source_from_dict(s: dict, categories=()) -> Source:
