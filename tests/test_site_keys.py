@@ -53,7 +53,7 @@ def test_secret_keys_follow_site_rows_without_repeats(monkeypatch):
     monkeypatch.setattr(summarise, "site_rows", lambda env: [{"provider": "groq", "model": "x", "url": "https://g.test", "key": "k1"}])
     backends = summarise.backends_from_env({"GROQ_API_KEY": "k1\nk2", "LLM_PROVIDERS": "groq"})
     keys = [b.api_key for b in backends]
-    assert keys[-1] == "k2" and set(keys[:-1]) == {"k1"} and len(keys) == 6  # k1: saved model + 4 free Groq models
+    assert keys[-1] == "k2" and set(keys[:-1]) == {"k1"} and len(keys) == 4  # k1: saved model + 2 free Groq models
 
 
 def test_openrouter_key_uses_only_free_models():

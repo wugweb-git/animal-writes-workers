@@ -496,3 +496,9 @@ def test_groq_stopped_at_its_limit_is_a_cut_off():
     b = summarise.GroqBackend("k", session=S(), sleep=lambda s: None, min_interval=0)
     with pytest.raises(summarise.CutOff):
         b.ask("x")
+
+
+def test_dead_models_are_not_tried():
+    """Gone from the providers' /models lists on 25 Oct 2026 (404 on every run): never tried again."""
+    gone = {"llama-3.3-70b-versatile", "llama-3.1-8b-instant", "minimax/minimax-m3.1-flash:free"}
+    assert not gone & {m for models in summarise.EXTRA_MODELS.values() for m in models}
