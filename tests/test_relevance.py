@@ -163,9 +163,12 @@ import yaml as _yaml  # noqa: E402
 
 _ROOT = _Path(__file__).resolve().parent.parent
 _YAML = _yaml.safe_load((_ROOT / "sources.yaml").read_text(encoding="utf-8"))
+# The category slugs sources.yaml knows: `category_names` (the site's, phase 1 on; the only ones once the site's phase 4
+# sends no `categories`), else the old `categories` lists.
+_SLUGS = set(_YAML.get("category_names") or _YAML.get("categories") or {})
 
 def test_builtin_categories_match_sources_yaml():
-    assert set(relevance.CATEGORIES) == set(_YAML["categories"])
+    assert set(relevance.CATEGORIES) == _SLUGS
     if isinstance(_YAML.get("category_names"), dict):
         assert relevance.CATEGORIES == {k: str(v) for k, v in _YAML["category_names"].items()}
 
@@ -185,7 +188,7 @@ def test_fallback_reads_category_names_then_slugs(tmp_path):
 def test_gate_without_the_site_knows_animal_experimentation(monkeypatch):
     monkeypatch.setenv("AW_SOURCES", str(_ROOT / "sources.yaml"))
     gate = relevance.Gate(None, cache={})
-    assert "animal-experimentation" in gate.categories and len(gate.categories) == len(_YAML["categories"])
+    assert "animal-experimentation" in gate.categories and len(gate.categories) == len(_SLUGS)
 
 
 def test_fallback_survives_a_yaml_that_is_not_a_mapping(tmp_path):

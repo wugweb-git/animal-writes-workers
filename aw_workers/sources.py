@@ -303,6 +303,9 @@ def load_sources_data(data: dict, relevance: dict | None = None) -> tuple[list[S
         elif s.get("filter"):
             s = {**s, "keywords": filter_words}
         sources.append(source_from_dict(s))
+    if not sources and data.get("sources_v2") and not data.get("sources"):
+        # Phase 4 sends no v1 `sources`: an unusable sources_v2 (one incomplete entry) leaves nothing to fetch.
+        log.error("sources_v2 could not be read and there is no v1 sources list: no sources this run")
     return sources, data.get("defaults", {})
 
 

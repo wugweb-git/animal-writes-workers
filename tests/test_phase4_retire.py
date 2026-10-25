@@ -15,7 +15,7 @@ from pathlib import Path
 
 import yaml
 
-from aw_workers import keywords, matcher, policy, run, sources
+from aw_workers import keywords, matcher, policy, relevance, run, sources
 
 ROOT = Path(__file__).resolve().parent.parent
 FIXTURE = json.loads((Path(__file__).parent / "fixtures" / "sourcing_phase2_policy.json").read_text(encoding="utf-8"))
@@ -132,6 +132,7 @@ def test_sources_yaml_written_from_the_phase4_policy_reads_the_same(tmp_path, mo
     _, from_site = built(raw)
     from_yaml = run.keyword_searches(sources.load_sources_data(data)[0], data)
     assert [(s.id, s.url) for s in from_yaml] == [(s.id, s.url) for s in from_site]
+    assert relevance.fallback_categories(path) == {str(k): str(v) for k, v in raw["config"]["category_names"].items()}
     assert sync.sync_lists(raw) is False  # unchanged
     assert sync.sync_lists({"publishers": {}}) is None  # the lists' switch off: sources.yaml stays as it is
     assert yaml.safe_load(path.read_text(encoding="utf-8")) == data
