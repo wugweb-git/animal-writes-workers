@@ -82,7 +82,8 @@ def checked(data: dict, text: str, services: dict) -> dict:
     nums_ok = all(n in low for n in re.findall(r"\d[\d,]*", desc.lower()))
     names = re.findall(r"(?<!^)(?<![.!?] )\b([A-Z][a-z]{2,}(?:\s[A-Z][a-z]+)*)", desc)
     names_ok = all(_in(low, n) for n in names)
-    plain = not PRAISE.search(desc) and not re.search(r"\b(we|our|us)\b", desc, re.I)
+    unnamed = re.sub(r"\b[A-Z][\w’']*(?:\s+(?:(?:and|of|for|the|&)\s+)?[A-Z][\w’']*)+", "", desc)  # "All Creatures Great and Small" is a name
+    plain = not PRAISE.search(unnamed) and not re.search(r"\b(we|our|us)\b", desc, re.I)
     if desc and len(desc.split()) <= 40 and nums_ok and names_ok and plain:
         out["description"] = desc
     rt = str(data.get("reg_type") or "")

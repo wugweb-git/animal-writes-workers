@@ -146,6 +146,8 @@ def test_description_is_plain_and_short_and_services_are_named():
     out = ai.checked({**base, "description": "Rescues injured dogs in Guntur and runs monthly adoption drives."}, text, svc)
     assert out["services"] == ["rescue", "adoption"]  # sterilisation is not in the text
     assert out["description"].startswith("Rescues")
+    named = "Rescues injured dogs in Guntur; its dogs stay at All Creatures Great and Small."
+    assert ai.checked({**base, "description": named}, text + " all creatures great and small", svc)["description"] == named
     for bad in ["A dedicated group that rescues injured dogs in Guntur.", "India's first rescue for dogs in Guntur.", "India’s first rescue for dogs in Guntur.",
                 "We rescue injured dogs in Guntur.", " ".join(["dogs"] * 41)]:
         assert "description" not in ai.checked({**base, "description": bad}, text, svc), bad
