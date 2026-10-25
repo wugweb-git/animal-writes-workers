@@ -498,7 +498,7 @@ def main() -> int:
         return 3
     # Press discovery (Media & PR), weekly, through Google News and Google Search.
     try:
-        press.run(lists.get("press") or {}, client, dry_run=dry_run, gate=gate)
+        press.run(keywords_mod.press_config(lists), client, dry_run=dry_run, gate=gate)
     except ingest.AuthError:
         raise
     except Exception as exc:
