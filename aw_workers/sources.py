@@ -17,6 +17,7 @@ import requests
 import yaml
 from bs4 import BeautifulSoup
 
+from . import matcher
 from . import relay as _relay
 
 USER_AGENT = "AnimalWritesWorkers/1.0 (+https://animalwrites.in)"
@@ -125,9 +126,15 @@ def categories_for(item: "Item", extra: str = "") -> list[str]:
     """Category slugs whose keywords occur in the item's title, feed text or `extra` (e.g. our summary)."""
     hay = f" {item.title} {item.text} {extra} ".lower()
     found = []
+    word = matcher.word_mode()
     for slug, words in CATEGORIES.items():
         for w in words:
             w = w.lower()
+            if word:
+                if matcher.matches(hay, w):
+                    found.append(slug)
+                    break
+                continue
             if (re.search(rf"\b{re.escape(w)}\b", hay) if w.isascii() and len(w) <= 4 else w in hay):
                 found.append(slug)
                 break
@@ -143,6 +150,7 @@ def load_sources_data(data: dict) -> tuple[list[Source], dict]:
     CATEGORIES.clear()
     CATEGORIES.update({k: [str(w) for w in v] for k, v in (data.get("categories") or {}).items()})
     set_sections(data.get("sections"))
+    matcher.set_mode(data.get("match"))
     TOPIC_TAGS.clear()
     TOPIC_TAGS.update({str(k): v for k, v in (data.get("topic_tags") or {}).items() if isinstance(v, dict)})
     sources = []
@@ -547,13 +555,18 @@ def parse_ccsea(source: Source, body: str) -> list[Item]:
 def topic_tags_for(text: str) -> tuple[list[str], str]:
     """Topic tags whose phrases occur in the text, and the first "hold" reason that matches (or "")."""
     hay = f" {text} ".lower()
+    word = matcher.word_mode()
+
+    def has(w) -> bool:
+        return matcher.matches(hay, str(w)) if word else str(w).lower() in hay
+
     tags, hold = [], ""
     for slug, rule in TOPIC_TAGS.items():
-        if any(str(w).lower() in hay for w in rule.get("any") or []):
+        if any(has(w) for w in rule.get("any") or []):
             tags.append(slug)
-            unless = [str(w).lower() for w in rule.get("unless") or []]
+            unless = [str(w) for w in rule.get("unless") or []]
             for pat in rule.get("hold") or []:
-                if not hold and re.search(str(pat), text, re.I) and not any(w in hay for w in unless):
+                if not hold and re.search(str(pat), text, re.I) and not any(has(w) for w in unless):
                     hold = f"{slug}: {rule.get('hold_reason') or pat}"
     return tags, hold
 
@@ -565,6 +578,8 @@ def matches_keywords(item: Item, keywords: list[str]) -> bool:
     if not keywords:
         return True
     hay = (item.title if item.source.match == "title" else f"{item.title} {item.text}").lower()
+    if matcher.word_mode():
+        return bool(matcher.any_match(hay, keywords))
     return any(k.lower() in hay for k in keywords)
 
 
