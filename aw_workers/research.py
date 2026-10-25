@@ -370,7 +370,9 @@ def main() -> int:
         try:
             summary = summariser.summarise(item)
             counts["summarised"] += 1
-            cats = summarise.pick_categories(summariser, item, summary, sources.allowed_categories("research"))
+            ai_cat = gate.category_slug(verdict.category) if verdict is not None and hasattr(gate, "category_slug") else ""
+            cats = summarise.pick_categories(summariser, item, summary, sources.allowed_categories("research"),
+                                             ai_choice=ai_cat)
             payload = dict(ingest.build_payload(item, summary, cats), backfill=True, study_title=p["title"],
                            authors=p.get("authors") or [], journal=p.get("journal") or "")  # the study's credit (Sources block)
             with_headline(payload, headline_fields(summariser, p, summary))

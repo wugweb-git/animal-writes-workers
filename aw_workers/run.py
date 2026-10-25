@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from datetime import date, timedelta
 from pathlib import Path
 
-from . import counts, documents, enrich, headline_case, ingest, merge, policy as policy_mod, press, relay, relevance, sources, summarise, summary_rules
+from . import counts, documents, enrich, headline_case, ingest, keywords as keywords_mod, merge, policy as policy_mod, press, relay, relevance, sources, summarise, summary_rules
 from . import titles as titles_mod
 
 # How far back Google News searches look (AW_WINDOW, e.g. "4d" to catch up after an outage).
@@ -235,8 +235,12 @@ def run(
                 as_press = item.source.file_as == "press"  # Media & PR coverage: no summary or categories
                 summary = ("" if as_press else ingest.opportunity_summary(item) if item.source.type == "opportunity"
                            else summariser.summarise(item))
+                ai_cat = ""  # the relevance check's category, as a slug (the site's list)
+                if verdict is not None and hasattr(gate, "category_slug"):
+                    ai_cat = gate.category_slug(str(getattr(verdict, "category", "") or ""))
                 cats = ([] if as_press else None if item.source.type == "opportunity"
-                          else summarise.pick_categories(summariser, item, summary, sources.allowed_categories(item.source.type)))
+                          else summarise.pick_categories(summariser, item, summary, sources.allowed_categories(item.source.type),
+                                                         ai_choice=ai_cat))
                 payload = ingest.build_payload(item, summary, cats)
                 cut_flag = ""
                 if item.source.type == "news" and not as_press and titles_mod.is_cut(payload["title"]):
@@ -322,17 +326,50 @@ def default_enricher(url: str) -> tuple[str, str]:
 
 # Mirrored on the site in aw-sourcing AW_SOURCING_EXTRA_SEARCHES (plugins/aw-sourcing/includes/keyword-stats.php in
 # wugweb-git/animalwrites): change both together, or the Sourcing keywords stats on the site miss or invent a search.
+# v1 only: with the keyword table (phase 2) "stray dogs" is a keyword with the Search role (feed gnews-kw-stray-dogs).
 EXTRA_SEARCHES = ("stray dogs",)  # owner, 12 Oct 2026
 SEARCH_MAX_ITEMS = 40  # new (unseen) items per Google News search and run; busy searches return 30-45 a day
 FAIL_SHARE = 0.5  # half the sources or more failing makes the run fail and the site alert the owner
 TIME_BUDGET_MIN = 25  # stop taking new items after this many minutes (job timeout 45); the next run carries on
 
 
+def keyword_feeds(lists: dict, have=()) -> list:
+    """The Google News feeds that became keywords (phase 2: a keyword search that carries a whole feed, `url`), as
+    sources with their own settings and keyword check, in payload order; ids in `have` are skipped. [] without the
+    keyword table. Backfill reads these too, as it read them as feeds before."""
+    table = keywords_mod.from_data(lists)
+    out, have = [], set(have)
+    for kw, spec in keywords_mod.search_specs(table or [])[0]:
+        if spec.get("on") is False:
+            continue
+        s = {**spec, "id": str(spec.get("feed") or spec.get("id") or "")}
+        if not s["id"] or s["id"] in have:
+            continue
+        words = sources.check_words(s, lists, kws=table)
+        if words is not None:
+            s["keywords"] = words
+        elif s.get("filter"):  # the "Keyword check" switch without a named check: the Include words, as for a feed
+            s["keywords"] = keywords_mod.role_words(table, "include")
+        try:
+            src = sources.source_from_dict(s, categories=kw["categories"])
+        except (KeyError, ValueError) as exc:
+            log.warning("keyword %r: search %s is incomplete (%s); skipped", kw.get("label"), s["id"], exc)
+            continue
+        out.append(src)
+        have.add(src.id)
+    return out
+
+
 def keyword_searches(source_list: list, lists: dict) -> list:
     """Search, don't only filter (owner, 12 Oct 2026): every English keyword in Sourcing (plus EXTRA_SEARCHES) becomes
     its own Google News search for the last 2 days, India edition, so stories from any publisher that use those words
     are found. Existing Google News searches get the same 2-day window (without it Google returns older "relevant"
-    stories and nothing new). Hindi keywords are not searched (no Hindi content, owner 10 Oct 2026)."""
+    stories and nothing new). Hindi keywords are not searched (no Hindi content, owner 10 Oct 2026).
+
+    With the keyword table (phase 2) the searches are the keywords' `searches`, keeping every feed id: first those that
+    carry a whole feed (`url`: the open-web Google News feeds that became keywords), then the plain ones (`q`), each
+    skipped when its feed id or its query is already taken (the keyword's categories then go to the search that is
+    kept). A search switched off (`on: false`) is not fetched. EXTRA_SEARCHES is then not used."""
     import re as _re
     import urllib.parse as up
     from dataclasses import replace as _replace
@@ -349,19 +386,43 @@ def keyword_searches(source_list: list, lists: dict) -> list:
         q = up.parse_qs(up.urlsplit(url).query).get("q", [""])[0]
         return " ".join(q.lower().split())
 
-    out = [(_replace(s, url=with_window(s.url), max_items=s.max_items or SEARCH_MAX_ITEMS)
-            if "news.google.com/rss/search" in s.url else s) for s in source_list]
-    have = {s.id for s in out}
-    queries = {norm_q(s.url) for s in out if "news.google.com/rss/search" in s.url}
-    kws = [k for k in (lists.get("keywords") or []) if isinstance(k, str) and k.isascii() and k.strip()]
-    for kw in list(dict.fromkeys([*kws, *EXTRA_SEARCHES])):
-        sid = "gnews-kw-" + _re.sub(r"[^a-z0-9]+", "-", kw.lower()).strip("-")
-        url = "https://news.google.com/rss/search?" + up.urlencode({"q": f'"{kw}" India when:{WINDOW}', "hl": "en-IN", "gl": "IN", "ceid": "IN:en"})
-        if sid in have or norm_q(url) in queries:  # the same search is already a source: fetch it once
+    def is_search(url: str) -> bool:
+        return "news.google.com/rss/search" in url
+
+    out = [(_replace(s, url=with_window(s.url), max_items=s.max_items or SEARCH_MAX_ITEMS) if is_search(s.url) else s)
+           for s in source_list]
+    by_id = {s.id: i for i, s in enumerate(out)}
+    by_query = {norm_q(s.url): i for i, s in enumerate(out) if is_search(s.url)}
+
+    def add(src) -> None:
+        """Append a search, or give its keyword's categories to the search already taken by its id or query."""
+        q = norm_q(src.url) if is_search(src.url) else None
+        i = by_id.get(src.id, by_query.get(q) if q is not None else None)
+        if i is not None:
+            if src.categories:
+                out[i] = _replace(out[i], categories=list(dict.fromkeys([*out[i].categories, *src.categories])))
+            return
+        by_id[src.id] = len(out)
+        if q is not None:
+            by_query[q] = len(out)
+        out.append(src)
+
+    table = keywords_mod.from_data(lists)
+    if table is None:  # v1: the Include words (`keywords`) plus the fixed extra searches
+        kws = [k for k in (lists.get("keywords") or []) if isinstance(k, str) and k.isascii() and k.strip()]
+        plain = [({"categories": []}, {"q": kw}) for kw in dict.fromkeys([*kws, *EXTRA_SEARCHES])]
+    else:
+        for src in keyword_feeds(lists):  # a feed that became a keyword: its own settings and keyword check
+            add(_replace(src, url=with_window(src.url), max_items=src.max_items or SEARCH_MAX_ITEMS) if is_search(src.url) else src)
+        plain = keywords_mod.search_specs(table)[1]
+    for kw_rec, spec in plain:
+        kw = str(spec.get("q") or "").strip()
+        if not kw.isascii() or spec.get("on") is False:  # Hindi keywords are not searched
             continue
-        out.append(sources.Source(id=sid, name=f"Google News – {kw}", kind="rss", type="news", url=url, max_items=SEARCH_MAX_ITEMS))
-        have.add(sid)
-        queries.add(norm_q(url))
+        sid = str(spec.get("feed") or "").strip() or "gnews-kw-" + _re.sub(r"[^a-z0-9]+", "-", kw.lower()).strip("-")
+        url = "https://news.google.com/rss/search?" + up.urlencode({"q": f'"{kw}" India when:{WINDOW}', "hl": "en-IN", "gl": "IN", "ceid": "IN:en"})
+        add(sources.Source(id=sid, name=f"Google News – {kw}", kind="rss", type="news", url=url, max_items=SEARCH_MAX_ITEMS,
+                           categories=list(kw_rec.get("categories") or [])))  # the same search already a source: fetched once
     return out
 
 
@@ -459,7 +520,7 @@ def main() -> int:
         return 3
     # Press discovery (Media & PR), weekly, through Google News and Google Search.
     try:
-        press.run(lists.get("press") or {}, client, dry_run=dry_run, gate=gate)
+        press.run(keywords_mod.press_config(lists), client, dry_run=dry_run, gate=gate)
     except ingest.AuthError:
         raise
     except Exception as exc:

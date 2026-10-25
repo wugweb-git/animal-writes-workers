@@ -30,7 +30,8 @@ SCHEMA_KEYS = ("schema", "priority", "field_rules")
 
 def sync_lists(raw: dict) -> bool | None:
     """sources.yaml from the policy: True changed, False unchanged, None when the lists' switch is off."""
-    # The new blocks (sources_v2, category_names, match, schema, sections_v2) may come beside `config`: keep them too.
+    # The new blocks (sources_v2, category_names, match, schema, the keyword table as keywords_v2 from phase 2,
+    # sections_v2 from phase 3) may come beside `config`: keep them in the copy too.
     config = sources.with_v2_blocks(raw["config"], raw) if isinstance(raw.get("config"), dict) else raw.get("config")
     if not isinstance(config, dict) or not config.get("sources"):
         return None

@@ -25,13 +25,17 @@ def _no_coverage_search(monkeypatch):
 def _fresh_section_lists():
     """Each test starts without the site's per-section lists (a test loading sources.yaml, which has them since the
     lists are copied from the site, must not change what later tests classify)."""
-    from aw_workers import relay, sources
+    from aw_workers import matcher, relay, sources
 
-    sources.SECTIONS.clear()
-    relay.configure(None, ())
+    def reset():  # also the matching mode and the keyword-table switch a loaded sources.yaml (or policy) may have set
+        sources.SECTIONS.clear()
+        relay.configure(None, ())
+        matcher.set_mode(None)
+        sources.KEYWORD_TABLE["on"] = False
+
+    reset()
     yield
-    sources.SECTIONS.clear()
-    relay.configure(None, ())
+    reset()
 
 
 @pytest.fixture(autouse=True)
