@@ -110,6 +110,62 @@ def _https_img(base: str, src: str) -> str:
     return u if u.startswith(("https://", "http://")) and not re.search(r"\.(svg|gif)(\?|$)", u, re.I) else ""  # http is fine: the site copies the picture, it never links to it
 
 
+WP_SIZE = re.compile(r"-\d{2,4}x\d{2,4}(?=\.(?:jpe?g|png|webp)(?:\?|$))", re.I)  # WordPress thumbnails: logo-150x150.png
+
+
+def _img_src(base: str, img) -> str:
+    """A picture's address: the largest srcset candidate when there is one, else src / data-src."""
+    best, size = "", -1.0
+    for attr in ("srcset", "data-srcset", "data-lazy-srcset"):
+        for part in str(img.get(attr) or "").split(","):
+            bits = part.strip().split()
+            if not bits:
+                continue
+            m = re.fullmatch(r"(\d+(?:\.\d+)?)[wx]", bits[1]) if len(bits) > 1 else None
+            n = float(m.group(1)) if m else 0.0
+            u = _https_img(base, bits[0])
+            if u and n > size:
+                best, size = u, n
+    return best or _https_img(base, img.get("src") or img.get("data-src") or img.get("data-lazy-src") or "")
+
+
+def full_size_candidate(url: str) -> str:
+    """The original upload behind a WordPress thumbnail (photo-300x200.jpg -> photo.jpg); '' when it is not one."""
+    path = urlparse(url).path
+    return url.replace(path, WP_SIZE.sub("", path), 1) if WP_SIZE.search(path) else ""
+
+
+def _is_image(http, url: str) -> bool:
+    try:
+        r = http.get(url, gap=0.5, headers={"User-Agent": BROWSER_UA}, stream=True, allow_redirects=True)
+    except Exception:  # noqa: BLE001
+        return False
+    try:
+        return r.status_code == 200 and str((r.headers or {}).get("content-type", "")).lower().startswith("image/")
+    finally:
+        if hasattr(r, "close"):
+            r.close()
+
+
+def _full_size_pictures(ctx, http) -> None:
+    """Swap WordPress thumbnails in this site's logo and photos for the full-size file, when that file exists."""
+    seen: dict[str, str] = {}
+
+    def up(u: str) -> str:
+        if u not in seen:
+            cand = full_size_candidate(u)
+            seen[u] = cand if cand and _is_image(http, cand) else u
+        return seen[u]
+
+    for f in ctx.facts:
+        if f.source_key != KEY:
+            continue
+        if f.field == "logo" and isinstance(f.value, str):
+            f.value = up(f.value)
+        elif f.field == "photos" and isinstance(f.value, list):
+            f.value = list(dict.fromkeys(up(u) for u in f.value))
+
+
 def fetch(http, url: str):
     r = http.get(url, gap=1.0, headers={"User-Agent": BROWSER_UA, "Accept-Language": "en-IN,en;q=0.9"}, allow_redirects=True)
     if r.status_code != 200 or "html" not in r.headers.get("content-type", "html"):
@@ -169,6 +225,7 @@ def run(ctx, env, http) -> None:
         ctx.texts[:] = [t for t in ctx.texts if t[0] != KEY]
         ctx.status[KEY] = "website does not mention the place"
         return
+    _full_size_pictures(ctx, http)
     ctx.status[KEY] = "ok" if found_any else "ok: nothing new"
 
 
@@ -248,7 +305,7 @@ def _extract(ctx, url: str, raw: str, home: str) -> bool:
         for img in soup.find_all("img")[:40]:
             attrs = " ".join(str(img.get(k, "")) for k in ("src", "class", "alt", "id"))
             if re.search(r"logo", attrs, re.I):
-                src = _https_img(url, img.get("src") or img.get("data-src") or "")
+                src = _img_src(url, img)
                 if src:
                     _add(ctx, "logo", src, url)
                     break
@@ -257,7 +314,7 @@ def _extract(ctx, url: str, raw: str, home: str) -> bool:
     if og and og.get("content"):
         photos.append(_https_img(url, og["content"]))
     for img in soup.find_all("img"):
-        src = _https_img(url, img.get("src") or img.get("data-src") or "")
+        src = _img_src(url, img)
         w = re.sub(r"\D", "", str(img.get("width", "")))
         if src and not re.search(r"logo|icon|avatar|banner|h[ae]{1,2}de?r|menu|pipe|line|topbottom|bg|background|sprite|flag|payment|qr|button|arrow|shloka", src + " " + str(img.get("class", "")), re.I) and (not w or int(w) >= 250):
             photos.append(src)
