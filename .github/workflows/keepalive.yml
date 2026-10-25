@@ -21,6 +21,8 @@ jobs:
       GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v5
+        with:
+          ssh-key: ${{ secrets.AW_DEPLOY_KEY }}
       - name: Report the start to the site
         uses: ./.github/actions/report
         env:
