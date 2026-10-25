@@ -23,8 +23,6 @@ keywords:
 - animal shelter
 - wildlife crime
 - poaching
-- पशु क्रूरता
-- रेबीज
 - stray
 - wildlife
 - veterinary
@@ -340,7 +338,6 @@ categories:
   - stray dogs
   - street dogs
   - community animals
-  - कुत्त
   animal-birth-control:
   - animal birth control
   - abc rules
@@ -351,7 +348,6 @@ categories:
   - neuter
   rabies-public-health:
   - rabies
-  - रेबीज
   - dog bite
   - anti-rabies
   - vaccination drive
@@ -373,8 +369,6 @@ categories:
   - gaushala
   - gaushalas
   - bovine
-  - बैल
-  - गाय
   transport-slaughter:
   - slaughter
   - transportation of animals
@@ -467,6 +461,8 @@ categories:
   - non-animal method
   - vivisection
   - animal research
+  - G.S.R. 864
+  - Palamur
 sections:
   aw_legal:
     tags:
@@ -633,9 +629,6 @@ press:
   enabled: true
   date_floor: '2025-11-01'
   every_days: 7
-  monthly_requests: 900
-  weekly_requests: 200
-  backfill_requests: 300
   queries:
   - Animal Writes
   - AnimalWrites
@@ -648,16 +641,6 @@ press:
   - CCSEA draft rules
   - animal testing rules objection
   - GSR 864 animal experiments
-  sites:
-  - instagram.com
-  - facebook.com
-  - fb.watch
-  - x.com
-  - twitter.com
-  - youtube.com
-  - threads.net
-  - linkedin.com
-  - reddit.com
 topic_tags:
   campaign-lab-animals-2026:
     any:
@@ -700,29 +683,9 @@ category_names:
   wildlife: Wildlife
 schema:
   sources: 2
+  keywords: 2
+match: word
 sources_v2:
-- id: gnews-animal-welfare
-  name: Google News – animal welfare India
-  kind: rss
-  type: news
-  url: https://news.google.com/rss/search?q=%22animal+welfare%22+India&hl=en-IN&gl=IN&ceid=IN:en
-  host: news.google.com
-  relay: false
-  read_by: feed
-  check:
-    roles: []
-    categories: []
-- id: gnews-animal-cruelty
-  name: Google News – animal cruelty India
-  kind: rss
-  type: news
-  url: https://news.google.com/rss/search?q=%22animal+cruelty%22+India&hl=en-IN&gl=IN&ceid=IN:en
-  host: news.google.com
-  relay: false
-  read_by: feed
-  check:
-    roles: []
-    categories: []
 - id: the-hindu-environment
   name: The Hindu – Energy & Environment
   kind: rss
@@ -751,11 +714,12 @@ sources_v2:
   - पशुपालन
   - रेबीज
   host: thehindu.com
+  check:
+    roles:
+    - include
+    categories: []
   relay: false
   read_by: feed
-  check:
-    roles: []
-    categories: []
 - id: awbi-circulars
   name: Animal Welfare Board of India – Circulars
   kind: awbi
@@ -809,11 +773,12 @@ sources_v2:
   - पशुपालन
   - रेबीज
   host: livelaw.in
+  check:
+    roles:
+    - include
+    categories: []
   relay: false
   read_by: feed
-  check:
-    roles: []
-    categories: []
 - id: barandbench
   name: Bar & Bench
   kind: rss
@@ -843,11 +808,12 @@ sources_v2:
   - पशुपालन
   - रेबीज
   host: barandbench.com
+  check:
+    roles:
+    - include
+    categories: []
   relay: false
   read_by: feed
-  check:
-    roles: []
-    categories: []
 - id: court-news-animals
   name: Court news – LiveLaw
   kind: rss
@@ -916,11 +882,12 @@ sources_v2:
   - पशुपालन
   - रेबीज
   host: pib.gov.in
+  check:
+    roles:
+    - include
+    categories: []
   relay: false
   read_by: feed
-  check:
-    roles: []
-    categories: []
 - id: ccsea-whats-new
   name: CCSEA – What's New
   kind: ccsea
@@ -943,29 +910,6 @@ sources_v2:
   check:
     roles: []
     categories: []
-- id: gnews-lab-animal-rules
-  name: Google News – lab animal rules India
-  kind: rss
-  type: news
-  url: https://news.google.com/rss/search?q=(%22CCSEA%22+OR+%22lab+animal+rules%22+OR+%22laboratory+animals+rules%22+OR+%22animal+experiments%22)+India+when:7d&hl=en-IN&gl=IN&ceid=IN:en
-  keywords:
-  - CCSEA
-  - CPCSEA
-  - laboratory animal
-  - lab animal
-  - animal experiment
-  - animal testing
-  - G.S.R. 864
-  - IAEC
-  - Palamur
-  - non-animal method
-  file_as: press
-  host: news.google.com
-  relay: false
-  read_by: feed
-  check:
-    roles: []
-    categories: []
 - id: pfa-substack
   name: People For Animals (Substack)
   kind: rss
@@ -983,11 +927,12 @@ sources_v2:
   - Palamur
   - non-animal method
   host: peopleforanimals.substack.com
-  relay: true
-  read_by: feed
   check:
     roles: []
-    categories: []
+    categories:
+    - animal-experimentation
+  relay: true
+  read_by: feed
 - id: peta-india
   name: PETA India
   kind: rss
@@ -1005,11 +950,12 @@ sources_v2:
   - Palamur
   - non-animal method
   host: petaindia.com
-  relay: false
-  read_by: feed
   check:
     roles: []
-    categories: []
+    categories:
+    - animal-experimentation
+  relay: false
+  read_by: feed
 - id: gazette-of-india
   name: Gazette of India
   kind: egazette
@@ -1096,3 +1042,2366 @@ sources_v2:
   check:
     roles: []
     categories: []
+keywords_v2:
+- id: 2552
+  label: animal welfare
+  variants: []
+  roles:
+  - include
+  - search
+  lang: en
+  searches:
+  - id: gnews-animal-welfare
+    name: Google News – animal welfare India
+    kind: rss
+    type: news
+    url: https://news.google.com/rss/search?q=%22animal+welfare%22+India&hl=en-IN&gl=IN&ceid=IN:en
+    feed: gnews-animal-welfare
+  - feed: gnews-kw-animal-welfare
+    q: animal welfare
+  categories: []
+  sections:
+  - aw_news
+- id: 1520
+  label: animal cruelty
+  variants: []
+  roles:
+  - include
+  - search
+  lang: en
+  searches:
+  - id: gnews-animal-cruelty
+    name: Google News – animal cruelty India
+    kind: rss
+    type: news
+    url: https://news.google.com/rss/search?q=%22animal+cruelty%22+India&hl=en-IN&gl=IN&ceid=IN:en
+    feed: gnews-animal-cruelty
+  - feed: gnews-kw-animal-cruelty
+    q: animal cruelty
+  categories: []
+  sections:
+  - aw_news
+- id: 1655
+  label: cruelty to animals
+  variants: []
+  roles:
+  - include
+  lang: en
+  searches:
+  - feed: gnews-kw-cruelty-to-animals
+    q: cruelty to animals
+  categories: []
+  sections:
+  - aw_news
+- id: 3184
+  label: stray dog
+  variants: []
+  roles:
+  - include
+  - category
+  lang: en
+  searches:
+  - feed: gnews-kw-stray-dog
+    q: stray dog
+  categories:
+  - community-dogs
+  sections:
+  - aw_news
+- id: 4572
+  label: street dog
+  variants: []
+  roles:
+  - include
+  - category
+  lang: en
+  searches:
+  - feed: gnews-kw-street-dog
+    q: street dog
+  categories:
+  - community-dogs
+  sections:
+  - aw_news
+- id: 2570
+  label: community dog
+  variants: []
+  roles:
+  - include
+  - category
+  lang: en
+  searches:
+  - feed: gnews-kw-community-dog
+    q: community dog
+  categories:
+  - community-dogs
+  sections:
+  - aw_news
+- id: 46
+  label: animal birth control
+  variants: []
+  roles:
+  - include
+  - category
+  lang: en
+  searches:
+  - feed: gnews-kw-animal-birth-control
+    q: animal birth control
+  categories:
+  - animal-birth-control
+  sections:
+  - aw_news
+- id: 1506
+  label: abc rules
+  variants: []
+  roles:
+  - include
+  - category
+  lang: en
+  searches:
+  - feed: gnews-kw-abc-rules
+    q: ABC Rules
+  categories:
+  - animal-birth-control
+  sections:
+  - aw_news
+- id: 4500
+  label: pca act
+  variants: []
+  roles:
+  - include
+  lang: en
+  searches:
+  - feed: gnews-kw-pca-act
+    q: PCA Act
+  categories: []
+  sections:
+  - aw_news
+- id: 3245
+  label: prevention of cruelty
+  variants: []
+  roles:
+  - include
+  lang: en
+  searches:
+  - feed: gnews-kw-prevention-of-cruelty
+    q: Prevention of Cruelty
+  categories: []
+  sections:
+  - aw_news
+- id: 147
+  label: awbi
+  variants: []
+  roles:
+  - include
+  lang: en
+  searches:
+  - feed: gnews-kw-awbi
+    q: AWBI
+  categories: []
+  sections:
+  - aw_news
+- id: 442
+  label: animal welfare board
+  variants: []
+  roles:
+  - include
+  lang: en
+  searches:
+  - feed: gnews-kw-animal-welfare-board
+    q: Animal Welfare Board
+  categories: []
+  sections:
+  - aw_news
+- id: 16
+  label: gaushala
+  variants:
+  - gaushalas
+  roles:
+  - include
+  - category
+  lang: en
+  searches:
+  - feed: gnews-kw-gaushala
+    q: gaushala
+  categories:
+  - cattle-gaushalas
+  sections:
+  - aw_news
+- id: 3152
+  label: rabies
+  variants: []
+  roles:
+  - include
+  - category
+  lang: en
+  searches:
+  - feed: gnews-kw-rabies
+    q: rabies
+  categories:
+  - rabies-public-health
+  sections:
+  - aw_news
+- id: 360
+  label: animal rescue
+  variants: []
+  roles:
+  - include
+  lang: en
+  searches:
+  - feed: gnews-kw-animal-rescue
+    q: animal rescue
+  categories: []
+  sections:
+  - aw_news
+- id: 15
+  label: animal shelter
+  variants: []
+  roles:
+  - include
+  lang: en
+  searches:
+  - feed: gnews-kw-animal-shelter
+    q: animal shelter
+  categories: []
+  sections:
+  - aw_news
+- id: 4573
+  label: wildlife crime
+  variants: []
+  roles:
+  - include
+  lang: en
+  searches:
+  - feed: gnews-kw-wildlife-crime
+    q: wildlife crime
+  categories: []
+  sections:
+  - aw_news
+- id: 4574
+  label: poaching
+  variants: []
+  roles:
+  - include
+  - context
+  lang: en
+  searches:
+  - feed: gnews-kw-poaching
+    q: poaching
+  categories: []
+  sections:
+  - aw_news
+- id: 4577
+  label: stray
+  variants:
+  - strays
+  roles:
+  - include
+  - animal
+  lang: en
+  searches:
+  - feed: gnews-kw-stray
+    q: stray
+  categories: []
+  sections:
+  - aw_news
+- id: 4489
+  label: wildlife
+  variants: []
+  roles:
+  - include
+  - animal
+  - category
+  lang: en
+  searches:
+  - feed: gnews-kw-wildlife
+    q: wildlife
+  categories:
+  - wildlife
+  sections:
+  - aw_news
+- id: 4578
+  label: veterinary
+  variants: []
+  roles:
+  - include
+  - context
+  - category
+  lang: en
+  searches:
+  - feed: gnews-kw-veterinary
+    q: veterinary
+  categories:
+  - veterinary-care
+  sections:
+  - aw_news
+- id: 3977
+  label: cow shelter
+  variants: []
+  roles:
+  - include
+  lang: en
+  searches:
+  - feed: gnews-kw-cow-shelter
+    q: cow shelter
+  categories: []
+  sections:
+  - aw_news
+- id: 153
+  label: world animal day 2026
+  variants: []
+  roles:
+  - include
+  lang: en
+  searches:
+  - feed: gnews-kw-world-animal-day-2026
+    q: world animal day 2026
+  categories: []
+  sections:
+  - aw_news
+- id: 270
+  label: animal testing india
+  variants: []
+  roles:
+  - include
+  lang: en
+  searches:
+  - feed: gnews-kw-animal-testing-india
+    q: animal testing india
+  categories: []
+  sections:
+  - aw_news
+- id: 4404
+  label: lab animal rules
+  variants: []
+  roles:
+  - search
+  lang: en
+  searches:
+  - id: gnews-lab-animal-rules
+    name: Google News – lab animal rules India
+    kind: rss
+    type: news
+    url: https://news.google.com/rss/search?q=(%22CCSEA%22+OR+%22lab+animal+rules%22+OR+%22laboratory+animals+rules%22+OR+%22animal+experiments%22)+India+when:7d&hl=en-IN&gl=IN&ceid=IN:en
+    keywords:
+    - CCSEA
+    - CPCSEA
+    - laboratory animal
+    - lab animal
+    - animal experiment
+    - animal testing
+    - G.S.R. 864
+    - IAEC
+    - Palamur
+    - non-animal method
+    file_as: press
+    check:
+      roles: []
+      categories:
+      - animal-experimentation
+    feed: gnews-lab-animal-rules
+  categories: []
+  sections:
+  - aw_press
+- id: 190
+  label: stray dogs
+  variants: []
+  roles:
+  - search
+  - category
+  lang: en
+  searches:
+  - feed: gnews-kw-stray-dogs
+    q: stray dogs
+  categories:
+  - community-dogs
+  sections:
+  - aw_news
+- id: 125
+  label: animal writes
+  variants: []
+  roles:
+  - press
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+  queries:
+  - Animal Writes
+- id: 195
+  label: animalwrites
+  variants:
+  - '#animalwrites'
+  roles:
+  - press
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+  queries:
+  - AnimalWrites
+  - '#animalwrites'
+- id: 4688
+  label: animalwrites.in
+  variants: []
+  roles:
+  - press
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+  queries:
+  - animalwrites.in
+- id: 4689
+  label: letter petition Supreme Court dogs
+  variants: []
+  roles:
+  - press
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+  queries:
+  - letter petition Supreme Court dogs
+- id: 4690
+  label: handwritten letters Supreme Court stray dogs
+  variants: []
+  roles:
+  - press
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+  queries:
+  - handwritten letters Supreme Court stray dogs
+- id: 4691
+  label: 29 November post office letters Supreme Court
+  variants: []
+  roles:
+  - press
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+  queries:
+  - 29 November post office letters Supreme Court
+- id: 599
+  label: draft lab animal rules
+  variants: []
+  roles:
+  - press
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+  queries:
+  - draft lab animal rules
+- id: 3192
+  label: ccsea draft rules
+  variants: []
+  roles:
+  - press
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+  queries:
+  - CCSEA draft rules
+- id: 4692
+  label: animal testing rules objection
+  variants: []
+  roles:
+  - press
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+  queries:
+  - animal testing rules objection
+- id: 4693
+  label: GSR 864 animal experiments
+  variants: []
+  roles:
+  - press
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+  queries:
+  - GSR 864 animal experiments
+- id: 47
+  label: abc programme
+  variants: []
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - animal-birth-control
+  sections: []
+- id: 131
+  label: dog bite
+  variants: []
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - rabies-public-health
+  sections: []
+- id: 145
+  label: cpcsea
+  variants: []
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - animal-experimentation
+  sections: []
+- id: 187
+  label: street dogs
+  variants: []
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - community-dogs
+  sections: []
+- id: 274
+  label: ccsea
+  variants: []
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - animal-experimentation
+  sections: []
+- id: 665
+  label: iaec
+  variants: []
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - animal-experimentation
+  sections: []
+- id: 737
+  label: notification
+  variants: []
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - laws-rules
+  sections: []
+- id: 898
+  label: gsr 864
+  variants:
+  - G.S.R. 864
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - animal-experimentation
+  sections: []
+- id: 1043
+  label: animal testing
+  variants: []
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - animal-experimentation
+  sections: []
+- id: 1301
+  label: laboratory animals
+  variants:
+  - laboratory animal
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - animal-experimentation
+  sections: []
+- id: 1357
+  label: palamur
+  variants: []
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - animal-experimentation
+  sections: []
+- id: 1644
+  label: community animals
+  variants: []
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - community-dogs
+  sections: []
+- id: 2163
+  label: slaughter
+  variants:
+  - slaughter*
+  roles:
+  - context
+  - category
+  lang: en
+  searches: []
+  categories:
+  - transport-slaughter
+  sections: []
+- id: 2501
+  label: performing animals
+  variants: []
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - performing-captive-animals
+  sections: []
+- id: 2873
+  label: cow
+  variants: []
+  roles:
+  - animal
+  - category
+  lang: en
+  searches: []
+  categories:
+  - cattle-gaushalas
+  sections: []
+- id: 3040
+  label: abc program
+  variants:
+  - abc program*
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - animal-birth-control
+  sections: []
+- id: 3112
+  label: shelter
+  variants: []
+  roles:
+  - context
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 3148
+  label: dog
+  variants: []
+  roles:
+  - animal
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 3396
+  label: supreme court
+  variants: []
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - courts-judgments
+  sections: []
+- id: 3672
+  label: elephant rides
+  variants:
+  - elephant ride
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - performing-captive-animals
+  sections: []
+- id: 3756
+  label: pet shop
+  variants: []
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - pets-breeding
+  sections: []
+- id: 3965
+  label: experiment on animals
+  variants:
+  - experiments on animals
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - animal-experimentation
+  sections: []
+- id: 4373
+  label: animal experiments
+  variants:
+  - animal experiment
+  - animal experiment*
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - animal-experimentation
+  sections: []
+- id: 4485
+  label: judgments
+  variants:
+  - judgment
+  roles:
+  - context
+  - category
+  lang: en
+  searches: []
+  categories:
+  - courts-judgments
+  sections: []
+- id: 4486
+  label: cruelty
+  variants: []
+  roles:
+  - context
+  - category
+  lang: en
+  searches: []
+  categories:
+  - cruelty-prosecution
+  sections: []
+- id: 4488
+  label: policy
+  variants:
+  - policy*
+  roles:
+  - context
+  - category
+  lang: en
+  searches: []
+  categories:
+  - policy-government
+  sections: []
+- id: 4491
+  label: breeding
+  variants: []
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - pets-breeding
+  sections: []
+- id: 4493
+  label: feeders
+  variants:
+  - feeder
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - feeders-caregivers
+  sections: []
+- id: 4495
+  label: adoption
+  variants: []
+  roles:
+  - context
+  - category
+  lang: en
+  searches: []
+  categories:
+  - adoption
+  sections: []
+- id: 4496
+  label: birds
+  variants:
+  - bird
+  roles:
+  - animal
+  - category
+  lang: en
+  searches: []
+  categories:
+  - birds
+  sections: []
+- id: 4498
+  label: act
+  variants: []
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - laws-rules
+  sections: []
+- id: 4514
+  label: circular
+  variants: []
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - laws-rules
+  sections: []
+- id: 4524
+  label: feeding
+  variants: []
+  roles:
+  - context
+  - category
+  lang: en
+  searches: []
+  categories:
+  - feeders-caregivers
+  sections: []
+- id: 4545
+  label: rescue
+  variants: []
+  roles:
+  - context
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4550
+  label: rule
+  variants:
+  - rules
+  roles:
+  - context
+  - category
+  lang: en
+  searches: []
+  categories:
+  - laws-rules
+  sections: []
+- id: 4556
+  label: sterilisation
+  variants: []
+  roles:
+  - context
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4562
+  label: vaccination
+  variants: []
+  roles:
+  - context
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4579
+  label: animal
+  variants:
+  - animals
+  roles:
+  - animal
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4580
+  label: dogs
+  variants: []
+  roles:
+  - animal
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4581
+  label: cat
+  variants: []
+  roles:
+  - animal
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4582
+  label: cats
+  variants: []
+  roles:
+  - animal
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4583
+  label: cattle
+  variants: []
+  roles:
+  - animal
+  - category
+  lang: en
+  searches: []
+  categories:
+  - cattle-gaushalas
+  sections: []
+- id: 4584
+  label: cows
+  variants: []
+  roles:
+  - animal
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4585
+  label: bull
+  variants: []
+  roles:
+  - animal
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4586
+  label: buffalo
+  variants: []
+  roles:
+  - animal
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4587
+  label: horse
+  variants: []
+  roles:
+  - animal
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4588
+  label: donkey
+  variants: []
+  roles:
+  - animal
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4589
+  label: elephant
+  variants: []
+  roles:
+  - animal
+  - category
+  lang: en
+  searches: []
+  categories:
+  - wildlife
+  sections: []
+- id: 4590
+  label: leopard
+  variants: []
+  roles:
+  - animal
+  - category
+  lang: en
+  searches: []
+  categories:
+  - wildlife
+  sections: []
+- id: 4591
+  label: tiger
+  variants: []
+  roles:
+  - animal
+  - category
+  lang: en
+  searches: []
+  categories:
+  - wildlife
+  sections: []
+- id: 4592
+  label: monkey
+  variants: []
+  roles:
+  - animal
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4593
+  label: livestock
+  variants: []
+  roles:
+  - animal
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4598
+  label: pig
+  variants: []
+  roles:
+  - animal
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4599
+  label: pigs
+  variants: []
+  roles:
+  - animal
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4600
+  label: goat
+  variants:
+  - goats
+  roles:
+  - animal
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4601
+  label: sheep
+  variants: []
+  roles:
+  - animal
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4602
+  label: camel
+  variants:
+  - camels
+  roles:
+  - animal
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4603
+  label: bear
+  variants:
+  - bears
+  roles:
+  - animal
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4604
+  label: snake
+  variants:
+  - snakes
+  roles:
+  - animal
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4605
+  label: turtle
+  variants:
+  - turtles
+  roles:
+  - animal
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4606
+  label: tortoise
+  variants: []
+  roles:
+  - animal
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4607
+  label: deer
+  variants: []
+  roles:
+  - animal
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4608
+  label: macaque
+  variants: []
+  roles:
+  - animal
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4609
+  label: parrot
+  variants:
+  - parrots
+  roles:
+  - animal
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4610
+  label: puppy
+  variants: []
+  roles:
+  - animal
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4611
+  label: puppies
+  variants: []
+  roles:
+  - animal
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4612
+  label: kitten
+  variants:
+  - kittens
+  roles:
+  - animal
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4613
+  label: poultry
+  variants: []
+  roles:
+  - animal
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4614
+  label: chicken
+  variants:
+  - chickens
+  roles:
+  - animal
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4615
+  label: rhino
+  variants: []
+  roles:
+  - animal
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4616
+  label: lion
+  variants:
+  - lions
+  roles:
+  - animal
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4617
+  label: pet
+  variants: []
+  roles:
+  - animal
+  - category
+  lang: en
+  searches: []
+  categories:
+  - pets-breeding
+  sections: []
+- id: 4618
+  label: pets
+  variants: []
+  roles:
+  - animal
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4619
+  label: court
+  variants:
+  - court*
+  roles:
+  - context
+  - category
+  lang: en
+  searches: []
+  categories:
+  - courts-judgments
+  sections: []
+- id: 4620
+  label: law
+  variants: []
+  roles:
+  - context
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4621
+  label: police
+  variants: []
+  roles:
+  - context
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4622
+  label: FIR
+  variants: []
+  roles:
+  - context
+  - category
+  lang: en
+  searches: []
+  categories:
+  - cruelty-prosecution
+  sections: []
+- id: 4623
+  label: arrested
+  variants: []
+  roles:
+  - context
+  - category
+  lang: en
+  searches: []
+  categories:
+  - cruelty-prosecution
+  sections: []
+- id: 4624
+  label: municipal
+  variants:
+  - municipal*
+  roles:
+  - context
+  - category
+  lang: en
+  searches: []
+  categories:
+  - policy-government
+  sections: []
+- id: 4625
+  label: ministry
+  variants: []
+  roles:
+  - context
+  - category
+  lang: en
+  searches: []
+  categories:
+  - policy-government
+  sections: []
+- id: 4626
+  label: minister
+  variants: []
+  roles:
+  - context
+  - category
+  lang: en
+  searches: []
+  categories:
+  - policy-government
+  sections: []
+- id: 4627
+  label: vet
+  variants: []
+  roles:
+  - context
+  - category
+  lang: en
+  searches: []
+  categories:
+  - veterinary-care
+  sections: []
+- id: 4628
+  label: hospital
+  variants:
+  - hospital*
+  roles:
+  - context
+  - category
+  lang: en
+  searches: []
+  categories:
+  - veterinary-care
+  sections: []
+- id: 4629
+  label: attack
+  variants: []
+  roles:
+  - context
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4630
+  label: bite
+  variants: []
+  roles:
+  - context
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4631
+  label: smuggling
+  variants: []
+  roles:
+  - context
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4632
+  label: transport
+  variants: []
+  roles:
+  - context
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4633
+  label: torture
+  variants:
+  - torture*
+  roles:
+  - context
+  - category
+  lang: en
+  searches: []
+  categories:
+  - cruelty-prosecution
+  sections: []
+- id: 4634
+  label: torturing
+  variants: []
+  roles:
+  - context
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4635
+  label: tortured
+  variants: []
+  roles:
+  - context
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4636
+  label: abuse
+  variants:
+  - abuse*
+  roles:
+  - context
+  - category
+  lang: en
+  searches: []
+  categories:
+  - cruelty-prosecution
+  sections: []
+- id: 4637
+  label: abused
+  variants: []
+  roles:
+  - context
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4638
+  label: neglect
+  variants: []
+  roles:
+  - context
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4639
+  label: import
+  variants:
+  - imports
+  roles:
+  - context
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4640
+  label: trade
+  variants: []
+  roles:
+  - context
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4641
+  label: trafficking
+  variants: []
+  roles:
+  - context
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4642
+  label: ban
+  variants: []
+  roles:
+  - context
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4643
+  label: banned
+  variants: []
+  roles:
+  - context
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4644
+  label: NGO
+  variants: []
+  roles:
+  - context
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4645
+  label: NGOs
+  variants: []
+  roles:
+  - context
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4646
+  label: welfare
+  variants: []
+  roles:
+  - context
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4647
+  label: protection
+  variants: []
+  roles:
+  - context
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4648
+  label: conservation
+  variants: []
+  roles:
+  - context
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4649
+  label: petition
+  variants:
+  - petition*
+  roles:
+  - context
+  - category
+  lang: en
+  searches: []
+  categories:
+  - courts-judgments
+  - campaigns-civic-action
+  sections: []
+- id: 4650
+  label: protest
+  variants:
+  - protest*
+  roles:
+  - context
+  - category
+  lang: en
+  searches: []
+  categories:
+  - campaigns-civic-action
+  sections: []
+- id: 4651
+  label: campaign
+  variants:
+  - campaign*
+  roles:
+  - context
+  - category
+  lang: en
+  searches: []
+  categories:
+  - campaigns-civic-action
+  sections: []
+- id: 4652
+  label: seized
+  variants: []
+  roles:
+  - context
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4653
+  label: rescued
+  variants: []
+  roles:
+  - context
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4654
+  label: killed
+  variants: []
+  roles:
+  - context
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4655
+  label: poisoned
+  variants: []
+  roles:
+  - context
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4656
+  label: injured
+  variants: []
+  roles:
+  - context
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4657
+  label: sanctuary
+  variants: []
+  roles:
+  - context
+  - category
+  lang: en
+  searches: []
+  categories:
+  - wildlife
+  sections: []
+- id: 4658
+  label: zoo
+  variants: []
+  roles:
+  - context
+  - category
+  lang: en
+  searches: []
+  categories:
+  - performing-captive-animals
+  sections: []
+- id: 4659
+  label: forest department
+  variants: []
+  roles:
+  - context
+  - category
+  lang: en
+  searches: []
+  categories:
+  - wildlife
+  sections: []
+- id: 4660
+  label: party animal
+  variants: []
+  roles:
+  - exclude
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4661
+  label: bull market
+  variants: []
+  roles:
+  - exclude
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4662
+  label: bear market
+  variants: []
+  roles:
+  - exclude
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4663
+  label: cattle class
+  variants: []
+  roles:
+  - exclude
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4664
+  label: dog-whistle
+  variants: []
+  roles:
+  - exclude
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4665
+  label: top dog
+  variants: []
+  roles:
+  - exclude
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4666
+  label: underdog
+  variants: []
+  roles:
+  - exclude
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4667
+  label: celebrity pet
+  variants: []
+  roles:
+  - exclude
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4668
+  label: pet project
+  variants: []
+  roles:
+  - exclude
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4669
+  label: brand campaign
+  variants: []
+  roles:
+  - exclude
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4670
+  label: IPO
+  variants: []
+  roles:
+  - exclude
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4671
+  label: box office
+  variants: []
+  roles:
+  - exclude
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4672
+  label: cattle theft
+  variants: []
+  roles:
+  - exclude
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4673
+  label: cattle thief
+  variants: []
+  roles:
+  - exclude
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4674
+  label: cattle thieves
+  variants: []
+  roles:
+  - exclude
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4675
+  label: cattle stealing
+  variants: []
+  roles:
+  - exclude
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4676
+  label: stealing cattle
+  variants: []
+  roles:
+  - exclude
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4677
+  label: stole cattle
+  variants: []
+  roles:
+  - exclude
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4678
+  label: cattle stolen
+  variants: []
+  roles:
+  - exclude
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4679
+  label: stolen cattle
+  variants: []
+  roles:
+  - exclude
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4680
+  label: cattle lifting
+  variants: []
+  roles:
+  - exclude
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4681
+  label: cattle lifters
+  variants: []
+  roles:
+  - exclude
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4682
+  label: cow theft
+  variants: []
+  roles:
+  - exclude
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4683
+  label: cow thieves
+  variants: []
+  roles:
+  - exclude
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4684
+  label: buffalo theft
+  variants: []
+  roles:
+  - exclude
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4685
+  label: cattle smuggling
+  variants: []
+  roles:
+  - exclude
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4686
+  label: cattle smuggler
+  variants:
+  - cattle smugglers
+  roles:
+  - exclude
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4687
+  label: smuggling of cattle
+  variants: []
+  roles:
+  - exclude
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4695
+  label: sterilis
+  variants:
+  - sterilis*
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - animal-birth-control
+  sections: []
+- id: 4696
+  label: steriliz
+  variants:
+  - steriliz*
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - animal-birth-control
+  sections: []
+- id: 4697
+  label: neuter
+  variants:
+  - neuter*
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - animal-birth-control
+  sections: []
+- id: 4698
+  label: anti-rabies
+  variants: []
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - rabies-public-health
+  sections: []
+- id: 4699
+  label: vaccination drive
+  variants: []
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - rabies-public-health
+  sections: []
+- id: 4700
+  label: prosecution
+  variants: []
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - cruelty-prosecution
+  sections: []
+- id: 4701
+  label: poison
+  variants:
+  - poison*
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - cruelty-prosecution
+  sections: []
+- id: 4702
+  label: caregiver
+  variants: []
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - feeders-caregivers
+  sections: []
+- id: 4703
+  label: bovine
+  variants: []
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - cattle-gaushalas
+  sections: []
+- id: 4705
+  label: transportation of animals
+  variants: []
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - transport-slaughter
+  sections: []
+- id: 4706
+  label: illegal transport
+  variants:
+  - illegal transport*
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - transport-slaughter
+  sections: []
+- id: 4707
+  label: smuggl
+  variants:
+  - smuggl*
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - transport-slaughter
+  sections: []
+- id: 4708
+  label: pangolin
+  variants: []
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - wildlife
+  sections: []
+- id: 4709
+  label: poach
+  variants:
+  - poach*
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - wildlife
+  sections: []
+- id: 4710
+  label: national park
+  variants: []
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - wildlife
+  sections: []
+- id: 4711
+  label: avian
+  variants: []
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - birds
+  sections: []
+- id: 4712
+  label: pigeon
+  variants: []
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - birds
+  sections: []
+- id: 4713
+  label: kite
+  variants: []
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - birds
+  sections: []
+- id: 4714
+  label: peacock
+  variants: []
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - birds
+  sections: []
+- id: 4715
+  label: breeder
+  variants: []
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - pets-breeding
+  sections: []
+- id: 4716
+  label: dog breed
+  variants:
+  - dog breed*
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - pets-breeding
+  sections: []
+- id: 4717
+  label: adopt
+  variants:
+  - adopt*
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - adoption
+  sections: []
+- id: 4718
+  label: circus
+  variants: []
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - performing-captive-animals
+  sections: []
+- id: 4719
+  label: captive
+  variants: []
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - performing-captive-animals
+  sections: []
+- id: 4720
+  label: amendment
+  variants: []
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - laws-rules
+  sections: []
+- id: 4721
+  label: guidelines
+  variants: []
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - laws-rules
+  sections: []
+- id: 4722
+  label: gazette
+  variants: []
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - laws-rules
+  sections: []
+- id: 4723
+  label: high court
+  variants: []
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - courts-judgments
+  sections: []
+- id: 4724
+  label: bench
+  variants:
+  - bench*
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - courts-judgments
+  sections: []
+- id: 4725
+  label: tribunal
+  variants: []
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - courts-judgments
+  sections: []
+- id: 4726
+  label: government
+  variants:
+  - government*
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - policy-government
+  sections: []
+- id: 4727
+  label: corporation
+  variants: []
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - policy-government
+  sections: []
+- id: 4728
+  label: scheme
+  variants: []
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - policy-government
+  sections: []
+- id: 4729
+  label: cabinet
+  variants: []
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - policy-government
+  sections: []
+- id: 4730
+  label: flood
+  variants:
+  - flood*
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - disaster-rescue
+  sections: []
+- id: 4731
+  label: cyclone
+  variants: []
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - disaster-rescue
+  sections: []
+- id: 4732
+  label: earthquake
+  variants: []
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - disaster-rescue
+  sections: []
+- id: 4733
+  label: disaster
+  variants: []
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - disaster-rescue
+  sections: []
+- id: 4734
+  label: rescue operation
+  variants: []
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - disaster-rescue
+  sections: []
+- id: 4735
+  label: clinic
+  variants:
+  - clinic*
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - veterinary-care
+  sections: []
+- id: 4736
+  label: letter
+  variants: []
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - campaigns-civic-action
+  sections: []
+- id: 4737
+  label: signature
+  variants: []
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - campaigns-civic-action
+  sections: []
+- id: 4738
+  label: awareness
+  variants: []
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - campaigns-civic-action
+  sections: []
+- id: 4739
+  label: lab animal
+  variants: []
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - animal-experimentation
+  sections: []
+- id: 4740
+  label: non-animal method
+  variants: []
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - animal-experimentation
+  sections: []
+- id: 4741
+  label: vivisection
+  variants: []
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - animal-experimentation
+  sections: []
+- id: 4742
+  label: animal research
+  variants: []
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - animal-experimentation
+  sections: []
