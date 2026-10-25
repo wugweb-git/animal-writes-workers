@@ -67,10 +67,15 @@ def enrich_one(listing: dict, env: dict, http, on: dict, summariser, services: d
     return ctx
 
 
+# The site's answer to enrich/results: applied, queued, failed (a write that did not work, e.g. a picture that could
+# not be copied; logged on the site as a 'failed' row) and skipped (nothing to do: already held, or not usable).
+OUTCOMES = ("applied", "queued", "failed", "skipped")
+
+
 class Report:
     def __init__(self, dry: bool):
         self.dry, self.listings = dry, []
-        self.field = defaultdict(Counter)  # field -> found / applied / queued / skipped
+        self.field = defaultdict(Counter)  # field -> found / applied / queued / failed / skipped
         self.source = defaultdict(Counter)  # source -> status kind, and "gave" (listings with at least one value)
         self.started = time.time()
 
@@ -81,22 +86,22 @@ class Report:
             self.source[k]["gave"] += 1
         for f in {p["field"] for p in props}:
             self.field[f]["found"] += 1
-        for kind in ("applied", "queued", "skipped"):
+        for kind in OUTCOMES:
             for f in outcome.get(kind, []):
                 self.field[f][kind] += 1
         self.listings.append({"id": listing["id"], "name": listing["name"], "url": listing.get("url"),
                               "place": ", ".join(x for x in (listing.get("district"), listing.get("state")) if x),
                               "status": ctx.status, "invite_claim": invite, "closed": bool(getattr(ctx, "closed", None)),
-                              "proposals": [{**p, "outcome": next((k for k in ("applied", "queued", "skipped") if p["field"] in outcome.get(k, [])), "")} for p in props]})
+                              "proposals": [{**p, "outcome": next((k for k in OUTCOMES if p["field"] in outcome.get(k, [])), "")} for p in props]})
 
     def markdown(self, extra: str = "") -> str:
         n = len(self.listings) or 1
         lines = [f"# Directory enrichment {'dry run' if self.dry else 'run'}, {now_ist()[:16].replace('T', ' ')} IST", "",
                  f"{len(self.listings)} listings · {round((time.time() - self.started) / 60, 1)} min. {extra}".strip(), "",
-                 "## Per field", "", "| Field | Found | " + ("Would apply | Would queue" if self.dry else "Applied | Queued") + " | Already held |",
-                 "|---|---|---|---|---|"]
+                 "## Per field", "", "| Field | Found | " + ("Would apply | Would queue" if self.dry else "Applied | Queued") + " | Failed | Already held |",
+                 "|---|---|---|---|---|---|"]
         for f, c in sorted(self.field.items(), key=lambda x: -x[1]["found"]):
-            lines.append(f"| {f} | {c['found']} ({round(100 * c['found'] / n)}%) | {c['applied']} | {c['queued']} | {c['skipped']} |")
+            lines.append(f"| {f} | {c['found']} ({round(100 * c['found'] / n)}%) | {c['applied']} | {c['queued']} | {c['failed']} | {c['skipped']} |")
         lines += ["", "## Per source", "", "| Source | Gave values | Status counts |", "|---|---|---|"]
         for s, c in sorted(self.source.items()):
             st = ", ".join(f"{k} {v}" for k, v in c.items() if k != "gave")

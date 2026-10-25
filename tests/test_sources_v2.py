@@ -92,7 +92,8 @@ def test_relay_hosts_from_v1_list_and_v2_switches():
     # no v1 list (or an older site): the v2 switches alone still cover the PFA Substack feed
     only_v2 = sources.relay_hosts(lists, [])
     assert "peopleforanimals.substack.com" in only_v2 and "awbi.gov.in" in only_v2
-    assert sources.relay_hosts(copy.deepcopy(YAML), None) == []
+    bare = {k: v for k, v in copy.deepcopy(YAML).items() if k not in ("sources_v2", "relay_hosts")}  # sources.yaml carries the site's switches since the phase-1 sync
+    assert sources.relay_hosts(bare, None) == []
 
 
 def test_pfa_substack_still_relayed_with_the_narrower_host():

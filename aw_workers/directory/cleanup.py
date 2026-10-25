@@ -389,7 +389,7 @@ def main(env=None) -> int:
                 outcome[p["field"]][kind] += 1
             continue
         r = client._call("POST", "/enrich/results", timeout=120, json={"listing_id": lid, "run": run_id, "import": True, "proposals": props})
-        for kind in ("applied", "queued", "skipped"):
+        for kind in ("applied", "queued", "failed", "skipped"):
             for f in r.get(kind, []):
                 outcome[f][kind] += 1
 
@@ -426,9 +426,9 @@ def report(dry, before, place_rows, unresolved, merges, left, outcome, places, p
              f"- Place: {len(place_rows)} (high {conf['high']}, medium {conf['medium']}, low {conf['low']}); nothing usable for {len(unresolved)}",
              f"- Merge into another listing: {sum(len(m['others']) for m in merges)} (always reviewed by the owner)",
              f"- Same-name groups left for the owner: {len(left)}", "",
-             "| Field | " + ("Would apply | Would queue" if dry else "Applied | Queued | Skipped") + " |", "|---|---|---|" + ("" if dry else "---|")]
+             "| Field | " + ("Would apply | Would queue" if dry else "Applied | Queued | Failed | Skipped") + " |", "|---|---|---|" + ("" if dry else "---|---|")]
     for f, c in sorted(outcome.items()):
-        lines.append(f"| {f} | {c['applied']} | {c['queued']} |" + ("" if dry else f" {c['skipped']} |"))
+        lines.append(f"| {f} | {c['applied']} | {c['queued']} |" + ("" if dry else f" {c['failed']} | {c['skipped']} |"))
     lines += ["", "## Place proposals", ""]
     for L, f in place_rows:
         v = f["value"]
