@@ -153,3 +153,36 @@ def test_rejections_go_in_one_request_and_cached_ones_are_not_resent():
     g.admit(Candidate("news", "a", "https://a/1"))  # judged already (cache): not logged again
     g.flush()
     assert [len(b) for b in log.batches] == [2] and log.rejected == []
+
+
+# ---- the stale CATEGORIES fallback (sourcing restructure phase 1, plan §6) ----
+
+from pathlib import Path as _Path  # noqa: E402
+
+import yaml as _yaml  # noqa: E402
+
+_ROOT = _Path(__file__).resolve().parent.parent
+_YAML = _yaml.safe_load((_ROOT / "sources.yaml").read_text(encoding="utf-8"))
+
+def test_builtin_categories_match_sources_yaml():
+    assert set(relevance.CATEGORIES) == set(_YAML["categories"])
+    if isinstance(_YAML.get("category_names"), dict):
+        assert relevance.CATEGORIES == {k: str(v) for k, v in _YAML["category_names"].items()}
+
+
+def test_fallback_reads_category_names_then_slugs(tmp_path):
+    p = tmp_path / "sources.yaml"
+    p.write_text(_yaml.safe_dump({"categories": {"wildlife": ["tiger"], "new-thing": ["x"]},
+                                 "category_names": {"wildlife": "Wildlife", "brand-new": "Brand New"}}))
+    assert relevance.fallback_categories(p) == {"wildlife": "Wildlife", "brand-new": "Brand New"}
+    p.write_text(_yaml.safe_dump({"categories": {"wildlife": ["tiger"], "new-thing": ["x"]}}))
+    assert relevance.fallback_categories(p) == {"wildlife": "Wildlife", "new-thing": "New Thing"}
+    assert relevance.fallback_categories(tmp_path / "missing.yaml") == relevance.CATEGORIES
+    p.write_text(": : not yaml : [")
+    assert relevance.fallback_categories(p) == relevance.CATEGORIES
+
+
+def test_gate_without_the_site_knows_animal_experimentation(monkeypatch):
+    monkeypatch.setenv("AW_SOURCES", str(_ROOT / "sources.yaml"))
+    gate = relevance.Gate(None, cache={})
+    assert "animal-experimentation" in gate.categories and len(gate.categories) == len(_YAML["categories"])
