@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import html
 import json
+import logging
 import re
 import time
 from dataclasses import dataclass, field
@@ -19,6 +20,8 @@ from bs4 import BeautifulSoup
 
 from . import matcher
 from . import relay as _relay
+
+log = logging.getLogger(__name__)
 
 USER_AGENT = "AnimalWritesWorkers/1.0 (+https://animalwrites.in)"
 # News search engines answer bots with 503 more often; they get a browser user agent, retries and a gap between calls.
@@ -145,27 +148,102 @@ def load_sources(path: str | Path = "sources.yaml") -> tuple[list[Source], dict]
     return load_sources_data(yaml.safe_load(Path(path).read_text(encoding="utf-8")))
 
 
-def load_sources_data(data: dict) -> tuple[list[Source], dict]:
-    """Sources from the lists' dict: sources.yaml, or the site's copy (Settings → Sourcing), which has the same shape."""
+# Each source's publisher host, from the site's `sources_v2` block (sourcing restructure phase 1): source id => host.
+SOURCE_HOSTS: dict[str, str] = {}
+# The relevance lists a keyword check by role reads (sourcing policy `relevance`): "include" is the strong list.
+ROLE_LISTS = {"include": "strong", "strong": "strong", "animal": "animal", "context": "context", "exclude": "exclude"}
+
+
+V2_BLOCKS = ("schema", "match", "sources_v2", "category_names")  # sourcing restructure (phase 1 on): beside the v1 keys
+
+
+def with_v2_blocks(config: dict, raw: dict) -> dict:
+    """The site's lists with the new blocks the policy sends beside them (top level or inside `config`); `config`
+    wins when both have one. Old workers ignore these keys; sources.yaml gets them through Sources sync."""
+    out = dict(config)
+    for k in V2_BLOCKS:
+        if k not in out and k in (raw or {}):
+            out[k] = raw[k]
+    return out
+
+
+def v2_sources(data: dict) -> list[dict] | None:
+    """The site's `sources_v2` list when it is there and every entry has the keys a source needs; None otherwise
+    (sources.yaml from before phase 1, or a malformed block), so the v1 `sources` list is read."""
+    v2 = (data or {}).get("sources_v2")
+    if not isinstance(v2, list) or not v2:
+        return None
+    for s in v2:
+        if not isinstance(s, dict) or not all(s.get(k) for k in ("id", "name", "kind", "type", "url")):
+            log.warning("sources_v2 has an incomplete entry (%r): reading the v1 sources list", s if isinstance(s, dict) else type(s))
+            return None
+    return v2
+
+
+def check_words(s: dict, data: dict, relevance: dict | None = None) -> list[str] | None:
+    """The words a `sources_v2` keyword check names (`check: {roles: [...], categories: [...]}`), or None when the
+    check names nothing (or nothing it names has words): the source's own `filter` / `keywords` then apply, as in v1."""
+    check = s.get("check") if isinstance(s.get("check"), dict) else {}
+    roles = [str(r).lower() for r in check.get("roles") or []]
+    cats = [str(c) for c in check.get("categories") or []]
+    if not roles and not cats:
+        return None
+    rel = relevance or {}
+    words: list[str] = []
+    for r in roles:
+        words += [str(w) for w in rel.get(ROLE_LISTS.get(r, r)) or []]
+    cat_words = data.get("categories") or {}
+    for c in cats:
+        words += [str(w) for w in cat_words.get(c) or []]
+    words = list(dict.fromkeys(w for w in words if w.strip()))
+    if not words:
+        log.warning("source %s: its keyword check (%s) has no words; using its own keyword list", s.get("id"), check)
+        return None
+    return words
+
+
+def relay_hosts(data: dict, v1_hosts) -> list[str]:
+    """Hosts the site fetches for us: the policy's `relay_hosts` plus the publisher host of every `sources_v2` source
+    whose relay switch is on (the site builds `relay_hosts` from the same switches, so this only ever adds a host the
+    site already allows)."""
+    hosts = [str(h).lower().strip(".") for h in (v1_hosts or []) if str(h).strip()]
+    for s in v2_sources(data) or []:
+        h = str(s.get("host") or "").lower().strip(".")
+        if s.get("relay") and h:
+            hosts.append(h)
+    return list(dict.fromkeys(hosts))
+
+
+def load_sources_data(data: dict, relevance: dict | None = None) -> tuple[list[Source], dict]:
+    """Sources from the lists' dict: sources.yaml, or the site's copy (Settings → Sourcing), which has the same shape.
+    The site's `sources_v2` block is read when it is there (each entry is a v1 source plus `host`, `relay`, `read_by`
+    and `check`), the v1 `sources` list otherwise. `match: "word"` switches every keyword check to whole words."""
     CATEGORIES.clear()
     CATEGORIES.update({k: [str(w) for w in v] for k, v in (data.get("categories") or {}).items()})
     set_sections(data.get("sections"))
     matcher.set_mode(data.get("match"))
     TOPIC_TAGS.clear()
     TOPIC_TAGS.update({str(k): v for k, v in (data.get("topic_tags") or {}).items() if isinstance(v, dict)})
+    SOURCE_HOSTS.clear()
     sources = []
     filter_words = list(data.get("filter_words") or data.get("keywords") or [])
-    for s in data.get("sources", []):
+    v2 = v2_sources(data)
+    for s in v2 if v2 is not None else data.get("sources", []):
         # Settings → Sourcing switches (the site applies them too): a source switched off is not fetched; "Keyword
         # check" gives it the keyword list. Lists without the switches (sources.yaml) are read as they are.
         if s.get("on") is False:
             continue
-        if s.get("filter"):
+        words = check_words(s, data, relevance) if v2 is not None else None
+        if words is not None:
+            s = {**s, "keywords": words}
+        elif s.get("filter"):
             s = {**s, "keywords": filter_words}
         if s["type"] not in ("news", "legal", "opportunity"):
             raise ValueError(f"source {s['id']}: type must be news, legal or opportunity")
         if s["kind"] not in PARSERS and s["kind"] not in SELF_FETCH:
             raise ValueError(f"source {s['id']}: unknown kind {s['kind']}")
+        if s.get("host"):
+            SOURCE_HOSTS[str(s["id"])] = str(s["host"]).lower()
         sources.append(
             Source(
                 id=s["id"],

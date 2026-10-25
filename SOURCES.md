@@ -2,6 +2,21 @@
 
 This file documents exactly what the sourcing workers fetch. The configuration lives in `sources.yaml`; publisher and keyword controls live in WP Admin (see below).
 
+## Site lists, v1 and v2 (sourcing restructure, phase 1, 25 Oct 2026)
+
+The site's sourcing policy (`GET aw/v1/sourcing-policy`) keeps every v1 key (`publishers`, `relevance`, `config`,
+`relay_hosts`) and adds new blocks beside them, inside `config` or at the top level: `schema` (`{"sources": 2}`),
+`sources_v2`, `category_names` and, from phase 2, `match`. Sources sync copies them into `sources.yaml`.
+
+- `sources_v2`: each source as in v1 plus `host` (its publisher), `relay` (fetched through the site), `read_by`
+  (`code` or `feed`) and `check` (`{roles: [...], categories: [...]}`). The workers read it when it is there and every
+  entry is complete, and the v1 `sources` list otherwise; both build the same sources and searches (tests/test_sources_v2.py).
+- Relay hosts: the policy's `relay_hosts` plus the host of every `sources_v2` source whose relay switch is on.
+- `category_names`: slug => name; the relevance check's categories when the site cannot be reached.
+- `match: "word"`: per-source keyword checks, category words and topic tags match whole words (plural allowed, a
+  trailing `*` matches the start of a word, Hindi as substrings; aw_workers/matcher.py, tests/fixtures/match_cases.json,
+  the same file the site tests). Until the site sends it, the old matching stays.
+
 ## Limits
 
 - Items older than **14 days** are ignored.
