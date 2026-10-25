@@ -333,8 +333,9 @@ EXTRA_MODELS = {
     # llama-3.3-70b-versatile and llama-3.1-8b-instant are gone from Groq's /models (25 Oct 2026: 404 on every run)
     "groq": ["openai/gpt-oss-120b", "openai/gpt-oss-20b"],
     # free ids on https://openrouter.ai/api/v1/models, 25 Oct 2026 (minimax-m3.1-flash:free answered 404 all run, 24 Oct)
+    # poolside/laguna-s-2.1:free expires 31 Oct 2026 on OpenRouter; replaced by thinkingmachines/inkling:free (price 0), 25 Oct 2026
     "openrouter": ["nvidia/nemotron-3-ultra-550b-a55b:free", "google/gemma-4-31b-it:free", "nvidia/nemotron-3-super-120b-a12b:free",
-                   "poolside/laguna-s-2.1:free", "xingchen-agi/xing4.0-29b-a4b:free", "openrouter/free"],  # openrouter/free: any free model OpenRouter has room on
+                   "thinkingmachines/inkling:free", "xingchen-agi/xing4.0-29b-a4b:free", "openrouter/free"],  # openrouter/free: any free model OpenRouter has room on
     "requesty": ["google/gemma-4-31b-it", "nvidia/nemotron-3-ultra-550b-a55b", "novita/ling-3.1-flash",
                  "nvidia/nemotron-3.5-lightning-30b-a3b", "nvidia/muse-glimmer-30b", "mistral/leanstral-1-5"],
     # minimax-m3.1-flash:free is gone from Cline's /models (25 Oct 2026); gemma-4-31b-it:free is listed there
