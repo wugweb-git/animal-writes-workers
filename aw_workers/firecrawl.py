@@ -9,8 +9,10 @@ limit are used up. Without a key, page_text() returns '' and nothing changes."""
 from __future__ import annotations
 
 import logging
+import math
 import os
 import re
+from datetime import datetime, timezone
 
 import requests
 
@@ -19,6 +21,7 @@ from .worker_id import ai_keys_params
 log = logging.getLogger(__name__)
 
 URL = "https://api.firecrawl.dev/v2/scrape"
+CREDITS_URL = "https://api.firecrawl.dev/v2/team/credit-usage"
 _state: dict = {}
 
 
@@ -59,10 +62,48 @@ def article_text(markdown: str, limit: int = 4000) -> str:
     return " ".join(dict.fromkeys(parts))[:limit]
 
 
+def credits(session=None) -> dict | None:
+    """{remaining, period_end (datetime)} of the Firecrawl plan, or None (no key, or not read)."""
+    key = _key()
+    if not key:
+        return None
+    try:
+        resp = (session or requests).get(CREDITS_URL, headers={"Authorization": f"Bearer {key}"}, timeout=20)
+        resp.raise_for_status()
+        data = (resp.json() or {}).get("data") or {}
+        end = datetime.fromisoformat(str(data["billingPeriodEnd"]).replace("Z", "+00:00"))
+        return {"remaining": int(data["remainingCredits"]), "period_end": end}
+    except Exception as exc:  # noqa: BLE001
+        log.info("firecrawl: credits not read: %s", type(exc).__name__)
+        return None
+
+
+def run_share(info: dict | None, per_day_kept: int, runs_per_day: int, cap: int, now: datetime | None = None) -> int:
+    """Pages a run of a background worker may read through Firecrawl (owner, 25 Oct 2026: "utilise firecrawl key too",
+    within the free credits). `per_day_kept` credits a day stay for sourcing until the plan renews; the rest is shared
+    over the days left and the runs of a day, at least 1 a run while that rest lasts; never more than `cap`. The
+    remaining credits are read at each run's start, so a run that spent more leaves less for the next. Unknown: 0."""
+    if not info:
+        return 0
+    now = now or datetime.now(timezone.utc)
+    days = max(1, math.ceil((info["period_end"] - now).total_seconds() / 86400))
+    spare = info["remaining"] - per_day_kept * days
+    if spare <= 0:
+        return 0
+    return max(1, min(cap, spare // (days * max(1, runs_per_day))))
+
+
+def set_run_cap(n: int) -> None:
+    """Pages this run may read through Firecrawl (instead of FIRECRAWL_MAX_PER_RUN)."""
+    _key()
+    _state["cap"] = max(0, int(n))
+
+
 def page_text(url: str, session=None, limit: int = 4000) -> str:
     """The article's own words through Firecrawl ('' without a key, after the run's limit, or on any error)."""
     key = _key()
-    if not key or _state["stopped"] or _state["used"] >= int(os.environ.get("FIRECRAWL_MAX_PER_RUN") or 5):
+    cap = _state["cap"] if "cap" in _state else int(os.environ.get("FIRECRAWL_MAX_PER_RUN") or 5)
+    if not key or _state["stopped"] or _state["used"] >= cap:
         return ""
     _state["used"] += 1
     try:
