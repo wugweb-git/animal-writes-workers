@@ -435,12 +435,12 @@ def main() -> int:
             return 3
         except Exception as exc:  # the site enforces the policy too, so carry on without the pre-filter
             log.warning("policy unavailable, relying on the site to enforce it: %s", exc)
-    source_list, defaults = sources.load_sources_data(lists, relevance=(raw or {}).get("relevance") if policy is not None else None)
+    source_list, defaults = sources.load_sources_data(lists, relevance=(raw or {}).get("relevance"))
     source_list = keyword_searches(source_list, lists)
     # Opportunities are not fetched (owner, 9 Oct 2026). AW_FETCH_OPPORTUNITIES=1 would turn them back on.
     if not truthy(os.environ.get("AW_FETCH_OPPORTUNITIES"), default=False):
         source_list = [s for s in source_list if s.type != "opportunity"]
-    gate = relevance.Gate.from_site(summariser, client or policy_client, dry_run=dry_run)
+    gate = relevance.Gate.from_site(summariser, client or policy_client, dry_run=dry_run, fallback=lists.get("category_names"))
     summary_rules.use(client or policy_client)  # Settings → Sourcing → Summary rules; the defaults when unreachable
 
     def checkpoint():  # live runs keep their progress item by item (a run cut short no longer starts over)

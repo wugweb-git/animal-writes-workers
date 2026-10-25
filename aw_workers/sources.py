@@ -148,10 +148,10 @@ def load_sources(path: str | Path = "sources.yaml") -> tuple[list[Source], dict]
     return load_sources_data(yaml.safe_load(Path(path).read_text(encoding="utf-8")))
 
 
-# Each source's publisher host, from the site's `sources_v2` block (sourcing restructure phase 1): source id => host.
-SOURCE_HOSTS: dict[str, str] = {}
-# The relevance lists a keyword check by role reads (sourcing policy `relevance`): "include" is the strong list.
-ROLE_LISTS = {"include": "strong", "strong": "strong", "animal": "animal", "context": "context", "exclude": "exclude"}
+# The relevance lists a keyword check by role reads (sourcing policy `relevance`): "include" is the strong list. A check
+# keeps items that have one of its words, so the Exclude role can never be one (it would keep what it should drop).
+ROLE_LISTS = {"include": "strong", "strong": "strong", "animal": "animal", "context": "context"}
+_warned: set[str] = set()  # each malformed-block warning once per run
 
 
 V2_BLOCKS = ("schema", "match", "sources_v2", "category_names")  # sourcing restructure (phase 1 on): beside the v1 keys
@@ -175,14 +175,22 @@ def v2_sources(data: dict) -> list[dict] | None:
         return None
     for s in v2:
         if not isinstance(s, dict) or not all(s.get(k) for k in ("id", "name", "kind", "type", "url")):
-            log.warning("sources_v2 has an incomplete entry (%r): reading the v1 sources list", s if isinstance(s, dict) else type(s))
+            what = repr(s if isinstance(s, dict) else type(s))[:200]
+            if what not in _warned:
+                _warned.add(what)
+                log.warning("sources_v2 has an incomplete entry (%s): reading the v1 sources list", what)
             return None
     return v2
 
 
 def check_words(s: dict, data: dict, relevance: dict | None = None) -> list[str] | None:
     """The words a `sources_v2` keyword check names (`check: {roles: [...], categories: [...]}`), or None when the
-    check names nothing (or nothing it names has words): the source's own `filter` / `keywords` then apply, as in v1."""
+    check names nothing (or nothing it names has words): the source's own `filter` / `keywords` then apply, as in v1.
+    The source's "Keyword check" switch still decides: `filter: false` means no check, whatever `check` names.
+    Without the relevance lists (sources.yaml fallback) the Include role reads the lists' `keywords`, which the site
+    fills with the Include list."""
+    if s.get("filter") is False:
+        return None
     check = s.get("check") if isinstance(s.get("check"), dict) else {}
     roles = [str(r).lower() for r in check.get("roles") or []]
     cats = [str(c) for c in check.get("categories") or []]
@@ -191,7 +199,14 @@ def check_words(s: dict, data: dict, relevance: dict | None = None) -> list[str]
     rel = relevance or {}
     words: list[str] = []
     for r in roles:
-        words += [str(w) for w in rel.get(ROLE_LISTS.get(r, r)) or []]
+        key = ROLE_LISTS.get(r)
+        if key is None:
+            log.warning("source %s: keyword check role %r is not one a check can use; ignored", s.get("id"), r)
+            continue
+        found = rel.get(key)
+        if not found and key == "strong":
+            found = data.get("filter_words") or data.get("keywords")
+        words += [str(w) for w in found or []]
     cat_words = data.get("categories") or {}
     for c in cats:
         words += [str(w) for w in cat_words.get(c) or []]
@@ -224,7 +239,6 @@ def load_sources_data(data: dict, relevance: dict | None = None) -> tuple[list[S
     matcher.set_mode(data.get("match"))
     TOPIC_TAGS.clear()
     TOPIC_TAGS.update({str(k): v for k, v in (data.get("topic_tags") or {}).items() if isinstance(v, dict)})
-    SOURCE_HOSTS.clear()
     sources = []
     filter_words = list(data.get("filter_words") or data.get("keywords") or [])
     v2 = v2_sources(data)
@@ -242,8 +256,6 @@ def load_sources_data(data: dict, relevance: dict | None = None) -> tuple[list[S
             raise ValueError(f"source {s['id']}: type must be news, legal or opportunity")
         if s["kind"] not in PARSERS and s["kind"] not in SELF_FETCH:
             raise ValueError(f"source {s['id']}: unknown kind {s['kind']}")
-        if s.get("host"):
-            SOURCE_HOSTS[str(s["id"])] = str(s["host"]).lower()
         sources.append(
             Source(
                 id=s["id"],

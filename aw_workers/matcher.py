@@ -14,6 +14,7 @@ plugins/aw-sourcing/tests/fixtures/match_cases.json); change both together.
 from __future__ import annotations
 
 import re
+from functools import lru_cache
 
 WORD = "word"
 LEGACY = "legacy"
@@ -34,23 +35,28 @@ def word_mode() -> bool:
     return _state["mode"] == WORD
 
 
-def matches(hay: str, term: str) -> bool:
-    """Word-mode match of one keyword in a text (case-insensitive)."""
+@lru_cache(maxsize=4096)
+def _compile(term: str):
+    """The term's matcher: a compiled pattern for Latin terms, the plain text for other scripts, None for nothing."""
     t = " ".join(str(term or "").lower().split())
-    if not t:
-        return False
-    hay = (hay or "").lower()
     prefix = t.endswith("*")
     if prefix:
         t = t.rstrip("*").rstrip()
-        if not t:
-            return False
+    if not t:
+        return None
     if not t.isascii():
-        return t in hay  # other scripts have no word boundaries
+        return t  # other scripts have no word boundaries
     body = r"\s+".join(re.escape(p) for p in t.split(" "))
-    if prefix:
-        return re.search(r"(?<![a-z0-9])" + body, hay) is not None
-    return re.search(r"(?<![a-z0-9])" + body + r"(?:s|es)?(?![a-z0-9])", hay) is not None
+    return re.compile(r"(?<![a-z0-9])" + body + ("" if prefix else r"(?:s|es)?(?![a-z0-9])"))
+
+
+def matches(hay: str, term: str) -> bool:
+    """Word-mode match of one keyword in a text (case-insensitive)."""
+    pat = _compile(str(term or ""))
+    if pat is None:
+        return False
+    hay = (hay or "").lower()
+    return pat in hay if isinstance(pat, str) else pat.search(hay) is not None
 
 
 def any_match(hay: str, terms) -> str:

@@ -186,3 +186,9 @@ def test_gate_without_the_site_knows_animal_experimentation(monkeypatch):
     monkeypatch.setenv("AW_SOURCES", str(_ROOT / "sources.yaml"))
     gate = relevance.Gate(None, cache={})
     assert "animal-experimentation" in gate.categories and len(gate.categories) == len(_YAML["categories"])
+
+
+def test_fallback_survives_a_yaml_that_is_not_a_mapping(tmp_path):
+    p = tmp_path / "sources.yaml"
+    p.write_text("- just\n- a list\n")
+    assert relevance.fallback_categories(p) == relevance.CATEGORIES

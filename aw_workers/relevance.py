@@ -70,6 +70,8 @@ def fallback_categories(path: str | Path | None = None) -> dict[str, str]:
     except (OSError, ValueError, yaml.YAMLError) as exc:
         log.info("sources.yaml unreadable for the category fallback (%s): built-in categories", exc)
         return dict(CATEGORIES)
+    if not isinstance(data, dict):
+        return dict(CATEGORIES)
     names = data.get("category_names")
     if isinstance(names, dict) and names:
         return {str(k): str(v) for k, v in names.items() if str(k).strip()}
@@ -240,8 +242,10 @@ class Gate:
         atexit.register(self.flush)  # every pipeline (run, backfill, submit, research, press) sends what is left at exit
 
     @classmethod
-    def from_site(cls, summariser, client, *, dry_run: bool = False, cache_file: Path = CACHE_FILE) -> "Gate":
-        """Categories and Directory names from the site when reachable; the built-in list otherwise."""
+    def from_site(cls, summariser, client, *, dry_run: bool = False, cache_file: Path = CACHE_FILE,
+                  fallback: dict | None = None) -> "Gate":
+        """Categories and Directory names from the site when reachable; otherwise `fallback` (the `category_names` of
+        the lists this run read), then sources.yaml's, then the built-in list."""
         cats, directory, recent, ids = None, None, [], {}
         if client is not None and hasattr(client, "relevance_config"):
             try:
@@ -254,6 +258,8 @@ class Gate:
                        if isinstance(r, dict) and r.get("title") and r.get("id")}
             except Exception as exc:
                 log.warning("relevance config unavailable, using the built-in categories: %s", exc)
+        if not cats and isinstance(fallback, dict) and fallback:
+            cats = {str(k): str(v) for k, v in fallback.items()}
         gate = cls(summariser, client=client, categories=cats, directory=directory, cache=load_cache(cache_file), dry_run=dry_run, recent=recent)
         gate.recent_ids = ids
         return gate

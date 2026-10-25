@@ -78,3 +78,9 @@ def test_word_mode_from_the_lists_switches_every_check():
     assert sources.topic_tags_for("New lab animals rules, a draft")[1] == ""  # unless word
     sources.load_sources_data({"sources": []})  # lists without `match` go back to legacy
     assert matcher.mode() == "legacy"
+
+
+def test_policy_has_term_understands_the_prefix_star():
+    assert policy.has_term("a sterilization drive", "steriliz*")
+    assert not policy.has_term("desterilization", "steriliz*")
+    assert policy.has_term("stray dogs", "dog")  # unchanged for plain terms

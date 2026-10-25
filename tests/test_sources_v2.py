@@ -38,7 +38,6 @@ def test_v1_and_v2_build_the_same_sources():
     v2, d2 = sources.load_sources_data(as_v2(YAML))
     assert fields(v1) == fields(v2) and d1 == d2
     assert len(v2) == len(YAML["sources"])
-    assert sources.SOURCE_HOSTS["pfa-substack"] == "peopleforanimals.substack.com"
 
 
 def test_identical_searches_from_v1_and_v2():
@@ -70,8 +69,8 @@ def test_keyword_check_by_role_and_category():
     lists["sources_v2"][0]["check"] = {"roles": ["include"], "categories": ["animal-experimentation"]}
     got = sources.load_sources_data(lists, relevance={"strong": ["animal welfare", "vivisection"]})[0][0]
     assert got.keywords == ["animal welfare", "vivisection", "lab animal"]
-    # without the relevance lists (sources.yaml fallback) only the category words are known
-    assert sources.load_sources_data(lists)[0][0].keywords == ["vivisection", "lab animal"]
+    # without the relevance lists (sources.yaml fallback) Include reads the lists' keywords
+    assert sources.load_sources_data(lists)[0][0].keywords == ["seed", "vivisection", "lab animal"]
     lists["sources_v2"][0]["check"] = {"roles": ["include"], "categories": []}
     assert sources.load_sources_data(lists)[0][0].keywords == ["seed"]  # filter: True -> the v1 filter words
 
@@ -117,3 +116,27 @@ def test_v2_blocks_beside_config_reach_the_lists():
     assert out["category_names"] == {"a": "A"} and "relay_hosts" not in out and raw["config"] == {"sources": [1]}
     inside = sources.with_v2_blocks({"sources": [1], "match": "legacy"}, raw)
     assert inside["match"] == "legacy"  # config wins
+
+
+def test_keyword_check_respects_the_switch_and_never_uses_exclude():
+    base = {"keywords": ["seed"], "categories": {"wildlife": ["tiger"]},
+            "sources": [{"id": "a", "name": "A", "kind": "rss", "type": "news", "url": "https://a.example/feed",
+                         "filter": False, "keywords": ["own"]}]}
+    lists = as_v2(base)
+    lists["sources_v2"][0]["check"] = {"roles": ["include"], "categories": ["wildlife"]}
+    rel = {"strong": ["animal welfare"], "exclude": ["bull market"]}
+    assert sources.load_sources_data(lists, relevance=rel)[0][0].keywords == ["own"]  # switch off: no check
+    lists["sources_v2"][0]["filter"] = True
+    lists["sources_v2"][0]["check"] = {"roles": ["include", "exclude"], "categories": []}
+    assert sources.load_sources_data(lists, relevance=rel)[0][0].keywords == ["animal welfare"]  # exclude ignored
+    # no relevance lists (sources.yaml fallback): Include reads the lists' keywords, which the site fills with it
+    assert sources.load_sources_data(lists)[0][0].keywords == ["seed"]
+
+
+def test_gate_prefers_the_lists_category_names(monkeypatch):
+    class Client:
+        def relevance_config(self):
+            raise OSError("down")
+
+    gate = relevance.Gate.from_site(None, Client(), fallback={"wildlife": "Wildlife"}, cache_file=Path("/nonexistent/x.json"))
+    assert gate.categories == {"wildlife": "Wildlife"}
