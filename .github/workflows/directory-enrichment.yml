@@ -4,6 +4,8 @@ name: "Directory enrichment"
 # and check only, the organisation's website and social pages, OpenStreetMap, Wikidata, AWBI, claims; Darpan needs a
 # CAPTCHA and is not read), with where each value came from. The site applies its rules (aw/v1/enrich/results) and
 # keeps which listings are done, so each run continues where the last stopped.
+# Clean-up pass (owner, 25 Oct 2026; input "cleanup", manual runs only): listings with no district or state get a place
+# proposal from their own PIN code (India Post) or address; true duplicates get a "merge into" proposal the owner reviews.
 # Dry run until the repository variable ENRICH_LIVE is "true" (after the owner's OK on the dry-run report).
 # Google: free quota only (owner, 20 Oct 2026: 0 USD). Variable GOOGLE_PLACES_FREE_REQUESTS (950 of Google's 1,000 free
 # Text Search Enterprise requests a month) turns it on; GOOGLE_PLACES_MONTHLY_BUDGET_USD (paid spend on top) stays 0.
@@ -27,6 +29,10 @@ on:
         description: "Only these listing IDs (comma-separated)"
         type: string
         default: ""
+      cleanup:
+        description: "Clean-up pass instead: missing district/state and true duplicates, as proposals for Enrichment review"
+        type: boolean
+        default: false
   workflow_run:
     workflows: ["SEO scores (Rank Math)"]
     types: [completed]
@@ -44,8 +50,10 @@ jobs:
       BATCH: ${{ inputs.batch || (github.event_name == 'workflow_dispatch' && inputs.dry_run && '50') || vars.ENRICH_BATCH || '5000' }}
       GROUP: ${{ inputs.group }}
       AW_IDS: ${{ inputs.ids }}
+      CLEANUP: ${{ inputs.cleanup && 'true' || 'false' }}
+      ENRICH_LIVE: ${{ vars.ENRICH_LIVE }}
       MAX_MINUTES: "150"
-      REPORT_DIR: enrich-report
+      REPORT_DIR: ${{ inputs.cleanup && 'cleanup-report' || 'enrich-report' }}
       WP_BASE_URL: ${{ secrets.WP_BASE_URL }}
       WP_INGEST_USER: ${{ secrets.WP_INGEST_USER }}
       WP_INGEST_APP_PASSWORD: ${{ secrets.WP_INGEST_APP_PASSWORD }}
@@ -78,15 +86,15 @@ jobs:
           python-version: "3.12"
           cache: pip
       - run: pip install -r requirements-dev.txt
-      - run: pytest -q tests/test_directory.py
+      - run: pytest -q tests/test_directory.py tests/test_directory_cleanup.py
         id: tests
       - run: python -m aw_workers.directory.run
         id: main
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: enrich-report-${{ github.run_id }}
-          path: enrich-report/
+          name: ${{ inputs.cleanup && 'cleanup' || 'enrich' }}-report-${{ github.run_id }}
+          path: ${{ inputs.cleanup && 'cleanup-report' || 'enrich-report' }}/
           retention-days: 90
       - name: Report the end to the site (Settings → Sourcing → Workers)
         if: always()
