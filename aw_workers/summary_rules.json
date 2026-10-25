@@ -10,8 +10,6 @@
       "label": "News",
       "min_words": 45,
       "max_words": 100,
-      "min_sentences": 3,
-      "max_sentences": 5,
       "structure": "Sentence 1, the lead: what happened, to which animals, and where, so it can stand alone as the search description. Then who acted or is responsible (police, court, civic body, forest department, NGO, residents), where exactly (district and state as the source names them), and when, only if the source gives the date of the event. Then why it matters (the law, rule, risk or number involved, as the source states it) and what happens next (a hearing, a deadline, an investigation), when the source says so.",
       "attribution": "Attribute every claim, allegation and number to whoever made it: police said, the court held, the ministry said, the NGO alleged. Name the publisher only when the report is its own finding (its investigation, survey or data); otherwise the source row credits it. Never write 'according to reports' or 'the report says'."
     },
@@ -19,8 +17,6 @@
       "label": "Library",
       "min_words": 60,
       "max_words": 130,
-      "min_sentences": 3,
-      "max_sentences": 6,
       "structure": "Sentence 1, the lead: who issued it, what kind of document it is (judgment, order, circular, advisory, notification, Act, Rules) and what it decides or asks, in plain language. Then who it applies to (state governments, municipal bodies, police, animal welfare organisations, gaushalas, pet shops, breeders, citizens, community animal feeders) and the key direction, holding or rule, with any deadline, number or penalty it states. Then what it means in practice for citizens and feeders. Give the case or document number and the date of the document when the source gives them. Explain a legal term in a few plain words the first time.",
       "attribution": "Always name the issuer as the Library names it (Supreme Court of India, the High Court by name, Animal Welfare Board of India, the ministry by its full name). Name the bench or judges only when the source does. One short quote of the operative direction is allowed, attributed to the court or body."
     },
@@ -28,8 +24,6 @@
       "label": "Research",
       "min_words": 60,
       "max_words": 120,
-      "min_sentences": 3,
-      "max_sentences": 5,
       "structure": "Sentence 1, the lead: what the study found, with its main number, and about which animals or people. Then who did it (institution or journal, when given), where (state, district or city) and when (the study period), and how (design and sample size). Then what it means or recommends, in the authors' own measure: 'found', 'suggests' or 'recommends' as the paper does, never a stronger claim.",
       "attribution": "Name the authors' institution or the journal when the source gives it; say 'the researchers' or 'the authors', never 'experts say'."
     }

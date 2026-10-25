@@ -112,6 +112,21 @@ def test_publisher_only_credited_as_reporter_is_still_refused():
     assert summary_rules.names_publisher_as_source(s3, PETA, "Goat rescued following PETA India intervention")
 
 
+# ---- sentence counts are no rule ----
+
+
+def test_sentence_counts_are_not_checked_and_site_values_are_ignored():
+    rules = summary_rules.merged({"sections": {"news": {"min_words": 5, "max_words": 60, "min_sentences": 4,
+                                                        "max_sentences": 4}}})
+    assert "min_sentences" not in rules["sections"]["news"] and "max_sentences" not in rules["sections"]["news"]
+    one = "Police rescued 14 dogs from an illegal breeding unit in Kondhwa, Pune, on Monday."
+    many = "Police acted. Dogs were rescued. The owner was booked. A case was filed. Vets checked them. All are well."
+    for text in (one, many):
+        assert not any("sentences" in p for p in summary_rules.problems(text, "news", rules=rules))
+    assert "sentences" not in summary_rules.rules_block("news", rules).split("The lead")[0]
+    assert all("min_sentences" not in s for s in summary_rules.DEFAULTS["sections"].values())
+
+
 # ---- sources read wrongly ----
 
 
