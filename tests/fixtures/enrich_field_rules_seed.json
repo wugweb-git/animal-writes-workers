@@ -1,0 +1,435 @@
+{
+ "_about": "The Directory enrichment field rules and trust order as seeded on the site (option aw_enrich_field_rules, sourcing restructure phase 3, owner 25 Oct 2026) from the workers' constants in aw_workers/directory/merge.py (MULTI, AI_FIELDS, OFFICIAL_AWBI, INVITE_FIELDS, SOCIAL_FIELDS, PRIORITY). The same file is in both repos: the site's tests check its seed equals this file, the workers' tests check this file equals the constants. 'apply' is the site's apply rule (enrichment.php aw_enrich_mode): empty = fill an empty field, both = keep it next to what is there, review = always a person.",
+ "priority": [
+  "claim",
+  "website",
+  "darpan",
+  "wikidata",
+  "osm",
+  "social",
+  "awbi",
+  "google_places"
+ ],
+ "field_rules": {
+  "phone": {
+   "on": true,
+   "sources": [],
+   "multi": 2,
+   "official": "",
+   "ai": false,
+   "invite": true,
+   "social": false,
+   "apply": "both"
+  },
+  "whatsapp": {
+   "on": true,
+   "sources": [],
+   "multi": 1,
+   "official": "",
+   "ai": false,
+   "invite": false,
+   "social": false,
+   "apply": "both"
+  },
+  "emergency": {
+   "on": true,
+   "sources": [],
+   "multi": 1,
+   "official": "",
+   "ai": false,
+   "invite": false,
+   "social": false,
+   "apply": "both"
+  },
+  "email": {
+   "on": true,
+   "sources": [],
+   "multi": 0,
+   "official": "",
+   "ai": false,
+   "invite": false,
+   "social": false,
+   "apply": "both"
+  },
+  "website": {
+   "on": true,
+   "sources": [],
+   "multi": 0,
+   "official": "",
+   "ai": false,
+   "invite": true,
+   "social": false,
+   "apply": "both"
+  },
+  "address": {
+   "on": true,
+   "sources": [],
+   "multi": 0,
+   "official": "awbi",
+   "ai": false,
+   "invite": true,
+   "social": false,
+   "apply": "empty"
+  },
+  "pincode": {
+   "on": true,
+   "sources": [],
+   "multi": 0,
+   "official": "awbi",
+   "ai": false,
+   "invite": false,
+   "social": false,
+   "apply": "empty"
+  },
+  "lat": {
+   "on": true,
+   "sources": [],
+   "multi": 0,
+   "official": "",
+   "ai": false,
+   "invite": false,
+   "social": false,
+   "apply": "empty"
+  },
+  "lng": {
+   "on": true,
+   "sources": [],
+   "multi": 0,
+   "official": "",
+   "ai": false,
+   "invite": false,
+   "social": false,
+   "apply": "empty"
+  },
+  "maps_url": {
+   "on": true,
+   "sources": [],
+   "multi": 0,
+   "official": "",
+   "ai": false,
+   "invite": false,
+   "social": false,
+   "apply": "empty"
+  },
+  "place_id": {
+   "on": true,
+   "sources": [],
+   "multi": 0,
+   "official": "",
+   "ai": false,
+   "invite": false,
+   "social": false,
+   "apply": "empty"
+  },
+  "hours": {
+   "on": true,
+   "sources": [],
+   "multi": 0,
+   "official": "",
+   "ai": false,
+   "invite": true,
+   "social": false,
+   "apply": "empty"
+  },
+  "logo": {
+   "on": true,
+   "sources": [],
+   "multi": 0,
+   "official": "",
+   "ai": false,
+   "invite": false,
+   "social": false,
+   "apply": "empty"
+  },
+  "photos": {
+   "on": true,
+   "sources": [],
+   "multi": 0,
+   "official": "",
+   "ai": false,
+   "invite": false,
+   "social": false,
+   "apply": "empty"
+  },
+  "description": {
+   "on": true,
+   "sources": [],
+   "multi": 0,
+   "official": "",
+   "ai": true,
+   "invite": false,
+   "social": false,
+   "apply": "empty"
+  },
+  "founded": {
+   "on": true,
+   "sources": [],
+   "multi": 0,
+   "official": "",
+   "ai": false,
+   "invite": false,
+   "social": false,
+   "apply": "empty"
+  },
+  "reg_type": {
+   "on": true,
+   "sources": [],
+   "multi": 0,
+   "official": "",
+   "ai": true,
+   "invite": false,
+   "social": false,
+   "apply": "empty"
+  },
+  "registration": {
+   "on": true,
+   "sources": [],
+   "multi": 0,
+   "official": "",
+   "ai": false,
+   "invite": false,
+   "social": false,
+   "apply": "empty"
+  },
+  "darpan_id": {
+   "on": true,
+   "sources": [],
+   "multi": 0,
+   "official": "",
+   "ai": false,
+   "invite": false,
+   "social": false,
+   "apply": "empty"
+  },
+  "reg_80g": {
+   "on": true,
+   "sources": [],
+   "multi": 0,
+   "official": "",
+   "ai": false,
+   "invite": false,
+   "social": false,
+   "apply": "empty"
+  },
+  "reg_12a": {
+   "on": true,
+   "sources": [],
+   "multi": 0,
+   "official": "",
+   "ai": false,
+   "invite": false,
+   "social": false,
+   "apply": "empty"
+  },
+  "fcra": {
+   "on": true,
+   "sources": [],
+   "multi": 0,
+   "official": "",
+   "ai": false,
+   "invite": false,
+   "social": false,
+   "apply": "empty"
+  },
+  "services": {
+   "on": true,
+   "sources": [],
+   "multi": 0,
+   "official": "",
+   "ai": true,
+   "invite": false,
+   "social": false,
+   "apply": "both"
+  },
+  "animals": {
+   "on": true,
+   "sources": [],
+   "multi": 0,
+   "official": "",
+   "ai": true,
+   "invite": false,
+   "social": false,
+   "apply": "both"
+  },
+  "areas_served": {
+   "on": true,
+   "sources": [],
+   "multi": 0,
+   "official": "",
+   "ai": true,
+   "invite": false,
+   "social": false,
+   "apply": "both"
+  },
+  "donate_url": {
+   "on": true,
+   "sources": [],
+   "multi": 0,
+   "official": "",
+   "ai": false,
+   "invite": false,
+   "social": false,
+   "apply": "empty"
+  },
+  "upi": {
+   "on": true,
+   "sources": [],
+   "multi": 0,
+   "official": "",
+   "ai": false,
+   "invite": false,
+   "social": false,
+   "apply": "empty"
+  },
+  "volunteer_url": {
+   "on": true,
+   "sources": [],
+   "multi": 0,
+   "official": "",
+   "ai": false,
+   "invite": false,
+   "social": false,
+   "apply": "empty"
+  },
+  "adopt_url": {
+   "on": true,
+   "sources": [],
+   "multi": 0,
+   "official": "",
+   "ai": false,
+   "invite": false,
+   "social": false,
+   "apply": "empty"
+  },
+  "instagram": {
+   "on": true,
+   "sources": [],
+   "multi": 0,
+   "official": "",
+   "ai": false,
+   "invite": false,
+   "social": true,
+   "apply": "empty"
+  },
+  "facebook": {
+   "on": true,
+   "sources": [],
+   "multi": 0,
+   "official": "",
+   "ai": false,
+   "invite": false,
+   "social": true,
+   "apply": "empty"
+  },
+  "x": {
+   "on": true,
+   "sources": [],
+   "multi": 0,
+   "official": "",
+   "ai": false,
+   "invite": false,
+   "social": true,
+   "apply": "empty"
+  },
+  "youtube": {
+   "on": true,
+   "sources": [],
+   "multi": 0,
+   "official": "",
+   "ai": false,
+   "invite": false,
+   "social": true,
+   "apply": "empty"
+  },
+  "linkedin": {
+   "on": true,
+   "sources": [],
+   "multi": 0,
+   "official": "",
+   "ai": false,
+   "invite": false,
+   "social": true,
+   "apply": "empty"
+  },
+  "ig_followers": {
+   "on": true,
+   "sources": [],
+   "multi": 0,
+   "official": "",
+   "ai": false,
+   "invite": false,
+   "social": false,
+   "apply": "empty"
+  },
+  "ig_posts": {
+   "on": true,
+   "sources": [],
+   "multi": 0,
+   "official": "",
+   "ai": false,
+   "invite": false,
+   "social": false,
+   "apply": "empty"
+  },
+  "last_post": {
+   "on": true,
+   "sources": [],
+   "multi": 0,
+   "official": "",
+   "ai": false,
+   "invite": false,
+   "social": false,
+   "apply": "empty"
+  },
+  "head": {
+   "on": true,
+   "sources": [],
+   "multi": 0,
+   "official": "",
+   "ai": true,
+   "invite": false,
+   "social": false,
+   "apply": "empty"
+  },
+  "wikidata": {
+   "on": true,
+   "sources": [],
+   "multi": 0,
+   "official": "",
+   "ai": false,
+   "invite": false,
+   "social": false,
+   "apply": "empty"
+  },
+  "closed": {
+   "on": true,
+   "sources": [],
+   "multi": 0,
+   "official": "",
+   "ai": false,
+   "invite": false,
+   "social": false,
+   "apply": "review"
+  },
+  "place": {
+   "on": true,
+   "sources": [],
+   "multi": 0,
+   "official": "",
+   "ai": false,
+   "invite": false,
+   "social": false,
+   "apply": "empty"
+  },
+  "merge_into": {
+   "on": true,
+   "sources": [],
+   "multi": 0,
+   "official": "",
+   "ai": false,
+   "invite": false,
+   "social": false,
+   "apply": "review"
+  }
+ }
+}
