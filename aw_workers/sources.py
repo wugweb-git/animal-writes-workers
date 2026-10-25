@@ -18,6 +18,7 @@ import requests
 import yaml
 from bs4 import BeautifulSoup
 
+from . import keywords as _keywords
 from . import matcher
 from . import relay as _relay
 
@@ -68,6 +69,7 @@ class Source:
     max_items: int | None = None  # overrides max_items_per_source (keyword searches: 40)
     skip_urls: list[str] = field(default_factory=list)  # rows already on the page when we started watching it
     file_as: str = ""  # "press": items go to Media & PR (coverage of a campaign topic) instead of the section
+    categories: list[str] = field(default_factory=list)  # a keyword search: the categories of the keyword that found it
 
 
 @dataclass
@@ -98,6 +100,12 @@ SECTIONS: dict[str, dict] = {}
 # words) waits for a person.
 TOPIC_TAGS: dict[str, dict] = {}
 SITE_TYPES = {"news": "aw_news", "legal": "aw_legal", "opportunity": "aw_opportunity", "research": "post"}
+# The lists came with the keyword table (phase 2): categories at ingest start from the keyword that found the item.
+KEYWORD_TABLE = {"on": False}
+
+
+def keyword_table_on() -> bool:
+    return KEYWORD_TABLE["on"]
 
 
 def set_sections(data) -> None:
@@ -154,16 +162,20 @@ ROLE_LISTS = {"include": "strong", "strong": "strong", "animal": "animal", "cont
 _warned: set[str] = set()  # each malformed-block warning once per run
 
 
-V2_BLOCKS = ("schema", "match", "sources_v2", "category_names")  # sourcing restructure (phase 1 on): beside the v1 keys
+V2_BLOCKS = ("schema", "match", "sources_v2", "category_names", "keywords_v2")  # sourcing restructure: beside the v1 keys
 
 
 def with_v2_blocks(config: dict, raw: dict) -> dict:
     """The site's lists with the new blocks the policy sends beside them (top level or inside `config`); `config`
-    wins when both have one. Old workers ignore these keys; sources.yaml gets them through Sources sync."""
+    wins when both have one. Old workers ignore these keys; sources.yaml gets them through Sources sync. The keyword
+    table (phase 2) comes as top-level `keywords` (objects) and as `config.keywords_v2`; inside the lists it is always
+    `keywords_v2`, because `keywords` there is the v1 list of Include words."""
     out = dict(config)
     for k in V2_BLOCKS:
         if k not in out and k in (raw or {}):
             out[k] = raw[k]
+    if "keywords_v2" not in out and _keywords.raw_block({"keywords": (raw or {}).get("keywords")}) is not None:
+        out["keywords_v2"] = raw["keywords"]
     return out
 
 
@@ -183,12 +195,13 @@ def v2_sources(data: dict) -> list[dict] | None:
     return v2
 
 
-def check_words(s: dict, data: dict, relevance: dict | None = None) -> list[str] | None:
+def check_words(s: dict, data: dict, relevance: dict | None = None, kws: list[dict] | None = None) -> list[str] | None:
     """The words a `sources_v2` keyword check names (`check: {roles: [...], categories: [...]}`), or None when the
     check names nothing (or nothing it names has words): the source's own `filter` / `keywords` then apply, as in v1.
     The source's "Keyword check" switch still decides: `filter: false` means no check, whatever `check` names.
-    Without the relevance lists (sources.yaml fallback) the Include role reads the lists' `keywords`, which the site
-    fills with the Include list."""
+    With the keyword table (`kws`, phase 2) a role reads the spellings of the keywords with that role and a category
+    the spellings of the `category` keywords mapped to it. Without it, the relevance lists; without those
+    (sources.yaml fallback) the Include role reads the lists' `keywords`, which the site fills with the Include list."""
     if s.get("filter") is False:
         return None
     check = s.get("check") if isinstance(s.get("check"), dict) else {}
@@ -196,7 +209,7 @@ def check_words(s: dict, data: dict, relevance: dict | None = None) -> list[str]
     cats = [str(c) for c in check.get("categories") or []]
     if not roles and not cats:
         return None
-    rel = relevance or {}
+    rel = _keywords.relevance_lists(kws) if kws is not None else (relevance or {})
     words: list[str] = []
     for r in roles:
         key = ROLE_LISTS.get(r)
@@ -204,10 +217,10 @@ def check_words(s: dict, data: dict, relevance: dict | None = None) -> list[str]
             log.warning("source %s: keyword check role %r is not one a check can use; ignored", s.get("id"), r)
             continue
         found = rel.get(key)
-        if not found and key == "strong":
+        if not found and key == "strong" and kws is None:
             found = data.get("filter_words") or data.get("keywords")
         words += [str(w) for w in found or []]
-    cat_words = data.get("categories") or {}
+    cat_words = _keywords.category_words(kws) if kws is not None else (data.get("categories") or {})
     for c in cats:
         words += [str(w) for w in cat_words.get(c) or []]
     words = list(dict.fromkeys(w for w in words if w.strip()))
@@ -232,9 +245,16 @@ def relay_hosts(data: dict, v1_hosts) -> list[str]:
 def load_sources_data(data: dict, relevance: dict | None = None) -> tuple[list[Source], dict]:
     """Sources from the lists' dict: sources.yaml, or the site's copy (Settings → Sourcing), which has the same shape.
     The site's `sources_v2` block is read when it is there (each entry is a v1 source plus `host`, `relay`, `read_by`
-    and `check`), the v1 `sources` list otherwise. `match: "word"` switches every keyword check to whole words."""
+    and `check`), the v1 `sources` list otherwise. `match: "word"` switches every keyword check to whole words. With
+    the keyword table (`keywords_v2`, phase 2) the category words come from the `category` keywords and keyword checks
+    from the roles; without it, from the v1 lists."""
+    kws = _keywords.from_data(data)
+    KEYWORD_TABLE["on"] = kws is not None
     CATEGORIES.clear()
-    CATEGORIES.update({k: [str(w) for w in v] for k, v in (data.get("categories") or {}).items()})
+    if kws is not None:
+        CATEGORIES.update(_keywords.category_words(kws, slugs=list(data.get("category_names") or {})))
+    else:
+        CATEGORIES.update({k: [str(w) for w in v] for k, v in (data.get("categories") or {}).items()})
     set_sections(data.get("sections"))
     matcher.set_mode(data.get("match"))
     TOPIC_TAGS.clear()
@@ -247,35 +267,39 @@ def load_sources_data(data: dict, relevance: dict | None = None) -> tuple[list[S
         # check" gives it the keyword list. Lists without the switches (sources.yaml) are read as they are.
         if s.get("on") is False:
             continue
-        words = check_words(s, data, relevance) if v2 is not None else None
+        words = check_words(s, data, relevance, kws) if v2 is not None else None
         if words is not None:
             s = {**s, "keywords": words}
         elif s.get("filter"):
             s = {**s, "keywords": filter_words}
-        if s["type"] not in ("news", "legal", "opportunity"):
-            raise ValueError(f"source {s['id']}: type must be news, legal or opportunity")
-        if s["kind"] not in PARSERS and s["kind"] not in SELF_FETCH:
-            raise ValueError(f"source {s['id']}: unknown kind {s['kind']}")
-        sources.append(
-            Source(
-                id=s["id"],
-                name=s["name"],
-                kind=s["kind"],
-                type=s["type"],
-                url=s["url"],
-                keywords=list(s.get("keywords") or []),
-                source_type=s.get("source_type", ""),
-                org=s.get("org", ""),
-                opportunity_type=s.get("opportunity_type", ""),
-                lookback_days=s.get("lookback_days"),
-                match=s.get("match", "text"),
-                ministries=list(s.get("ministries") or []),
-                max_items=s.get("max_items"),
-                skip_urls=list(s.get("skip_urls") or []),
-                file_as=str(s.get("file_as") or ""),
-            )
-        )
+        sources.append(source_from_dict(s))
     return sources, data.get("defaults", {})
+
+
+def source_from_dict(s: dict, categories=()) -> Source:
+    """One source from its dict (a v1 source, a `sources_v2` entry or a keyword search that carries a whole feed)."""
+    if s["type"] not in ("news", "legal", "opportunity"):
+        raise ValueError(f"source {s['id']}: type must be news, legal or opportunity")
+    if s["kind"] not in PARSERS and s["kind"] not in SELF_FETCH:
+        raise ValueError(f"source {s['id']}: unknown kind {s['kind']}")
+    return Source(
+        id=s["id"],
+        name=s["name"],
+        kind=s["kind"],
+        type=s["type"],
+        url=s["url"],
+        keywords=list(s.get("keywords") or []),
+        source_type=s.get("source_type", ""),
+        org=s.get("org", ""),
+        opportunity_type=s.get("opportunity_type", ""),
+        lookback_days=s.get("lookback_days"),
+        match=s.get("match", "text"),
+        ministries=list(s.get("ministries") or []),
+        max_items=s.get("max_items"),
+        skip_urls=list(s.get("skip_urls") or []),
+        file_as=str(s.get("file_as") or ""),
+        categories=list(categories or []),
+    )
 
 
 # A list page, not one story: a tag, category, topic, author or search page (a "peta-india" title came from

@@ -22,7 +22,8 @@ HEADER = ("# Sources for the Animal Writes sourcing workers. COPIED FROM THE SIT
 def main() -> int:
     client = ingest.Client(os.environ["WP_BASE_URL"], os.environ["WP_INGEST_USER"], os.environ["WP_INGEST_APP_PASSWORD"])
     raw = client.policy()
-    # The new blocks (sources_v2, category_names, match, schema) may come beside `config`: keep them in the copy too.
+    # The new blocks (sources_v2, category_names, match, schema, and from phase 2 the keyword table as keywords_v2) may
+    # come beside `config`: keep them in the copy too.
     config = sources.with_v2_blocks(raw["config"], raw) if isinstance(raw.get("config"), dict) else raw.get("config")
     if not isinstance(config, dict) or not config.get("sources"):
         print("unchanged (Workers use these lists is off: sources.yaml stays as it is)")

@@ -91,8 +91,16 @@ class Policy:
 
     @classmethod
     def from_json(cls, data: dict) -> "Policy":
+        """The site's policy. With the keyword table (phase 2: top-level `keywords`, or `config.keywords_v2`) the four
+        lists are the spellings of the keywords with the Include, Animal, Context and Exclude roles; the switches stay
+        in `relevance`. Without it, the v1 lists in `relevance`."""
+        from . import keywords
+
         pub = data.get("publishers") or {}
         rel = data.get("relevance") or {}
+        table = keywords.from_data(data)
+        if table is not None:
+            rel = {**rel, **keywords.relevance_lists(table)}
         return cls(
             blocked=set(pub.get("blocked") or []),
             allowed=set(pub.get("allowed") or []),
