@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from datetime import date, timedelta
 from pathlib import Path
 
-from . import counts, documents, enrich, headline_case, ingest, merge, policy as policy_mod, press, relay, relevance, sources, summarise, summary_rules
+from . import counts, documents, enrich, headline_case, ingest, keywords as keywords_mod, merge, policy as policy_mod, press, relay, relevance, sources, summarise, summary_rules
 from . import titles as titles_mod
 
 # How far back Google News searches look (AW_WINDOW, e.g. "4d" to catch up after an outage).
@@ -322,6 +322,7 @@ def default_enricher(url: str) -> tuple[str, str]:
 
 # Mirrored on the site in aw-sourcing AW_SOURCING_EXTRA_SEARCHES (plugins/aw-sourcing/includes/keyword-stats.php in
 # wugweb-git/animalwrites): change both together, or the Sourcing keywords stats on the site miss or invent a search.
+# v1 only: with the keyword table (phase 2) "stray dogs" is a keyword with the Search role (feed gnews-kw-stray-dogs).
 EXTRA_SEARCHES = ("stray dogs",)  # owner, 12 Oct 2026
 SEARCH_MAX_ITEMS = 40  # new (unseen) items per Google News search and run; busy searches return 30-45 a day
 FAIL_SHARE = 0.5  # half the sources or more failing makes the run fail and the site alert the owner
@@ -332,7 +333,11 @@ def keyword_searches(source_list: list, lists: dict) -> list:
     """Search, don't only filter (owner, 12 Oct 2026): every English keyword in Sourcing (plus EXTRA_SEARCHES) becomes
     its own Google News search for the last 2 days, India edition, so stories from any publisher that use those words
     are found. Existing Google News searches get the same 2-day window (without it Google returns older "relevant"
-    stories and nothing new). Hindi keywords are not searched (no Hindi content, owner 10 Oct 2026)."""
+    stories and nothing new). Hindi keywords are not searched (no Hindi content, owner 10 Oct 2026).
+
+    With the keyword table (phase 2) the searches are the keywords' `searches`, keeping every feed id: first those that
+    carry a whole feed (`url`: the open-web Google News feeds that became keywords), then the plain ones (`q`), each
+    skipped when its feed id or its query is already taken. EXTRA_SEARCHES is then not used."""
     import re as _re
     import urllib.parse as up
     from dataclasses import replace as _replace
@@ -353,13 +358,43 @@ def keyword_searches(source_list: list, lists: dict) -> list:
             if "news.google.com/rss/search" in s.url else s) for s in source_list]
     have = {s.id for s in out}
     queries = {norm_q(s.url) for s in out if "news.google.com/rss/search" in s.url}
-    kws = [k for k in (lists.get("keywords") or []) if isinstance(k, str) and k.isascii() and k.strip()]
-    for kw in list(dict.fromkeys([*kws, *EXTRA_SEARCHES])):
-        sid = "gnews-kw-" + _re.sub(r"[^a-z0-9]+", "-", kw.lower()).strip("-")
+    table = keywords_mod.from_data(lists)
+    if table is None:  # v1: the Include words (`keywords`) plus the fixed extra searches
+        kws = [k for k in (lists.get("keywords") or []) if isinstance(k, str) and k.isascii() and k.strip()]
+        plain = [({"categories": []}, {"q": kw}) for kw in dict.fromkeys([*kws, *EXTRA_SEARCHES])]
+    else:
+        whole, plain = keywords_mod.search_specs(table)
+        for kw, spec in whole:  # a feed that became a keyword: its own settings and keyword check
+            if spec.get("on") is False:
+                continue
+            s = {**spec, "id": str(spec.get("feed") or spec.get("id") or "")}
+            if not s["id"] or s["id"] in have:
+                continue
+            words = sources.check_words(s, lists, kws=table)
+            if words is not None:
+                s["keywords"] = words
+            try:
+                src = sources.source_from_dict(s, categories=kw["categories"])
+            except (KeyError, ValueError) as exc:
+                log.warning("keyword %r: search %s is incomplete (%s); skipped", kw.get("label"), s["id"], exc)
+                continue
+            if "news.google.com/rss/search" in src.url:
+                src = _replace(src, url=with_window(src.url), max_items=src.max_items or SEARCH_MAX_ITEMS)
+                if norm_q(src.url) in queries:
+                    continue
+                queries.add(norm_q(src.url))
+            out.append(src)
+            have.add(src.id)
+    for kw_rec, spec in plain:
+        kw = str(spec.get("q") or "").strip()
+        if not kw.isascii():  # Hindi keywords are not searched
+            continue
+        sid = str(spec.get("feed") or "").strip() or "gnews-kw-" + _re.sub(r"[^a-z0-9]+", "-", kw.lower()).strip("-")
         url = "https://news.google.com/rss/search?" + up.urlencode({"q": f'"{kw}" India when:{WINDOW}', "hl": "en-IN", "gl": "IN", "ceid": "IN:en"})
         if sid in have or norm_q(url) in queries:  # the same search is already a source: fetch it once
             continue
-        out.append(sources.Source(id=sid, name=f"Google News – {kw}", kind="rss", type="news", url=url, max_items=SEARCH_MAX_ITEMS))
+        out.append(sources.Source(id=sid, name=f"Google News – {kw}", kind="rss", type="news", url=url,
+                                  max_items=SEARCH_MAX_ITEMS, categories=list(kw_rec.get("categories") or [])))
         have.add(sid)
         queries.add(norm_q(url))
     return out
