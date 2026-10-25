@@ -235,8 +235,12 @@ def run(
                 as_press = item.source.file_as == "press"  # Media & PR coverage: no summary or categories
                 summary = ("" if as_press else ingest.opportunity_summary(item) if item.source.type == "opportunity"
                            else summariser.summarise(item))
+                ai_cat = ""  # the relevance check's category, as a slug (the site's list)
+                if verdict is not None and hasattr(gate, "category_slug"):
+                    ai_cat = gate.category_slug(str(getattr(verdict, "category", "") or ""))
                 cats = ([] if as_press else None if item.source.type == "opportunity"
-                          else summarise.pick_categories(summariser, item, summary, sources.allowed_categories(item.source.type)))
+                          else summarise.pick_categories(summariser, item, summary, sources.allowed_categories(item.source.type),
+                                                         ai_choice=ai_cat))
                 payload = ingest.build_payload(item, summary, cats)
                 cut_flag = ""
                 if item.source.type == "news" and not as_press and titles_mod.is_cut(payload["title"]):

@@ -652,11 +652,18 @@ Title: {title}
 Summary: {summary}"""
 
 
-def pick_categories(summariser, item: Item, summary: str, allowed: list[str]) -> list[str]:
-    """Every item gets a category: keyword matches first; when none match, the summary model picks from the list."""
-    from .sources import categories_for
+def pick_categories(summariser, item: Item, summary: str, allowed: list[str], ai_choice: str = "") -> list[str]:
+    """Every item gets a category: keyword matches first; when none match, the summary model picks from the list.
 
-    found = [c for c in categories_for(item, summary) if not allowed or c in allowed]
+    With the keyword table (sourcing phase 2, plan §6): the categories of the keyword that found the item, plus those of
+    the category keywords found in the text (whole words); the relevance check's category (`ai_choice`) is added when it
+    is not among them; the section rule (`allowed`) limits the result; when nothing is left the model picks as before."""
+    from .sources import categories_for, keyword_table_on
+
+    found = list(categories_for(item, summary))
+    if keyword_table_on():
+        found = list(dict.fromkeys([*item.source.categories, *found, *([ai_choice] if ai_choice else [])]))
+    found = [c for c in found if not allowed or c in allowed]
     if found or not allowed or not hasattr(summariser, "backends"):
         return found
     prompt = CATEGORY_PROMPT.format(slugs=", ".join(allowed), title=item.title, summary=summary)
