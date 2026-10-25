@@ -48,6 +48,12 @@ Edit `sources.yaml`. Its `categories:` section maps each site category (by slug)
 under every category whose keywords appear in the title or feed text. AWBI and PIB items also send a `source_type`. Kinds: `rss` (any feed) and `awbi` (AWBI table pages). `type` maps to the site:
 `news` → News, `legal` → Legal. Legal summaries end with `[Needs legal review]`.
 Court news (Supreme Court, High Courts, NGT) comes from LiveLaw, Bar & Bench and SC Observer, tagged by the court named in the headline.
+Judgments themselves (Library documents) come from the open datasets: `judgments-sc` (Supreme Court) and `judgments-hc`
+(High Courts, s3://indian-high-court-judgments, CC BY 4.0). The High Court source rules out bail, interim and off-topic
+matters by case type, then reads the first pages of each remaining PDF and keeps the judgment only when it cites an animal
+statute or uses the animal terms at least twice outside the party lines (at most `AW_HC_MAX_PDFS`, default 1,500, PDFs and
+`AW_HC_MINUTES`, default 8, per run; a watermark per bench in `.state/documents.json`). To see what it would keep without
+sending anything: `python -m aw_workers.hc_dry_run --days 60 --max-pdfs 1500 [--newest-first]`.
 
 Notes:
 - PIB's own RSS refuses automated clients (403), so PIB comes via a Google News query limited to `pib.gov.in`.
