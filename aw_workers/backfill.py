@@ -176,10 +176,10 @@ def main() -> int:
             raw = inner.policy()
             policy = policy_mod.Policy.from_json(raw)
             if isinstance(raw.get("config"), dict) and raw["config"].get("sources"):
-                lists = raw["config"]
+                lists = sources.with_v2_blocks(raw["config"], raw)
         except Exception as exc:  # the site applies the policy too
             log.warning("policy unavailable: %s", exc)
-    source_list, defaults = sources.load_sources_data(lists)
+    source_list, defaults = sources.load_sources_data(lists, relevance=raw.get("relevance") if policy is not None else None)
     defaults = dict(defaults, max_items_per_source=int(os.environ.get("AW_BACKFILL_PER_SOURCE", "100")))
     plan_list = plan(source_list, floor, today)
     log.info("backfill %s → %s: %d source runs (opportunities skipped)", floor, today, len(plan_list))

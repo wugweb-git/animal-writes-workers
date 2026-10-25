@@ -69,6 +69,10 @@ def has_term(hay: str, term: str) -> bool:
     t = term.strip().lower()
     if not t:
         return False
+    if t.endswith("*"):  # a prefix ("steriliz*"): the shared matcher, as on the site (aw_has_term)
+        from . import matcher
+
+        return matcher.matches(hay, t)
     if re.fullmatch(r"[a-z0-9 \-'’]+", t):  # Latin terms: whole words only, plural allowed ("hen" no longer matches "when")
         return re.search(r"(?<![a-z0-9])" + re.escape(t) + r"(?:s|es)?(?![a-z0-9])", hay) is not None
     return t in hay  # other scripts (Hindi etc.) have no word boundaries

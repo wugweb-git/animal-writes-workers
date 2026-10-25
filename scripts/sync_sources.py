@@ -12,7 +12,7 @@ from pathlib import Path
 import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from aw_workers import counts, ingest  # noqa: E402
+from aw_workers import counts, ingest, sources  # noqa: E402
 
 HEADER = ("# Sources for the Animal Writes sourcing workers. COPIED FROM THE SITE (Settings → Sourcing) by\n"
           "# .github/workflows/sources-sync.yml while \"Workers use these lists\" is on: edit the lists on the site, not here.\n"
@@ -21,7 +21,9 @@ HEADER = ("# Sources for the Animal Writes sourcing workers. COPIED FROM THE SIT
 
 def main() -> int:
     client = ingest.Client(os.environ["WP_BASE_URL"], os.environ["WP_INGEST_USER"], os.environ["WP_INGEST_APP_PASSWORD"])
-    config = client.policy().get("config")
+    raw = client.policy()
+    # The new blocks (sources_v2, category_names, match, schema) may come beside `config`: keep them in the copy too.
+    config = sources.with_v2_blocks(raw["config"], raw) if isinstance(raw.get("config"), dict) else raw.get("config")
     if not isinstance(config, dict) or not config.get("sources"):
         print("unchanged (Workers use these lists is off: sources.yaml stays as it is)")
         counts.write(changed=0, lists="yaml")

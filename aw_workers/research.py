@@ -344,7 +344,7 @@ def main() -> int:
         try:  # the site's category list, so each paper gets categories like News does
             raw = client.policy()
             if isinstance(raw.get("config"), dict) and raw["config"].get("sources"):
-                sources.load_sources_data(raw["config"])
+                sources.load_sources_data(sources.with_v2_blocks(raw["config"], raw), relevance=raw.get("relevance"))
         except Exception as exc:
             log.warning("policy unavailable: %s", exc)
     backends = summarise.backends_from_env(os.environ, ledger={})

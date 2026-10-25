@@ -406,6 +406,7 @@ def main() -> int:
 
     # Sourcing policy from WP Admin. Live runs need it reachable; a dry run uses it when credentials exist.
     policy = None
+    raw: dict = {}
     lists_from = "yaml"
     policy_client = client
     if policy_client is None and all(os.environ.get(k) for k in ("WP_BASE_URL", "WP_INGEST_USER", "WP_INGEST_APP_PASSWORD")):
@@ -418,26 +419,28 @@ def main() -> int:
             # The lists (feeds, Library and opportunity sources, categories, press queries) come from Settings → Sourcing
             # once "Workers use these lists" is on there; otherwise, or if the site is unreachable, from sources.yaml.
             if isinstance(raw.get("config"), dict) and raw["config"].get("sources"):
-                lists = raw["config"]
+                lists = sources.with_v2_blocks(raw["config"], raw)
                 lists_from = "site"
-                log.info("lists: from the site (%d sources)", len(lists["sources"]))
+                log.info("lists: from the site (%d sources%s)", len(lists["sources"]),
+                         ", sources_v2" if sources.v2_sources(lists) is not None else "")
             else:
                 log.info("lists: from sources.yaml")
-            relay.configure(policy_client, raw.get("relay_hosts"))
-            if raw.get("relay_hosts"):
-                log.info("relay hosts (fetched through the site on 403): %s", ", ".join(raw["relay_hosts"]))
+            hosts = sources.relay_hosts(lists, raw.get("relay_hosts"))
+            relay.configure(policy_client, hosts)
+            if hosts:
+                log.info("relay hosts (fetched through the site on 403): %s", ", ".join(hosts))
         except ingest.AuthError as exc:
             log.error("AUTH FAILURE, stopping: %s", exc)
             print(f"::error::Policy authentication failed: {exc}")
             return 3
         except Exception as exc:  # the site enforces the policy too, so carry on without the pre-filter
             log.warning("policy unavailable, relying on the site to enforce it: %s", exc)
-    source_list, defaults = sources.load_sources_data(lists)
+    source_list, defaults = sources.load_sources_data(lists, relevance=(raw or {}).get("relevance"))
     source_list = keyword_searches(source_list, lists)
     # Opportunities are not fetched (owner, 9 Oct 2026). AW_FETCH_OPPORTUNITIES=1 would turn them back on.
     if not truthy(os.environ.get("AW_FETCH_OPPORTUNITIES"), default=False):
         source_list = [s for s in source_list if s.type != "opportunity"]
-    gate = relevance.Gate.from_site(summariser, client or policy_client, dry_run=dry_run)
+    gate = relevance.Gate.from_site(summariser, client or policy_client, dry_run=dry_run, fallback=lists.get("category_names"))
     summary_rules.use(client or policy_client)  # Settings → Sourcing → Summary rules; the defaults when unreachable
 
     def checkpoint():  # live runs keep their progress item by item (a run cut short no longer starts over)

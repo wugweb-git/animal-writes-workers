@@ -33,10 +33,13 @@ BATCH = 50  # rejections per request to the Rejected log
 CACHE_FILE = Path(os.environ.get("AW_RELEVANCE_CACHE", ".state/relevance.json"))
 UNAVAILABLE = "classifier unavailable"
 
-# The site's Categories (wp term list category, 15 Oct 2026); the site's own list replaces this when it is reachable.
+# The site's Categories (wp term list category, 25 Oct 2026). Last resort only: the site's own list is used when it is
+# reachable, and sources.yaml's `category_names` (copied from the site by Sources sync) when it is not
+# (fallback_categories). tests/test_relevance.py checks this list against sources.yaml.
 CATEGORIES = {
     "adoption": "Adoption",
     "animal-birth-control": "Animal Birth Control",
+    "animal-experimentation": "Animal Experimentation",
     "transport-slaughter": "Animal Transport and Slaughter",
     "birds": "Birds",
     "campaigns-civic-action": "Campaigns and Civic Action",
@@ -54,6 +57,29 @@ CATEGORIES = {
     "veterinary-care": "Veterinary Care",
     "wildlife": "Wildlife",
 }
+
+def fallback_categories(path: str | Path | None = None) -> dict[str, str]:
+    """Categories for when the site cannot be reached: `category_names` in sources.yaml (slug => name, copied from the
+    site), else the yaml's category slugs with the built-in names, else the built-in list. The built-in list alone went
+    stale (18 categories dated 15 Oct; the site has had 19 since Animal Experimentation was added)."""
+    import yaml
+
+    path = Path(path or os.environ.get("AW_SOURCES", "sources.yaml"))
+    try:
+        data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    except (OSError, ValueError, yaml.YAMLError) as exc:
+        log.info("sources.yaml unreadable for the category fallback (%s): built-in categories", exc)
+        return dict(CATEGORIES)
+    if not isinstance(data, dict):
+        return dict(CATEGORIES)
+    names = data.get("category_names")
+    if isinstance(names, dict) and names:
+        return {str(k): str(v) for k, v in names.items() if str(k).strip()}
+    slugs = [str(k) for k in (data.get("categories") or {})]
+    if slugs:
+        return {k: CATEGORIES.get(k) or k.replace("-", " ").title() for k in slugs}
+    return dict(CATEGORIES)
+
 
 # Issuers the site already knows (issuers.php slugs) that count as a known body.
 KNOWN_ISSUER_SLUGS = {
@@ -206,7 +232,7 @@ class Gate:
         self.client = client
         self.recent = list(recent or [])  # News titles from the last days; passed items are added during the run
         self.recent_ids: dict[str, int] = {}  # title -> site ID, for adding a same-event report to the first story
-        self.categories = dict(categories or CATEGORIES)
+        self.categories = dict(categories or fallback_categories())
         self.directory = {norm_name(n) for n in (directory or []) if norm_name(n)}
         self.cache = cache if cache is not None else {}
         self.dry_run = dry_run
@@ -216,8 +242,10 @@ class Gate:
         atexit.register(self.flush)  # every pipeline (run, backfill, submit, research, press) sends what is left at exit
 
     @classmethod
-    def from_site(cls, summariser, client, *, dry_run: bool = False, cache_file: Path = CACHE_FILE) -> "Gate":
-        """Categories and Directory names from the site when reachable; the built-in list otherwise."""
+    def from_site(cls, summariser, client, *, dry_run: bool = False, cache_file: Path = CACHE_FILE,
+                  fallback: dict | None = None) -> "Gate":
+        """Categories and Directory names from the site when reachable; otherwise `fallback` (the `category_names` of
+        the lists this run read), then sources.yaml's, then the built-in list."""
         cats, directory, recent, ids = None, None, [], {}
         if client is not None and hasattr(client, "relevance_config"):
             try:
@@ -230,6 +258,8 @@ class Gate:
                        if isinstance(r, dict) and r.get("title") and r.get("id")}
             except Exception as exc:
                 log.warning("relevance config unavailable, using the built-in categories: %s", exc)
+        if not cats and isinstance(fallback, dict) and fallback:
+            cats = {str(k): str(v) for k, v in fallback.items()}
         gate = cls(summariser, client=client, categories=cats, directory=directory, cache=load_cache(cache_file), dry_run=dry_run, recent=recent)
         gate.recent_ids = ids
         return gate
