@@ -3,9 +3,16 @@
 The rules live on the site (Settings → Sourcing → Summary rules, option aw_summary_rules) and are served at
 aw/v1/summary-rules. Every summary writer here builds its prompt and its checks from them: new summaries
 (summarise.py), same-story rewrites (merge.py) and the clean-up tools that use them (fold_existing.py). When the site
-cannot be reached, the same defaults are used (summary_rules.json, a copy of the site's data/summary-rules-default.json).
+cannot be reached, summary_rules.json is used: until phase 3 a copy of the site's data/summary-rules-default.json, from
+phase 3 the site's rules in force, copied by Sources sync (for_file). Tests read a frozen copy
+(tests/fixtures/summary_rules_defaults.json, conftest.py), so the owner's edits never break them.
 
 Sections: news (News), library (Library: court orders, Acts, Rules, circulars, releases), research (Resources research).
+From the sourcing restructure's phase 3 (owner, 25 Oct 2026) the site keeps one rule per section, keyed by post type,
+and sends them as `by_type` beside the v1 `sections`: {"aw_news": {..., "alias": "news"}, "aw_legal": {..., "alias":
+"library"}, "post": {..., "alias": "research"}, "aw_campaign": {..., "inherit": "aw_news"}, ...}. An item's rule is the
+one for its post type (section_for); a section that inherits uses the rule it inherits. Without `by_type` the v1 map
+(SECTION_OF_TYPE) applies, as before.
 A summary is never shorter than the page's search description: each section's minimum is well above the 155 characters
 of the description, which is the summary's lead sentence (titles.php in aw-seo-extras).
 """
@@ -18,6 +25,8 @@ import logging
 import re
 from pathlib import Path
 
+from . import sections as sections_mod
+
 log = logging.getLogger("aw_workers.summary_rules")
 
 DEFAULTS: dict = json.loads((Path(__file__).with_name("summary_rules.json")).read_text(encoding="utf-8"))
@@ -28,6 +37,30 @@ NO_LONGER_RULES = frozenset({"min_sentences", "max_sentences"})
 
 SECTION_OF_TYPE = {"news": "news", "legal": "library", "research": "research",
                    "aw_news": "news", "aw_legal": "library", "post": "research"}
+RULE_FIELDS = ("label", "min_words", "max_words", "structure", "attribution")
+
+
+def _by_type(site_bt) -> dict:
+    """The site's rules per post type, cleaned: word counts as numbers, sentence counts dropped; `alias` (the v1 section
+    name) and `inherit` (the post type whose rule applies) kept."""
+    out: dict = {}
+    if not isinstance(site_bt, dict):
+        return out
+    for pt, rule in site_bt.items():
+        if not isinstance(rule, dict):
+            continue
+        r = {}
+        for f, val in rule.items():
+            if f in NO_LONGER_RULES:
+                continue
+            if f in ("min_words", "max_words"):
+                try:
+                    val = int(val)
+                except (TypeError, ValueError):
+                    continue
+            r[f] = val
+        out[str(pt)] = r
+    return out
 
 
 def merged(site: dict | None) -> dict:
@@ -49,8 +82,21 @@ def merged(site: dict | None) -> dict:
                             except (TypeError, ValueError):
                                 continue
                         base[f] = val
+        elif k == "by_type":
+            out["by_type"] = _by_type(v)
         elif k in DEFAULTS and type(v) is type(DEFAULTS[k]) and v not in ("", []):
             out[k] = v
+    # A rule by post type is the item's rule: an aliased one (aw_news = news) sets its v1 section; one of its own (a
+    # section added on the site that no longer inherits) becomes a section of its own, named by its post type.
+    for pt, rule in (out.get("by_type") or {}).items():
+        if rule.get("inherit"):
+            continue
+        name = rule.get("alias") if rule.get("alias") in out["sections"] else pt
+        base = out["sections"].setdefault(name, {})
+        base.update({f: rule[f] for f in RULE_FIELDS if f in rule})
+        base.setdefault("label", pt)
+        for f, d in (("min_words", 0), ("max_words", 10**6), ("structure", ""), ("attribution", "")):
+            base.setdefault(f, d)
     for sec in out["sections"].values():  # never a minimum above the maximum
         sec["min_words"] = min(int(sec.get("min_words", 0)), int(sec.get("max_words", 10**6)))
     return out
@@ -79,8 +125,31 @@ def reset() -> None:
     _current = None
 
 
-def section_for(kind: str) -> str:
-    return SECTION_OF_TYPE.get(kind or "", "news")
+def section_for(kind: str, rules: dict | None = None) -> str:
+    """The rule set an item of this type follows: its post type's rule when the site sends rules by post type (an
+    inheriting section follows the rule it inherits), else the v1 map. Returns a key of rules["sections"]."""
+    rules = rules or current()
+    bt = rules.get("by_type") or {}
+    pt = sections_mod.post_type_for(kind or "")
+    seen = set()
+    while pt in bt and bt[pt].get("inherit") and pt not in seen:  # a section that inherits: the rule it inherits
+        seen.add(pt)
+        pt = str(bt[pt]["inherit"])
+    if pt in bt:
+        alias = bt[pt].get("alias")
+        if alias in rules["sections"]:
+            return alias
+        if pt in rules["sections"]:
+            return pt
+    return SECTION_OF_TYPE.get(kind or "", SECTION_OF_TYPE.get(pt, "news"))
+
+
+def for_file(site: dict | None) -> dict:
+    """The rules as summary_rules.json keeps them (Sources sync copies the site's rules there from phase 3): the site's
+    rules over the defaults, the way the workers read them."""
+    out = merged(site)
+    out["version"] = (site or {}).get("version") or out.get("version")
+    return out
 
 
 # ---- text measures ----
