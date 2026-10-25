@@ -106,6 +106,8 @@ def set_sections(data, v2=None) -> None:
     `sections` dict (post type => {categories, tags})."""
     if v2 is not None and sections_mod.use(v2):
         data = sections_mod.allowed(v2)
+    elif v2 is None and sections_mod.active():
+        return  # sections_v2 is in force: the v1 dict (relevance-config) never replaces its lists
     if isinstance(data, dict) and data:
         SECTIONS.clear()
         SECTIONS.update({str(k): v for k, v in data.items() if isinstance(v, dict)})

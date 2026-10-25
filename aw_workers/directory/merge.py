@@ -39,16 +39,16 @@ def rule_from_constants(field: str) -> dict:
             "ai": field in AI_FIELDS, "invite": field in INVITE_FIELDS, "social": field in SOCIAL_FIELDS}
 
 
-def _clean_rule(raw) -> dict:
-    """A rule from the site, each value checked; a missing or unusable value falls back to the default."""
-    r = dict(DEFAULT_RULE)
+def _clean_rule(field: str, raw) -> dict:
+    """A rule from the site, each value checked; a missing or unusable value falls back to the field's constants."""
+    r = rule_from_constants(field)
     if not isinstance(raw, dict):
         return r
     for k in ("on", "ai", "invite", "social"):
         if isinstance(raw.get(k), bool):
             r[k] = raw[k]
     try:
-        r["multi"] = max(0, int(raw.get("multi", 0)))
+        r["multi"] = max(0, int(raw.get("multi", r["multi"])))
     except (TypeError, ValueError):
         pass
     if isinstance(raw.get("official"), str):
@@ -83,7 +83,7 @@ def rules_from_config(cfg: dict | None) -> Rules:
     priority = [str(x) for x in pr if str(x).strip()] if isinstance(pr, list) and pr else None
     if not isinstance(fr, dict) or not fr:
         return Rules(None, priority, from_site=priority is not None)
-    return Rules({str(k): _clean_rule(v) for k, v in fr.items()}, priority, from_site=True)
+    return Rules({str(k): _clean_rule(str(k), v) for k, v in fr.items()}, priority, from_site=True)
 
 
 def use_config(cfg: dict | None) -> Rules:
@@ -130,7 +130,7 @@ def proposals(ctx, rules: Rules | None = None) -> tuple[list[dict], list[str]]:
             continue  # switched off in Rules → Directory enrichment: never proposed
         store, check = d.get(STORE, []), d.get(CHECK, [])
         if rule["sources"]:
-            store = [f for f in store if f.source_key in rule["sources"]]  # only the sources allowed to fill it
+            store = [f for f in store if f.source_key in rule["sources"] or f.source_key == "claim"]  # the organisation's own claim always counts
         if not store:
             if check and rule["invite"] and not (ctx.listing.get("now") or {}).get(field):
                 invite.append(field)  # only Google has it

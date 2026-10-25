@@ -132,8 +132,9 @@ def test_edited_rules_take_effect():
 def test_unusable_site_rules_fall_back_value_by_value():
     r = merge.rules_from_config({"field_rules": {"phone": {"multi": "two", "ai": "yes", "on": True}, "email": "x"},
                                  "priority": "not a list"})
-    assert r.rule("phone")["multi"] == 0 and r.rule("phone")["ai"] is False  # bad values: the default rule's
-    assert r.rule("email") == merge.DEFAULT_RULE
+    assert r.rule("phone")["multi"] == 2 and r.rule("phone")["ai"] is False  # bad values: the field's constants
+    assert r.rule("email") == merge.rule_from_constants("email")
+    assert merge.rules_from_config({"field_rules": {"address": {"on": True}}}).rule("address")["official"] == "awbi"
     assert r.priority == merge.PRIORITY
 
 
@@ -269,3 +270,31 @@ def test_sync_writes_summary_rules_and_directory_schema(tmp_path, monkeypatch):
     assert rules["sections"]["library"]["min_words"] == 160 and rules["by_type"]["post"]["alias"] == "research"
     assert sync.sync_directory_schema(FakeClient({}, {"sources": {}})) is None  # a site before phase 3
     assert sync.sync_summary_rules(FakeClient({}, {})) is None
+
+
+def test_claim_always_counts_and_v2_sections_are_not_replaced_by_v1():
+    rules = copy.deepcopy(SEED["field_rules"])
+    rules["email"]["sources"] = ["website"]
+    merge.use_config({"field_rules": rules, "priority": SEED["priority"]})
+    c = ctx_with(Fact("email", "own@x.org", "claim", "C"), Fact("email", "o@x.org", "osm", "O"))
+    assert [(p["value"], p["confidence"]) for p in merge.proposals(c)[0]] == [("own@x.org", "high")]
+    lists = copy.deepcopy(YAML)
+    lists["sections_v2"] = [{"post_type": "aw_news", "worker_type": "news", "categories": ["wildlife"], "tags": []}]
+    sources.load_sources_data(lists)
+    sources.set_sections({"aw_news": {"categories": ["birds"], "tags": []}})  # relevance-config's v1 dict, later in the run
+    assert sources.allowed_categories("news") == ["wildlife"]
+
+
+def test_a_listed_section_without_worker_type_gets_nothing_and_bad_alias_is_ignored():
+    sections.use([{"post_type": "aw_opportunity", "worker_type": ""}])
+    assert sections.post_type_for("opportunity") == "opportunity" and sections.post_type_for("news") == "aw_news"
+    r = summary_rules.merged({"sections": copy.deepcopy(LIVE), "by_type": {"aw_news": {"alias": ["news"], "max_words": 150}}})
+    assert "alias" not in r["by_type"]["aw_news"] and r["sections"]["aw_news"]["max_words"] == 150
+    stale = summary_rules.for_file(site_rules(aw_campaign={"label": "C", "min_words": 1, "max_words": 9}))
+    old = summary_rules.DEFAULTS
+    try:
+        summary_rules.DEFAULTS = stale  # a file an earlier sync wrote
+        again = summary_rules.merged({"sections": copy.deepcopy(LIVE)})
+        assert "by_type" not in again and "aw_campaign" not in again["sections"]
+    finally:
+        summary_rules.DEFAULTS = old

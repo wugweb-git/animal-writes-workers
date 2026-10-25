@@ -39,10 +39,13 @@ def use(v2) -> bool:
     global _v2
     good = valid(v2)
     _types.clear()
-    _types.update(FALLBACK)
     _v2 = []
     if good is None:
+        _types.update(FALLBACK)
         return False
+    listed = {str(s["post_type"]) for s in good}
+    # The code map only for a post type the site does not list at all; a listed section with no worker_type gets nothing.
+    _types.update({wt: pt for wt, pt in FALLBACK.items() if pt not in listed})
     for s in good:
         pt = str(s["post_type"])
         wt = str(s.get("worker_type") or "").strip()
@@ -50,6 +53,11 @@ def use(v2) -> bool:
             _types[wt] = pt
     _v2 = good
     return True
+
+
+def active() -> bool:
+    """Whether the site's sections_v2 is in force (then the v1 `sections` dict never replaces its lists)."""
+    return bool(_v2)
 
 
 def post_type_for(kind: str) -> str:
@@ -65,10 +73,3 @@ def allowed(v2) -> dict[str, dict]:
         out[str(s["post_type"])] = {"categories": list(s.get("categories") or []), "tags": list(s.get("tags") or [])}
     return out
 
-
-def summary_type(post_type: str) -> str:
-    """The post type whose summary rule a section follows (its own, unless the site says otherwise)."""
-    for s in _v2:
-        if s.get("post_type") == post_type:
-            return str(s.get("summary") or post_type)
-    return post_type

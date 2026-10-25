@@ -41,6 +41,7 @@ jobs:
       - name: Copy the site's lists, summary rules and Directory schema
         id: sync
         run: |
+          set -o pipefail
           python scripts/sync_sources.py | tee sync.log
           echo "result=$(tail -1 sync.log)" >> "$GITHUB_OUTPUT"
       - name: Commit the copies

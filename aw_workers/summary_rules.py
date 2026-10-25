@@ -38,6 +38,7 @@ NO_LONGER_RULES = frozenset({"min_sentences", "max_sentences"})
 SECTION_OF_TYPE = {"news": "news", "legal": "library", "research": "research",
                    "aw_news": "news", "aw_legal": "library", "post": "research"}
 RULE_FIELDS = ("label", "min_words", "max_words", "structure", "attribution")
+V1_SECTIONS = ("news", "library", "research")
 
 
 def _by_type(site_bt) -> dict:
@@ -51,8 +52,8 @@ def _by_type(site_bt) -> dict:
             continue
         r = {}
         for f, val in rule.items():
-            if f in NO_LONGER_RULES:
-                continue
+            if f in NO_LONGER_RULES or (f in ("alias", "inherit") and not isinstance(val, str)):
+                continue  # alias and inherit are names; anything else is ignored
             if f in ("min_words", "max_words"):
                 try:
                     val = int(val)
@@ -68,6 +69,9 @@ def merged(site: dict | None) -> dict:
     out = copy.deepcopy(DEFAULTS)
     if not isinstance(site, dict):
         return out
+    # The rules come from the site: what an earlier sync wrote into summary_rules.json by post type never stays on.
+    out.pop("by_type", None)
+    out["sections"] = {k: v for k, v in out["sections"].items() if k in V1_SECTIONS}
     for k, v in site.items():
         if k == "sections" and isinstance(v, dict):
             for name, sec in v.items():
