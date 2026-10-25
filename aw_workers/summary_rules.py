@@ -23,6 +23,9 @@ log = logging.getLogger("aw_workers.summary_rules")
 DEFAULTS: dict = json.loads((Path(__file__).with_name("summary_rules.json")).read_text(encoding="utf-8"))
 _current: dict | None = None
 
+# Summaries are limited by word counts only (owner, 25 Oct 2026): no sentence minimum or maximum.
+NO_LONGER_RULES = frozenset({"min_sentences", "max_sentences"})
+
 SECTION_OF_TYPE = {"news": "news", "legal": "library", "research": "research",
                    "aw_news": "news", "aw_legal": "library", "post": "research"}
 
@@ -38,7 +41,9 @@ def merged(site: dict | None) -> dict:
                 if isinstance(sec, dict):
                     base = out["sections"].setdefault(name, {})
                     for f, val in sec.items():
-                        if f in ("min_words", "max_words", "min_sentences", "max_sentences"):
+                        if f in NO_LONGER_RULES:
+                            continue  # sentence counts are no rule (owner, 25 Oct 2026): ignored if the site still sends them
+                        if f in ("min_words", "max_words"):
                             try:
                                 val = int(val)
                             except (TypeError, ValueError):
@@ -146,22 +151,19 @@ SHORT = "short:"  # problems that only say "too short": the fallback (re-read th
 
 
 def problems(summary: str, section: str, source_text: str = "", rules: dict | None = None,
-             publisher: str = "") -> list[str]:
+             publisher: str = "", context: str = "") -> list[str]:
     """Why `summary` breaks the rules ([] = it follows them). A problem starting with SHORT only says it is below a
-    minimum; those are never fixed by padding."""
+    minimum; those are never fixed by padding. `context`: the item's title (what the story is about), used to tell a
+    publisher that is the story's actor from one that only reported it; empty = the opening of `source_text`."""
     rules = rules or current()
     sec = rules["sections"].get(section) or rules["sections"]["news"]
     out: list[str] = []
     text = summary or ""
-    n_words, n_sent = len(words(text)), len(sentences(text))
+    n_words = len(words(text))
     if n_words < sec["min_words"]:
         out.append(f"{SHORT} needs at least {sec['min_words']} words, got {n_words} (never pad: only facts from the source)")
     if n_words > sec["max_words"]:
         out.append(f"over {sec['max_words']} words ({n_words})")
-    if n_sent < sec["min_sentences"]:
-        out.append(f"{SHORT} needs at least {sec['min_sentences']} sentences, got {n_sent}")
-    if n_sent > sec["max_sentences"]:
-        out.append(f"needs at most {sec['max_sentences']} sentences, got {n_sent}")
     body = text.strip().split("\n")[0].strip()  # Library summaries carry the legal note on a line of their own
     if body and not ends_sentence(body):
         out.append("ends mid-sentence (the answer was cut off): write complete sentences only")
@@ -194,14 +196,31 @@ def problems(summary: str, section: str, source_text: str = "", rules: dict | No
         out.append("plain text only: no link, URL, HTML, heading, list, bold or line break")
     if re.search(r"\b(click here|read more|here\s*:)", low):
         out.append("no 'click here' or 'read more': actions are buttons on the page")
-    if publisher and publisher.strip() and section == "news":
-        pub = re.escape(publisher.strip())
-        if re.search(r"according to\s+(?:a |the )?(?:reports? (?:by|in)\s+)?" + pub + r"|" + pub
-                     + r"\s+(?:said|says|reported|reports|stated)", text, re.I):
-            out.append("names the publisher as the source of the story (the source row credits it)")
+    if publisher and publisher.strip() and section == "news" and names_publisher_as_source(
+            text, publisher, context or (source_text or "")[:600]):
+        out.append("names the publisher as the source of the story (the source row credits it)")
     out += searched_word_problems(text, (source_text or "")[:400], rules)  # the title and the opening: what it is about
     out += entity_problems(text, rules)
     return out
+
+
+def names_publisher_as_source(summary: str, publisher: str, context: str = "") -> bool:
+    """Whether the summary credits the publisher as the source of the story (owner, 15 Oct 2026: the source row credits
+    it). As the reporter ("according to a report by X", "X reported") always; as the one who said it ("X said",
+    "according to X") only when X is not itself the story's actor (owner, 25 Oct 2026: PETA India rescued the goat and
+    PETA India stated why; that is the story, not a credit). X is the actor when the title (or the source's opening)
+    names it, or when the summary names it doing something beyond saying or reporting."""
+    pub = re.escape(publisher.strip()).replace(r"\ ", r"\s+")
+    reporter = re.compile(r"according to\s+(?:a |the )?reports? (?:by|in|from)\s+(?:the\s+)?" + pub + r"|" + pub
+                          + r"\s+(?:reported|reports|has reported)\b|" + pub + r"['’]s?\s+report\b", re.I)
+    if reporter.search(summary or ""):
+        return True
+    said = re.compile(r"according to\s+(?:the\s+)?" + pub + r"|" + pub + r"\s+(?:said|says|stated|states|noted|added)\b", re.I)
+    if not said.search(summary or ""):
+        return False
+    named = re.compile(r"(?<![\w-])" + pub + r"(?![\w-])", re.I)
+    actor = bool(named.search(context or "")) or bool(named.search(said.sub(" ", summary or "")))
+    return not actor
 
 
 def searched_word_problems(summary: str, source_text: str, rules: dict | None = None) -> list[str]:
@@ -257,7 +276,7 @@ def rules_block(section: str, rules: dict | None = None, source_text: str = "") 
     rules = rules or current()
     sec = rules["sections"].get(section) or rules["sections"]["news"]
     lines = [
-        f"Length: {sec['min_words']} to {sec['max_words']} words, {sec['min_sentences']} to {sec['max_sentences']} sentences. "
+        f"Length: {sec['min_words']} to {sec['max_words']} words. "
         f"The lead sentence about {rules.get('lead_max_words', 30)} words or fewer.",
         "Structure: " + sec.get("structure", ""),
         "Attribution: " + sec.get("attribution", ""),

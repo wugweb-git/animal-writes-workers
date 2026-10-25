@@ -52,7 +52,6 @@ def test_good_summary_passes():
     "text,problem",
     [
         ("One sentence only.", "short: needs at least 45 words"),
-        ("One. Two. Three. Four. Five. Six.", "at most 5 sentences"),
         (GOOD + " " + " ".join(["word"] * 50) + ".", "over 100 words"),
         (GOOD + ' Officials said "this is a very long quoted statement that goes on and on well past the twenty-five '
          'word limit we set for any quote in a summary".', "quote longer than 25"),

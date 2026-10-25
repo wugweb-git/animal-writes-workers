@@ -61,35 +61,138 @@ _OPENERS = set("""a an the it its he she they his her their this that these thos
 after before during while when according also both each officials authorities police residents locals""".split())
 
 
+# Ordinary words that open a sentence (25 Oct 2026: "If", "Additional", "Because", "Me" were refused as names when the
+# source text did not happen to contain them). At the start of a sentence a capital letter says nothing; these and the
+# word forms below are never names.
+_ORDINARY = _OPENERS | set("""i me my we our us you your him them it's if because although though however despite since
+as until unless whether where what which who whom whose why how once so yet but and or nor not no all some many most
+more several such other another every any either neither only even just still then now later earlier today yesterday
+tomorrow meanwhile further furthermore moreover besides instead nearly almost around about above below under over into
+onto upon through without within against between among along across beyond following given apart thus hence therefore
+overall finally first second third last next new former earlier recent previous each few much less least most own same
+whereas otherwise accordingly additionally similarly separately currently initially subsequently eventually""".split())
+# Word forms that are never names (Additional, Designated, Interested, Issued, Compliance, Failure, Rehabilitation …).
+_ORDINARY_FORM = re.compile(r"(?:tion|sion|ment|ness|ance|ence|ally|ional|ity|ated|ested|ified|ised|ized|ued|ious|ous|ive|"
+                            r"ful|less|able|ible|ure)$")
+# Linking words inside a long name ("Animal Welfare Board of India"): not counted in its initials.
+_NAME_LINKS = {"of", "and", "for", "the", "to", "on", "in", "&"}
+
+
 def _norm_num(s: str) -> str:
-    return s.replace(",", "").rstrip(".")
+    """'1,200' = '1200', '9.' = '9', '09' = '9' (a leading zero is not a different number: '09 October' = '9 Oct')."""
+    s = s.replace(",", "").rstrip(".")
+    whole, dot, frac = s.partition(".")
+    whole = whole.lstrip("0") or "0"
+    return whole + dot + frac
 
 
 def _numbers(text: str) -> set[str]:
-    return {_norm_num(n) for n in re.findall(r"\d[\d,.]*", text or "")}
+    """Numbers written in digits. A date written 09.10.2026 also gives 9, 10 and 2026 (its day, month and year). Digits
+    that are part of a name (News18, G20) are not: "citing News18" holds no 18."""
+    out = set()
+    for n in re.findall(r"(?<![A-Za-z\d])\d[\d,.]*", text or ""):
+        out.add(_norm_num(n))
+        if re.fullmatch(r"\d{1,2}\.\d{1,2}\.\d{2,4}\.?", n):
+            out.update(_norm_num(p) for p in n.rstrip(".").split("."))
+    return out
+
+
+def _number_forms(text: str) -> set[str]:
+    """Numbers in digits and in words ("four" = 4, "Seventeen" = 17): the same number however it is written."""
+    return _numbers(text) | summary_rules._word_numbers(text, source=True)
 
 
 def _tokens(text: str) -> set[str]:
     return set(re.findall(r"[\w'’-]+", (text or "").lower()))
 
 
+def _base(word: str) -> str:
+    """Lower case, one apostrophe, no possessive: "Corporation’s" = "corporation's" = "corporation"."""
+    w = word.lower().replace("’", "'").strip("'")
+    return w[:-2] if w.endswith("'s") else w
+
+
+def _acronyms(text: str) -> tuple[set[str], set[str]]:
+    """(acronyms written in `text`, the initials of the capitalised names in it): AWBI and Animal Welfare Board of
+    India are one name, whichever of the two the text uses."""
+    acr = {w.replace(".", "") for w in re.findall(r"\b(?:[A-Z]\.){2,}|\b[A-Z][A-Z&]{1,9}s?\b", text or "")}
+    acr = {a[:-1] if a.endswith("s") and a[:-1].isupper() else a for a in acr}
+    initials = set()
+    for run in _name_runs(text):
+        caps = [w for w in run if w.lower() not in _NAME_LINKS]
+        for i in range(len(caps)):
+            for j in range(i + 2, min(len(caps), i + 12) + 1):
+                initials.add("".join(w[0] for w in caps[i:j]).upper())
+    return acr, initials
+
+
+def _name_runs(text: str) -> list[list[str]]:
+    """Runs of capitalised words, linking words allowed inside ("Prevention of Cruelty to Animals")."""
+    runs, cur = [], []
+    for w in re.findall(r"[\w'’&-]+|[^\w\s]", text or ""):
+        if w[:1].isupper():
+            cur.append(re.sub(r"['’]s$", "", w))
+        elif w.lower() in _NAME_LINKS and cur:
+            cur.append(w)
+        else:
+            while cur and cur[-1].lower() in _NAME_LINKS:
+                cur.pop()
+            if cur:
+                runs.append(cur)
+            cur = []
+    while cur and cur[-1].lower() in _NAME_LINKS:
+        cur.pop()
+    if cur:
+        runs.append(cur)
+    return runs
+
+
+def _expanded(written: str, source_acronyms: set[str]) -> set[str]:
+    """Words of `written` that spell out an acronym of the source (the source says AWBI, the summary Animal Welfare
+    Board of India, as the rules require)."""
+    ok = set()
+    for run in _name_runs(written):
+        caps = [w for w in run if w.lower() not in _NAME_LINKS]
+        for i in range(len(caps)):
+            for j in range(i + 2, min(len(caps), i + 12) + 1):
+                if "".join(w[0] for w in caps[i:j]).upper() in source_acronyms:
+                    ok.update(_base(w) for w in caps[i:j])
+    return ok
+
+
 def _unsourced(written: str, source: str) -> list[str]:
-    """Numbers and capitalised words (names, places, bodies, months) in `written` that `source` does not contain."""
+    """Numbers and capitalised words (names, places, bodies, months) in `written` that `source` does not contain.
+
+    The same thing written another way is not unsourced (25 Oct 2026): a number in words or digits ("four" = 4,
+    "09" = 9), an acronym or its expansion (AWBI = Animal Welfare Board of India), a possessive with either apostrophe,
+    and an ordinary word that only has a capital because it opens a sentence ("If", "Additional")."""
     problems = []
-    missing = sorted(_numbers(written) - _numbers(source))
-    if missing:
-        problems.append("numbers not in the reports: " + ", ".join(missing))
-    have = _tokens(source)
+    src_nums = _number_forms(source)
+    missing = set(_numbers(written) - src_nums)
+    have = {_base(t) for t in _tokens(source)}
+    acr, initials = _acronyms(source)
+    expanded = _expanded(written, acr)
+    own_lower = {_base(t) for t in re.findall(r"[\w'’-]+", written or "") if t[:1].islower()}
     names = []
     for sentence in re.split(r"(?<=[.!?])\s+", written.strip()):
         for i, w in enumerate(re.findall(r"[\w'’-]+", sentence)):
             if not w[:1].isupper():
                 continue
-            low = w.lower()
-            if i == 0 and low in _OPENERS:
+            low = _base(w)
+            if low in have or low in expanded:
                 continue
-            if low not in have and low.rstrip("'’s") not in have:
-                names.append(w)
+            as_number = summary_rules._word_numbers(low)
+            if as_number:  # "Seventeen" opening a sentence: a number, checked as one (17 in the source)
+                missing |= as_number - src_nums
+                continue
+            bare = re.sub(r"['’]s$", "", w)
+            if len(bare) >= 2 and bare.isupper() and (bare in initials or bare.rstrip("S") in initials):
+                continue  # AWBI where the source spells out Animal Welfare Board of India
+            if i == 0 and (low in _ORDINARY or _ORDINARY_FORM.search(low) or low in own_lower):
+                continue
+            names.append(w)
+    if missing:
+        problems.insert(0, "numbers not in the reports: " + ", ".join(sorted(missing, key=lambda x: (len(x), x))))
     if names:
         problems.append("names not in the reports: " + ", ".join(dict.fromkeys(names)))
     return problems
@@ -121,7 +224,7 @@ def check_summary(summary: str, ours: str, title: str, text: str, publisher: str
     wrong = event_dates.pub_date_mentions(summary, pubs, f"{title}. {text}")
     if wrong:
         problems.append(event_dates.problem(wrong))
-    lost = sorted(_numbers(event_dates.without_pub_dates(ours, pubs)) - _numbers(summary))
+    lost = sorted(_numbers(event_dates.without_pub_dates(ours, pubs)) - _number_forms(summary))  # "four" keeps our 4
     if lost:
         problems.append("numbers from our summary left out: " + ", ".join(lost))
     found = summary_rules.problems(summary, section, f"{title}. {text}", rules, publisher=publisher)

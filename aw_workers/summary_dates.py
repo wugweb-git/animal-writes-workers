@@ -100,7 +100,22 @@ def read_page(url: str, session=None) -> dict:
     if len(text) < 200 and raw:  # paragraphs in <div>s (PIB: inside an ASP.NET <form>): the page's visible text
         page = re.sub(r"(?is)<(script|style|noscript|nav|header|footer|aside|select)\b.*?</\1>", " ", raw)
         text = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", page)).strip()[:20000]
-    return {"text": htmllib.unescape(text), "published": published, "status": status}
+    return {"text": fix_mojibake(htmllib.unescape(text)), "published": published, "status": status}
+
+
+_MOJIBAKE = re.compile(r"[\xc2-\xf4][\x80-\xbf]{1,3}")
+
+
+def fix_mojibake(text: str) -> str:
+    """UTF-8 read as Latin-1 (25 Oct 2026: a page without a charset gave "Corporationâ\x80\x99s" and "Adopt Meâ\x80\x94",
+    so "Corporation’s" and "Me" in the summary looked unsourced): each such run decoded again; anything else kept."""
+    def fix(m):
+        try:
+            return m.group(0).encode("latin-1").decode("utf-8")
+        except UnicodeError:
+            return m.group(0)
+
+    return _MOJIBAKE.sub(fix, text or "")
 
 
 def fetch_all(urls: list[str], cache_dir: Path, session=None) -> dict[str, dict]:
