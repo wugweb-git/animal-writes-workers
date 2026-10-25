@@ -250,17 +250,20 @@ def load_sources_data(data: dict, relevance: dict | None = None) -> tuple[list[S
     from the roles; without it, from the v1 lists."""
     kws = _keywords.from_data(data)
     KEYWORD_TABLE["on"] = kws is not None
+    # The keyword table's spellings may end in "*" (start of a word), which only word mode reads: the table always
+    # comes with `match: "word"`, and switches word mode on even if that key is missing.
+    matcher.set_mode(matcher.WORD if kws is not None else data.get("match"))
     CATEGORIES.clear()
     if kws is not None:
         CATEGORIES.update(_keywords.category_words(kws, slugs=list(data.get("category_names") or {})))
     else:
         CATEGORIES.update({k: [str(w) for w in v] for k, v in (data.get("categories") or {}).items()})
     set_sections(data.get("sections"))
-    matcher.set_mode(data.get("match"))
     TOPIC_TAGS.clear()
     TOPIC_TAGS.update({str(k): v for k, v in (data.get("topic_tags") or {}).items() if isinstance(v, dict)})
     sources = []
-    filter_words = list(data.get("filter_words") or data.get("keywords") or [])
+    filter_words = (_keywords.role_words(kws, "include") if kws is not None
+                    else list(data.get("filter_words") or data.get("keywords") or []))
     v2 = v2_sources(data)
     for s in v2 if v2 is not None else data.get("sources", []):
         # Settings → Sourcing switches (the site applies them too): a source switched off is not fetched; "Keyword

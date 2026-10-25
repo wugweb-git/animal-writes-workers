@@ -168,8 +168,10 @@ def test_a_hindi_keyword_with_a_sourcing_role_is_ignored():
     assert "पशु क्रूरता" not in policy.Policy.from_json(raw).strong
     assert "पशु क्रूरता" not in sources.CATEGORIES["cruelty-prosecution"]
     assert "पशु क्रूरता" not in keywords.press_config(lists)["queries"]
-    # a record without a language is not trusted either
-    assert keywords.from_data({"keywords_v2": [{**HINDI, "lang": ""}]}) == []
+    # a record without a language is not trusted either; a table with nothing usable leaves the v1 lists in force
+    assert keywords.from_data({"keywords_v2": [{**HINDI, "lang": ""}]}) is None
+    only_hindi = {**raw, "keywords": [copy.deepcopy(HINDI)], "config": {**raw["config"], "keywords_v2": [copy.deepcopy(HINDI)]}}
+    assert policy.Policy.from_json(only_hindi).strong == raw["relevance"]["strong"]
 
 
 # ---- press: queries from the Press role, no Brave ----
@@ -348,3 +350,70 @@ def test_sources_sync_copies_the_keyword_table(tmp_path, monkeypatch):
     data = yaml.safe_load((tmp_path / "sources.yaml").read_text(encoding="utf-8"))
     assert data["keywords_v2"] == raw["keywords"] and data["match"] == "word"
     assert data["keywords"] == raw["config"]["keywords"]  # the v1 Include words stay for old workers
+
+
+# ---- review follow-ups ----
+
+
+def _with(raw, label, fn):
+    for k in raw["keywords"]:
+        if k["label"] == label:
+            fn(k)
+    raw["config"]["keywords_v2"] = raw["keywords"]
+    return raw
+
+
+def test_a_plain_search_switched_off_is_not_fetched():
+    raw = _with(migrated(), "awbi", lambda k: k["searches"][0].update(on=False))
+    assert "gnews-kw-awbi" not in {s.id for s in searches(raw)}
+
+
+def test_a_whole_feed_search_with_the_keyword_check_switch_gets_the_include_words():
+    def switch(k):
+        k["searches"][0]["filter"] = True
+        k["searches"][0]["check"] = {"roles": [], "categories": []}
+    raw = _with(migrated(), "animal cruelty", switch)
+    got = {s.id: s for s in searches(raw)}["gnews-animal-cruelty"]
+    assert got.keywords == keywords.role_words(keywords.from_data(lists_of(raw)), "include")
+
+
+def test_a_duplicate_search_gives_its_categories_to_the_search_kept():
+    raw = migrated()
+    raw["keywords"].append({"id": 9002, "label": "stray dog feeding", "variants": [], "roles": ["search"], "lang": "en",
+                            "searches": [{"feed": "gnews-kw-stray-dog-2", "q": "stray dog"}],
+                            "categories": ["feeders-caregivers"], "sections": ["aw_news"]})
+    raw["config"]["keywords_v2"] = raw["keywords"]
+    got = {s.id: s for s in searches(raw)}
+    assert "gnews-kw-stray-dog-2" not in got
+    assert got["gnews-kw-stray-dog"].categories == ["community-dogs", "feeders-caregivers"]
+    assert sorted(gnews(got.values())) == sorted(gnews(searches(today())))
+
+
+def test_backfill_keeps_the_feeds_that_became_keywords():
+    from aw_workers import backfill
+
+    def plan_ids(raw):
+        lists = lists_of(raw)
+        src = sources.load_sources_data(lists)[0]
+        src += run.keyword_feeds(lists, {s.id for s in src})
+        return sorted({s.id for s in backfill.plan(src, date(2026, 9, 1), date(2026, 10, 25))})
+
+    assert plan_ids(migrated()) == plan_ids(today())
+    assert "gnews-lab-animal-rules@2026-10" in plan_ids(migrated())
+
+
+def test_the_keyword_table_reads_prefixes_even_without_the_match_key():
+    lists = lists_of(migrated())
+    del lists["match"]
+    sources.load_sources_data(lists)
+    assert matcher.word_mode()
+    src = sources.Source(id="x", name="X", kind="rss", type="news", url="u")
+    assert "animal-birth-control" in sources.categories_for(sources.Item(src, "Sterilization drive", "u", None))
+
+
+def test_filter_switch_sources_get_the_include_role_under_the_table():
+    lists = lists_of(migrated())
+    lists["sources_v2"] = [{"id": "a", "name": "A", "kind": "rss", "type": "news", "url": "https://a.example/feed",
+                            "filter": True, "check": {"roles": [], "categories": []}}]
+    got = sources.load_sources_data(lists)[0][0]
+    assert got.keywords == keywords.role_words(keywords.from_data(lists), "include") and "strays" in got.keywords

@@ -59,7 +59,7 @@ def _strs(value) -> list[str]:
 
 def from_data(data: dict | None) -> list[dict] | None:
     """The usable keywords: English records with at least one known role, each cleaned to the payload's shape. None when
-    the block is absent (v1 lists apply)."""
+    the block is absent, or when not one record in it is usable (then the v1 lists apply, rather than empty lists)."""
     block = raw_block(data)
     if block is None:
         return None
@@ -80,6 +80,9 @@ def from_data(data: dict | None) -> list[dict] | None:
             "categories": _strs(k.get("categories")), "sections": _strs(k.get("sections")),
             "queries": _strs(k.get("queries")),
         })
+    if not out:
+        _warn_once("the keyword table has %d record(s) and none is usable: reading the v1 lists", len(block))
+        return None
     return out
 
 

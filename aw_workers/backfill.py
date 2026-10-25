@@ -29,7 +29,7 @@ import requests
 
 from . import counts, ingest, relevance, sources, summarise, summary_rules
 from . import policy as policy_mod
-from .run import SEEN_FILE, default_enricher, load_seen, run, save_seen, truthy
+from .run import SEEN_FILE, default_enricher, keyword_feeds, load_seen, run, save_seen, truthy
 
 log = logging.getLogger("aw_workers.backfill")
 REPORT = Path("backfill-report.json")
@@ -180,6 +180,7 @@ def main() -> int:
         except Exception as exc:  # the site applies the policy too
             log.warning("policy unavailable: %s", exc)
     source_list, defaults = sources.load_sources_data(lists, relevance=raw.get("relevance") if policy is not None else None)
+    source_list += keyword_feeds(lists, {s.id for s in source_list})  # phase 2: the Google News feeds that became keywords
     defaults = dict(defaults, max_items_per_source=int(os.environ.get("AW_BACKFILL_PER_SOURCE", "100")))
     plan_list = plan(source_list, floor, today)
     log.info("backfill %s → %s: %d source runs (opportunities skipped)", floor, today, len(plan_list))
