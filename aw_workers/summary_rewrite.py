@@ -34,7 +34,7 @@ from datetime import date, datetime
 
 import requests
 
-from . import counts, coverage, event_dates, ingest, merge, summarise, summary_dates, summary_rules
+from . import counts, coverage, event_dates, firecrawl, ingest, merge, summarise, summary_dates, summary_rules
 from .summarise import note_failure, note_success, usable, wait_for_cooldown
 
 log = logging.getLogger("aw_workers.summary_rewrite")
@@ -164,13 +164,36 @@ def glyph_codes(text: str) -> bool:
     return codes >= 20 and codes * 4 >= len(summary_rules.words(text))
 
 
-def read_source(url: str, session=None) -> dict:
-    """{text, published, status} of the source: a page, a PDF, or a Google News link resolved to its publisher."""
-    from .enrich import UA, resolve_google_news
+THIN_CHARS = 1500  # a source read with less text than this is read again through Firecrawl
+
+
+def read_source(url: str, session=None, deep: bool = True) -> dict:
+    """{text, published, status} of the source: a page, a PDF, or a Google News link resolved to its publisher.
+
+    When the plain read is refused (403 from PETA India's pages), fails, is thin or is a PDF without a text layer, the
+    source is read again through Firecrawl (owner, 25 Oct 2026: "utilise firecrawl key too"), within the run's cap
+    (FIRECRAWL_MAX_PER_RUN; Firecrawl stops for the run on 401/402/429). The longer text is used."""
+    from .enrich import resolve_google_news
 
     if not url:
         return {"text": "", "published": [], "status": "no url"}
     url = resolve_google_news(url)
+    page = _plain_read(url, session)
+    if deep and needs_deep_read(page):
+        more = firecrawl.page_text(url, limit=20000)
+        if len(more) > len(page.get("text") or ""):
+            return {"text": more, "published": page.get("published") or [], "status": f"firecrawl ({page.get('status')})"}
+    return page
+
+
+def needs_deep_read(page: dict) -> bool:
+    """The plain read gave little or nothing: refused or failed (no text), a PDF without text, or thin text."""
+    return len(page.get("text") or "") < THIN_CHARS
+
+
+def _plain_read(url: str, session=None) -> dict:
+    from .enrich import UA
+
     if url.lower().split("?")[0].endswith(".pdf"):
         try:
             r = requests.get(url, headers=UA, timeout=40)
@@ -293,11 +316,11 @@ def process(rw: Rewriter, row: dict) -> dict:
     rules = summary_rules.current()
     cur = summary_rules.problems(ours, section, "", rules, publisher=row.get("publisher") or "", context=row.get("title") or "")
     why = "; ".join(cur) or "rewrite"
-    page = read_source(row.get("source_url") or "")
+    page = row.get("_page") or read_source(row.get("source_url") or "")  # a short item's re-read is used as it is
     text = page.get("text") or ""
     pubs = _pubs(row, page.get("published") or [])
     cands: list[tuple[str, list[str], list[str], list]] = []
-    info = {"src": f"{page.get('status')}:{len(text)}", "cov": 0}
+    info = {"src": f"{page.get('status')}:{len(text)}", "cov": 0, "chars": len(text)}
     rw.info = info
     first = rw.candidate(row, section, text, pubs, why) if (text or ours) else None
     if first:
@@ -373,6 +396,34 @@ def candidates(client, batch: int, only: list[int] | None, dry: bool, log_) -> l
     return out[:batch]
 
 
+SHORT_PER_RUN = 5  # short items tried again per run, only after the new and failed ones (AW_SHORT_PER_RUN)
+MORE_TEXT = (1.25, 300)  # a re-read "finds more" when its text is longer than src_chars * 1.25 + 300
+
+
+def short_candidates(client, room: int, log_) -> list[dict]:
+    """Short items due another try (site: GET ?short=1): their section's minimum changed ('rules'), or their source is
+    due a re-read ('recheck'). [] when there is no room or the site does not offer it yet."""
+    if room <= 0:
+        return []
+    try:
+        got = client._call("GET", "/summary-rewrite", params={"short": 1, "per_page": room})
+    except Exception as exc:  # noqa: BLE001
+        log_.info("short items not read: %s", type(exc).__name__)
+        return []
+    if "due" not in (got or {}):  # a site without ?short=1 answers with its normal list: not short items
+        return []
+    items = [r for r in got.get("items") or [] if r.get("why") in ("rules", "recheck") and (r.get("source_url") or "").strip()]
+    log_.info("%d short items due another try; %d this run", got.get("due") or 0, len(items))
+    return items[:room]
+
+
+def finds_more(page: dict, before) -> bool:
+    """A short item's source, read again, holds clearly more text than when it was judged (unknown before: no)."""
+    if before is None:
+        return False
+    return len(page.get("text") or "") > float(before) * MORE_TEXT[0] + MORE_TEXT[1]
+
+
 def main(env=os.environ, *, client=None, backends=None, deadline: Deadline | None = None, process_=None, sleep=time.sleep) -> int:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
     try:  # each item's line shows when it is done (a cancelled run used to lose every buffered line)
@@ -388,13 +439,21 @@ def main(env=os.environ, *, client=None, backends=None, deadline: Deadline | Non
     if client is None:
         client = ingest.Client(env["WP_BASE_URL"], env["WP_INGEST_USER"], env["WP_INGEST_APP_PASSWORD"])
         summary_rules.use(client)
+        # Firecrawl re-reads refused or thin sources, within the free credits: sourcing keeps its share (25 Oct 2026)
+        fc = firecrawl.credits()
+        firecrawl.set_run_cap(firecrawl.run_share(fc, int(env.get("FIRECRAWL_KEEP_PER_DAY") or 20),
+                                                  int(env.get("AW_RUNS_PER_DAY") or 24), int(env.get("FIRECRAWL_MAX_PER_RUN") or 20)))
+        log.info("firecrawl: %s credits left; up to %d pages this run", fc["remaining"] if fc else "unknown",
+                 firecrawl._state.get("cap", 0))
     if backends is None:
         backends = summarise.backends_from_env(env, ledger={})
     log.info("providers: %d key/model pairs; %.0f min left before the stop", len(backends), deadline.left() / 60)
     rw = Rewriter(summarise.Summariser(backends), pause, deadline=deadline,
                   max_tries=int(env.get("AW_MAX_TRIES_PER_ITEM") or MAX_TRIES))
     rows = candidates(client, batch, only, dry, log)
-    stats = {"done": 0, "short": 0, "settled": 0, "failed": 0, "error": 0, "left": 0}
+    if not only:  # after the new and failed items, never before them: a few short ones get another try
+        rows += short_candidates(client, min(int(env.get("AW_SHORT_PER_RUN") or SHORT_PER_RUN), batch - len(rows)), log)
+    stats = {"done": 0, "short": 0, "settled": 0, "failed": 0, "error": 0, "left": 0, "rechecked": 0}
     report = []
     for n, row in enumerate(rows):
         if deadline.expired(ITEM_MIN_S):
@@ -404,20 +463,39 @@ def main(env=os.environ, *, client=None, backends=None, deadline: Deadline | Non
         if n:
             sleep(min(pause, max(0.0, deadline.left() - ITEM_MIN_S)))
         try:
+            again = row.get("why")  # a short item tried again: 'rules' or 'recheck'
+            if again:
+                row["_page"] = read_source(row.get("source_url") or "")
+                if again == "recheck" and not finds_more(row["_page"], row.get("src_chars")):
+                    chars = len(row["_page"].get("text") or "")
+                    print(json.dumps({"id": row["id"], "section": row.get("section"), "action": "recheck", "chars": chars,
+                                      "before": row.get("src_chars"), "src": row["_page"].get("status")}))
+                    if not dry:
+                        client._call("POST", "/summary-rewrite", json={"id": row["id"], "before_md5": row["md5"], "recheck": chars})
+                    stats["rechecked"] += 1
+                    continue
+            rw.info = {}  # this item's source facts only (process() fills them)
             res = process_(rw, row)
+            if again and res["action"] == "failed":  # a short item stays short (its summary is unchanged), never 'failed'
+                res = {"action": "settle", "reason": "tried again: " + (res.get("reason") or "nothing better")}
+            chars = getattr(rw, "info", {}).get("chars")
+            extra = {"src_chars": chars} if chars is not None else {}
             line = {"id": row["id"], "section": row.get("section"), "action": res["action"], **getattr(rw, "info", {})}
+            if again:
+                line["again"] = again
             if res["action"] == "write":
                 line.update(state=res["state"], before=row["summary"], after=res["summary"], model=res["model"],
                             words=[res["before_words"], res["after_words"]], also=[a["url"] for a in res["also"]], reason=res["reason"])
                 if not dry:
                     client._call("POST", "/summary-rewrite", json={
                         "id": row["id"], "before_md5": row["md5"], "summary": res["summary"], "state": res["state"],
-                        "model": res["model"], "reason": res["reason"], "also": res["also"]})
+                        "model": res["model"], "reason": res["reason"], "also": res["also"], **extra})
                 stats[res["state"]] += 1
             elif res["action"] == "settle":
                 line["reason"] = res["reason"]
                 if not dry:
-                    client._call("POST", "/summary-rewrite", json={"id": row["id"], "before_md5": row["md5"], "settle": res["reason"] or "kept"})
+                    client._call("POST", "/summary-rewrite", json={"id": row["id"], "before_md5": row["md5"],
+                                                                   "settle": res["reason"] or "kept", **extra})
                 stats["settled"] += 1
             else:
                 line["reason"] = res["reason"]

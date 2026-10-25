@@ -330,13 +330,15 @@ def site_rows(env, session=None) -> list[dict]:
 # left 199 items unchecked while the same keys' other models were idle). Tried in this order after the saved model.
 EXTRA_MODELS = {
     "gemini": ["gemini-flash-lite-latest", "gemini-3-flash-preview", "gemini-flash-latest"],
-    "groq": ["openai/gpt-oss-120b", "openai/gpt-oss-20b", "llama-3.3-70b-versatile", "llama-3.1-8b-instant"],
+    # llama-3.3-70b-versatile and llama-3.1-8b-instant are gone from Groq's /models (25 Oct 2026: 404 on every run)
+    "groq": ["openai/gpt-oss-120b", "openai/gpt-oss-20b"],
     # free ids on https://openrouter.ai/api/v1/models, 25 Oct 2026 (minimax-m3.1-flash:free answered 404 all run, 24 Oct)
     "openrouter": ["nvidia/nemotron-3-ultra-550b-a55b:free", "google/gemma-4-31b-it:free", "nvidia/nemotron-3-super-120b-a12b:free",
                    "poolside/laguna-s-2.1:free", "xingchen-agi/xing4.0-29b-a4b:free", "openrouter/free"],  # openrouter/free: any free model OpenRouter has room on
     "requesty": ["google/gemma-4-31b-it", "nvidia/nemotron-3-ultra-550b-a55b", "novita/ling-3.1-flash",
                  "nvidia/nemotron-3.5-lightning-30b-a3b", "nvidia/muse-glimmer-30b", "mistral/leanstral-1-5"],
-    "cline": ["minimax/minimax-m3.1-flash:free", "nvidia/nemotron-3-ultra-550b-a55b:free"],
+    # minimax-m3.1-flash:free is gone from Cline's /models (25 Oct 2026); gemma-4-31b-it:free is listed there
+    "cline": ["nvidia/nemotron-3-ultra-550b-a55b:free", "google/gemma-4-31b-it:free"],
     "commandcode": ["reflection/beam:free", "poolside/laguna-s-2.1-free", "stealth/glyph-cluster:free"],
     "nvidia": ["nvidia/nemotron-3.5-lightning-30b-a3b", "nvidia/nemotron-3-ultra-550b-a55b", "meta/muse-glimmer-30b"],
 }
