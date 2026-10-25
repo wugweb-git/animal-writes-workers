@@ -19,6 +19,7 @@ import yaml
 from bs4 import BeautifulSoup
 
 from . import matcher
+from . import sections as sections_mod
 from . import relay as _relay
 
 log = logging.getLogger(__name__)
@@ -97,17 +98,21 @@ SECTIONS: dict[str, dict] = {}
 # the phrases gets the tag (if the section allows it); one that also matches a "hold" pattern (and none of the "unless"
 # words) waits for a person.
 TOPIC_TAGS: dict[str, dict] = {}
-SITE_TYPES = {"news": "aw_news", "legal": "aw_legal", "opportunity": "aw_opportunity", "research": "post"}
+SITE_TYPES = sections_mod.FALLBACK  # worker item type => post type; the site's sections_v2 wins (sections.py)
 
 
-def set_sections(data) -> None:
+def set_sections(data, v2=None) -> None:
+    """Each section's allowed categories and tags: the site's `sections_v2` (phase 3) when it is there, else the v1
+    `sections` dict (post type => {categories, tags})."""
+    if v2 is not None and sections_mod.use(v2):
+        data = sections_mod.allowed(v2)
     if isinstance(data, dict) and data:
         SECTIONS.clear()
         SECTIONS.update({str(k): v for k, v in data.items() if isinstance(v, dict)})
 
 
 def _allowed(item_type: str, key: str) -> list[str] | None:
-    sec = SECTIONS.get(SITE_TYPES.get(item_type, item_type))
+    sec = SECTIONS.get(sections_mod.post_type_for(item_type))
     if not sec or key not in sec:
         return None
     vals = sec[key]
@@ -154,7 +159,7 @@ ROLE_LISTS = {"include": "strong", "strong": "strong", "animal": "animal", "cont
 _warned: set[str] = set()  # each malformed-block warning once per run
 
 
-V2_BLOCKS = ("schema", "match", "sources_v2", "category_names")  # sourcing restructure (phase 1 on): beside the v1 keys
+V2_BLOCKS = ("schema", "match", "sources_v2", "category_names", "sections_v2")  # sourcing restructure: beside the v1 keys
 
 
 def with_v2_blocks(config: dict, raw: dict) -> dict:
@@ -235,7 +240,7 @@ def load_sources_data(data: dict, relevance: dict | None = None) -> tuple[list[S
     and `check`), the v1 `sources` list otherwise. `match: "word"` switches every keyword check to whole words."""
     CATEGORIES.clear()
     CATEGORIES.update({k: [str(w) for w in v] for k, v in (data.get("categories") or {}).items()})
-    set_sections(data.get("sections"))
+    set_sections(data.get("sections"), data.get("sections_v2") or [])  # [] resets to the fallback map
     matcher.set_mode(data.get("match"))
     TOPIC_TAGS.clear()
     TOPIC_TAGS.update({str(k): v for k, v in (data.get("topic_tags") or {}).items() if isinstance(v, dict)})
