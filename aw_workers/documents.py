@@ -43,7 +43,6 @@ ANIMAL_TERMS = re.compile(
 )
 # "Animal Husbandry" alone is a department name (service and staff matters), not an animal-welfare subject.
 DEPARTMENT_ONLY = re.compile(r"\banimal\s+hus\w*\.?", re.I)  # husbandry, husbandary, hus., husb.
-SKIP_MATTERS = re.compile(r"\bbail\b|anticipatory|\binterim\b|\b(?:ABA|CRMBA|CRLMBA|BA)\b|\bB\.\s?A\.", re.I)
 
 SC_BUCKET = "https://indian-supreme-court-judgments.s3.ap-south-1.amazonaws.com"
 HC_BUCKET = "https://indian-high-court-judgments.s3.ap-south-1.amazonaws.com"
@@ -165,14 +164,17 @@ def parse_judgments_sc(source: Source, body: str = "", get=_get, today: date | N
 #   2. the judgment itself decides: its first pages must cite an animal statute, or use the animal terms at least twice
 #      outside the party and address lines (add_hc_text). An animal-welfare body as a party (AWBI, PFA, PETA...) is
 #      enough on its own.
-# Each bench keeps a watermark (last decision date read and the PDFs read on that date), so a changed metadata file is
-# not read again from the start; at most HC_MAX_PDFS PDFs (and HC_MINUTES) per run, oldest first, the next run carries on.
+# Each bench keeps a watermark (the last decision date read, and the PDFs read in the HC_GRACE days before it, so a
+# decision the dataset adds a few days late is still read), so a changed metadata file is not read again from the start;
+# at most HC_MAX_PDFS PDFs (and HC_MINUTES) per run, oldest first, the next run carries on. A PDF that could not be
+# downloaded (other than "not found") is tried again next run.
 
 HC_MAX_PDFS = int(os.environ.get("AW_HC_MAX_PDFS") or 1500)
 HC_MINUTES = float(os.environ.get("AW_HC_MINUTES") or 8)
 HC_PAGES = 3  # the statute and the subject are on the first pages
 HC_THREADS = 8
 HC_LOOKBACK = 60  # days, when the source sets none
+HC_GRACE = 10  # days before the watermark in which late additions are still read
 HC_COLUMNS = ["title", "description", "decision_date", "pdf_link", "cnr", "court", "disposal_nature"]
 
 # The case-type token: "BAIL APPLN./123/2026 of X Vs Y" -> "BAIL APPLN."; "WP 123/2026" -> "WP".
@@ -226,9 +228,12 @@ _PARTY_LINE = re.compile(
     re.I,
 )
 _ADDRESS_LINE = re.compile(r"\.{3,}\s*(?:petitioner|respondent|appellant|applicant)|\b(?:r/o|s/o|d/o|w/o|c/o|resident\s+of|aged\s+about|pin\s?(?:code)?\s*[:-]?\s*\d{6})\b", re.I)
-# A bail order filed under another case type (criminal petitions in Karnataka, Telangana...).
+# A place named after one (Zoo Road, Gaushala Lane in Guwahati or Kanpur addresses) is not about animals.
+_PLACE_NAME = re.compile(r"\b(?:zoo|zoological\s+park|gau\s?shala|go\s?shala)\s+(?:road|lane|bye\s?lane|street|marg|path|nagar|colony|tiniali|chowk|area)\b", re.I)
+# A bail order filed under another case type (criminal petitions in Karnataka, Telangana, applications in Bombay...).
 _BAIL_TEXT = re.compile(
     r"\b(?:regular|anticipatory)\s+bail\b|\bbail\s+(?:application|petition)\b|\bgrant\s+of\s+bail\b|"
+    r"\bseek(?:s|ing)?\s+(?:regular\s+|anticipatory\s+|interim\s+)?bail\b|\bapplication\s+for\s+(?:grant\s+of\s+)?bail\b|"
     r"\bsections?\s+43[89]\b[^.\n]{0,40}(?:cr\.?\s?p\.?\s?c|code\s+of\s+criminal)|\bsections?\s+48[23]\b[^.\n]{0,40}(?:bnss|bharatiya\s+nagarik)",
     re.I,
 )
@@ -275,14 +280,16 @@ def hc_skip_reason(title: str, disposal: str = "") -> str:
 
 
 def hc_candidates(rows: list[dict], key: str, since: date, mark: dict | None = None, skipped: dict | None = None) -> list[HCCandidate]:
-    """Rows of one bench's metadata file worth reading, oldest first: decided since `since`, after the bench's
-    watermark (mark: {"date": iso, "pdfs": [basenames read on that date]}), and not ruled out by hc_skip_reason."""
+    """Rows of one bench's metadata file worth reading, oldest first: decided since `since`, not read yet by the bench's
+    watermark (mark: {"date": iso, "pdfs": {basename: iso date} read in the HC_GRACE days before it}), and not ruled
+    out by hc_skip_reason."""
     m = re.search(r"year=(\d+)/court=([^/]+)/bench=([^/]+)/", key)
     if not m:
         return []
     year, court_dir, bench = int(m.group(1)), m.group(2), m.group(3)
     mark = mark or {}
     mark_date = _date(mark.get("date"))
+    floor = mark_date - timedelta(days=HC_GRACE) if mark_date else None
     mark_pdfs = set(mark.get("pdfs") or [])
     out = []
     for r in rows:
@@ -290,7 +297,7 @@ def hc_candidates(rows: list[dict], key: str, since: date, mark: dict | None = N
         link = os.path.basename(str(r.get("pdf_link") or ""))
         if not when or when < since or not link or link == "None":
             continue
-        if mark_date and (when < mark_date or (when == mark_date and link in mark_pdfs)):
+        if floor and (when < floor or link in mark_pdfs):
             continue
         title = _clean(str(r.get("title") or ""))
         why = hc_skip_reason(title, str(r.get("disposal_nature") or ""))
@@ -312,11 +319,12 @@ def _hc_clean_lines(text: str) -> str:
     return "\n".join(head + body)
 
 
-def hc_text_match(text: str) -> str:
+def hc_text_match(text: str, strong: str = "") -> str:
     """Why a judgment's opening pages make it ours ('' when they do not): an animal statute cited, or the animal terms
-    at least twice outside the party and address lines. Bail orders filed under another case type are not."""
-    clean = _hc_clean_lines(text or "")
-    if _BAIL_TEXT.search(clean[:2500]):
+    at least twice outside the party and address lines; or `strong` (an animal-welfare body as a party) with readable
+    text. Bail orders filed under another case type are not."""
+    clean = _PLACE_NAME.sub(" ", _hc_clean_lines(text or ""))
+    if _BAIL_TEXT.search(clean[:1500]):  # the opening says what is sought; later pages may mention earlier bail
         return ""
     m = ANIMAL_STATUTES.search(clean)
     if m:
@@ -324,6 +332,8 @@ def hc_text_match(text: str) -> str:
     hits = [h.lower() for h in ANIMAL_TERMS.findall(DEPARTMENT_ONLY.sub(" ", clean))]
     if len(hits) >= 2:
         return "terms: " + ", ".join(sorted(set(hits)))[:80] + f" ({len(hits)} hits)"
+    if strong and len(clean.strip()) >= 100:
+        return "party: " + strong
     return ""
 
 
@@ -349,25 +359,32 @@ def hc_item(source: Source, c: HCCandidate, text: str, why: str) -> Item:
 
 
 def _fetch_pdf(url: str) -> bytes | None:
+    """The PDF; None when the dataset has none (404). Other failures raise: the PDF is tried again next run."""
     try:
         return _get(url).content
-    except requests.RequestException:
-        return None
+    except requests.HTTPError as exc:
+        if exc.response is not None and exc.response.status_code in (403, 404):  # S3 answers 403 for a missing key
+            return None
+        raise
 
 
 def add_hc_text(cands: list[HCCandidate], fetch=_fetch_pdf, deadline: float | None = None, stats: dict | None = None):
     """Read each candidate's first pages, in order; yields (candidate, text, why) for every one read (why '' when not
-    kept). Stops at the deadline (time.monotonic()); what was not read is read next run."""
+    kept; text None when the download failed, to be tried again). Stops at the deadline (time.monotonic()); what was
+    not read is read next run."""
     import time
     from concurrent.futures import ThreadPoolExecutor
 
     stats = stats if stats is not None else {}
 
     def read(c: HCCandidate):
-        content = fetch(c.url)
-        if content is None:
+        try:
+            content = fetch(c.url)
+        except Exception:  # noqa: BLE001  a timeout or 5xx: next run
             return c, None
-        return c, pdf_text(content, max_pages=HC_PAGES)
+        if content is None:
+            return c, ""
+        return c, pdf_text(content, max_pages=HC_PAGES) or " "
 
     with ThreadPoolExecutor(HC_THREADS) as pool:
         for i in range(0, len(cands), HC_THREADS * 4):  # in batches, so a deadline stops between two
@@ -375,17 +392,22 @@ def add_hc_text(cands: list[HCCandidate], fetch=_fetch_pdf, deadline: float | No
                 stats["stopped"] = True
                 return
             for c, text in pool.map(read, cands[i: i + HC_THREADS * 4]):
-                stats["read"] = stats.get("read", 0) + 1
                 if text is None:
+                    stats["failed"] = stats.get("failed", 0) + 1
+                    yield c, None, ""
+                    continue
+                stats["read"] = stats.get("read", 0) + 1
+                if text == "":
                     stats["missing"] = stats.get("missing", 0) + 1
                     yield c, "", ""
                     continue
                 if len(text.strip()) < 100:
                     stats["no text"] = stats.get("no text", 0) + 1  # scanned: nothing to read
-                why = hc_text_match(text)
-                if not why and c.strong and not _BAIL_TEXT.search(text[:2500]):
-                    why = "party: " + HC_STRONG_PARTIES.search(c.title).group(0)
-                yield c, text, why
+                strong = HC_STRONG_PARTIES.search(c.title) if c.strong else None
+                yield c, text, hc_text_match(text, strong.group(0) if strong else "")
+
+
+_s3 = None
 
 
 def read_hc_rows(key: str, get=_get) -> list[dict]:
@@ -394,8 +416,10 @@ def read_hc_rows(key: str, get=_get) -> list[dict]:
         import pyarrow.fs as pafs
         import pyarrow.parquet as pq
 
-        s3 = pafs.S3FileSystem(anonymous=True, region="ap-south-1")
-        f = pq.ParquetFile(s3.open_input_file(f"indian-high-court-judgments/{key}"))
+        global _s3
+        if _s3 is None:
+            _s3 = pafs.S3FileSystem(anonymous=True, region="ap-south-1")
+        f = pq.ParquetFile(_s3.open_input_file(f"indian-high-court-judgments/{key}"))
         return f.read(columns=[c for c in HC_COLUMNS if c in f.schema_arrow.names]).to_pylist()
     except Exception:  # noqa: BLE001  (no S3 support in this pyarrow, a network error...): the plain download
         return read_parquet(get(f"{HC_BUCKET}/{key}").content, HC_COLUMNS)
@@ -417,7 +441,9 @@ def parse_judgments_hc(source: Source, body: str = "", get=_get, today: date | N
 
     now = now or datetime.now(timezone.utc)
     today = today or now.date()
-    lookback = int(source.lookback_days or HC_LOOKBACK)
+    if not source.lookback_days:  # collect() applies it too: without it the run's default (14 days) would drop kept ones
+        source.lookback_days = HC_LOOKBACK
+    lookback = int(source.lookback_days)
     since = today - timedelta(days=lookback)
     rows_for = rows_for or (lambda key: read_hc_rows(key, get=get))
     cap = HC_MAX_PDFS if max_pdfs is None else max_pdfs
@@ -430,8 +456,9 @@ def parse_judgments_hc(source: Source, body: str = "", get=_get, today: date | N
     report = report if report is not None else {}
     skipped: dict = report.setdefault("skipped", {})
 
-    cands: list[HCCandidate] = []
-    files: dict[str, dict] = {}
+    from concurrent.futures import ThreadPoolExecutor
+
+    todo = []
     for year in sorted({today.year, since.year}):
         for obj in s3_list(HC_BUCKET, f"metadata/parquet/year={year}/", get=get):
             key = obj["key"]
@@ -440,11 +467,23 @@ def parse_judgments_hc(source: Source, body: str = "", get=_get, today: date | N
             b = benches.get(key, {})
             if b.get("etag") == obj["etag"] and b.get("done"):
                 continue
-            try:
-                rows = rows_for(key)
-            except Exception as exc:  # noqa: BLE001  one unreadable file must not stop the others
+            todo.append(obj)
+
+    def load(obj):
+        try:
+            return obj, rows_for(obj["key"]), None
+        except Exception as exc:  # noqa: BLE001  one unreadable file must not stop the others
+            return obj, None, exc
+
+    cands: list[HCCandidate] = []
+    files: dict[str, dict] = {}
+    with ThreadPoolExecutor(HC_THREADS) as pool:
+        for obj, rows, exc in pool.map(load, todo):
+            key = obj["key"]
+            if rows is None:
                 report.setdefault("errors", []).append(f"{key}: {exc}")
                 continue
+            b = benches.get(key, {})
             report["rows"] = report.get("rows", 0) + len(rows)
             found = hc_candidates(rows, key, since, b.get("mark"), skipped)
             files[key] = {"etag": obj["etag"], "total": len(found)}
@@ -457,6 +496,8 @@ def parse_judgments_hc(source: Source, body: str = "", get=_get, today: date | N
     deadline = time.monotonic() + HC_MINUTES * 60 if not newest_first else None
     read: dict[str, list[HCCandidate]] = {}
     for c, text, why in add_hc_text(cands[:cap], fetch=fetch, deadline=deadline, stats=report):
+        if text is None:  # download failed: not marked read
+            continue
         read.setdefault(c.key, []).append(c)
         if why:
             it = hc_item(source, c, text, why)
@@ -471,9 +512,11 @@ def parse_judgments_hc(source: Source, body: str = "", get=_get, today: date | N
                 continue
             b = benches.get(key, {})
             mark = b.get("mark") or {}
-            last = done[-1].when
-            pdfs = {c.pdf for c in done if c.when == last} | (set(mark.get("pdfs") or []) if mark.get("date") == last.isoformat() else set())
-            benches[key] = {"etag": info["etag"], "done": len(done) >= info["total"], "mark": {"date": last.isoformat(), "pdfs": sorted(pdfs)}}
+            last = max([c.when for c in done] + ([_date(mark["date"])] if mark.get("date") else []))
+            floor = (last - timedelta(days=HC_GRACE)).isoformat()
+            pdfs = {**(mark.get("pdfs") or {}), **{c.pdf: c.when.isoformat() for c in done}}
+            pdfs = {k: v for k, v in sorted(pdfs.items()) if v >= floor}
+            benches[key] = {"etag": info["etag"], "done": len(done) >= info["total"], "mark": {"date": last.isoformat(), "pdfs": pdfs}}
     hc["kept"] = kept
     return sorted((_kept_item(source, d) for d in kept), key=lambda i: i.date, reverse=True)
 

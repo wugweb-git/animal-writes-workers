@@ -464,7 +464,7 @@ def main() -> int:
     gate.flush()  # the Rejected log, in one request
     if not dry_run:
         checkpoint()
-        documents.save_state()  # High Court file versions: only remembered when items were really sent
+        documents.save_state()  # High Court watermarks and kept judgments: dry runs never save them
     if ledger:
         SPEND_FILE.parent.mkdir(parents=True, exist_ok=True)
         SPEND_FILE.write_text(json.dumps(ledger))

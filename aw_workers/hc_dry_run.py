@@ -38,7 +38,7 @@ def main(argv: list[str] | None = None) -> int:
     report["seconds"] = round(time.monotonic() - t)
     kept = report.get("kept", [])
     print(f"rows in changed files: {report.get('rows', 0)}; skipped by metadata: {report.get('skipped', {})}; "
-          f"candidates: {report.get('candidates', 0)}; PDFs read: {report.get('read', 0)} (missing {report.get('missing', 0)}, "
+          f"candidates: {report.get('candidates', 0)}; PDFs read: {report.get('read', 0)} (not in the dataset {report.get('missing', 0)}, download failed {report.get('failed', 0)}, "
           f"no text {report.get('no text', 0)}){' (stopped at the time limit)' if report.get('stopped') else ''}; "
           f"kept: {len(kept)}; {report['seconds']} s")
     for k in sorted(kept, key=lambda k: k["date"], reverse=True):

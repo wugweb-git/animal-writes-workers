@@ -64,8 +64,12 @@ def test_high_court_candidates_since_watermark_and_url():
     assert [x.pdf for x in c] == ["DLHC1_2026-09-01.pdf", "DLHC2_2026-09-02.pdf", "DLHC3_2026-09-02.pdf"]
     assert skipped == {"bail/interim/misc": 1}
     assert c[0].url == "https://indian-high-court-judgments.s3.ap-south-1.amazonaws.com/data/pdf/year=2026/court=7_26/bench=dhcdb/DLHC1_2026-09-01.pdf"
-    mark = {"date": "2026-09-02", "pdfs": ["DLHC2_2026-09-02.pdf"]}
+    mark = {"date": "2026-09-02", "pdfs": {"DLHC1_2026-09-01.pdf": "2026-09-01", "DLHC2_2026-09-02.pdf": "2026-09-02"}}
     assert [x.pdf for x in documents.hc_candidates(rows, HC_KEY, date(2026, 8, 1), mark)] == ["DLHC3_2026-09-02.pdf"]
+    # Added late with an earlier date: still read within HC_GRACE days of the watermark, not before.
+    late = rows + [{"title": "W.P.(C)/6/2026 of X Vs Union", "decision_date": "2026-08-25", "pdf_link": "late.pdf"},
+                   {"title": "W.P.(C)/7/2026 of X Vs Union", "decision_date": "2026-08-20", "pdf_link": "too-late.pdf"}]
+    assert [x.pdf for x in documents.hc_candidates(late, HC_KEY, date(2026, 8, 1), mark)] == ["late.pdf", "DLHC3_2026-09-02.pdf"]
 
 
 HEADER = ("IN THE HIGH COURT OF DELHI AT NEW DELHI\nW.P.(C) 1/2026\nSHREE GOPAL GAUSHALA, Village Rampur, District Agra .....Petitioner\n"
@@ -83,7 +87,12 @@ def test_high_court_text_match():
     assert m(HEADER + "The Society for the Prevention of Cruelty to Animals owns the building let to the tenant.") == ""
     assert m(HEADER + "The municipality must run the animal birth control programme and feed street dogs.").startswith("cites")
     assert m(HEADER + "Complaints about stray dogs and dog bites in the colony were ignored.").startswith("terms:")
+    assert m(HEADER + "1. The dispute concerns the lease of a shop.", strong="Animal Welfare") == "party: Animal Welfare"
+    assert m("", strong="Animal Welfare") == ""  # scanned: nothing to summarise from
     assert m(HEADER + "This is a petition for regular bail. FIR under the Prevention of Cruelty to Animals Act, 1960.") == ""
+    assert m(HEADER + "By this application, the applicant is seeking bail in Crime No. 324 under the Maharashtra Animal Preservation Act, 1976.") == ""
+    # Zoo Road is an address in Guwahati (dry run, 25 Oct 2026), not a zoo.
+    assert m(HEADER + "The land near Zoo Road, Guwahati was allotted; the house on Zoo Road was sold.") == ""
 
 
 class _Resp:
@@ -131,7 +140,8 @@ def test_high_courts_parse_keeps_from_text_and_moves_watermark(monkeypatch):
     assert "Prevention of Cruelty to Animals Act" in it.text
     st = documents._state
     assert "hc_checked" not in st and "hc_etags" not in st
-    assert st["hc"]["benches"][HC_KEY] == {"etag": '"e1"', "done": False, "mark": {"date": "2026-10-03", "pdfs": ["DLHC3.pdf"]}}
+    assert st["hc"]["benches"][HC_KEY] == {"etag": '"e1"', "done": False, "mark": {
+        "date": "2026-10-03", "pdfs": {"DLHC1.pdf": "2026-10-01", "DLHC2.pdf": "2026-10-02", "DLHC3.pdf": "2026-10-03"}}}
     p = ingest.build_payload(it, "summary", [])
     assert p["tags"] == ["judgment"] and p["court"] == "high-court" and p["source_type"] == "high-court"
 
@@ -140,6 +150,21 @@ def test_high_courts_parse_keeps_from_text_and_moves_watermark(monkeypatch):
     out = documents.parse_judgments_hc(src_hc, get=get, now=now, rows_for=rows_for, fetch=fetch, max_pdfs=3)
     assert [u.rsplit("/", 1)[1] for u in fetched] == ["DLHC4.pdf"] and [i.url for i in out] == [it.url]
     assert st["hc"]["benches"][HC_KEY]["done"] is True
+
+    # A download that fails (timeout, 5xx) is not marked read: tried again next run.
+    st["hc"]["benches"][HC_KEY] = {"etag": '"e0"', "done": False, "mark": {"date": "2026-10-03", "pdfs": {"DLHC3.pdf": "2026-10-03"}}}
+
+    def flaky(url):
+        if url.endswith("DLHC1.pdf"):
+            raise documents.requests.ConnectionError("timeout")
+        return fetch(url)
+
+    fetched.clear()
+    documents.parse_judgments_hc(src_hc, get=get, now=now, rows_for=rows_for, fetch=flaky)
+    assert sorted(st["hc"]["benches"][HC_KEY]["mark"]["pdfs"]) == ["DLHC2.pdf", "DLHC3.pdf", "DLHC4.pdf"]
+    assert st["hc"]["benches"][HC_KEY]["done"] is False
+    documents.parse_judgments_hc(src_hc, get=get, now=now, rows_for=rows_for, fetch=fetch)
+    assert st["hc"]["benches"][HC_KEY]["done"] is True and fetched[-1].endswith("DLHC1.pdf")
 
     # Then: file unchanged and done, nothing is read.
     read.clear()
