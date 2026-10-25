@@ -625,6 +625,9 @@ sections:
     - wildlife
     - animal-experimentation
     tags: []
+  aw_press:
+    categories: []
+    tags: []
 press:
   enabled: true
   date_floor: '2025-11-01'
@@ -684,6 +687,7 @@ category_names:
 schema:
   sources: 2
   keywords: 2
+  rules: 2
 match: word
 sources_v2:
 - id: the-hindu-environment
@@ -3405,3 +3409,196 @@ keywords_v2:
   categories:
   - animal-experimentation
   sections: []
+sections_v2:
+- post_type: aw_news
+  label: News
+  worker_type: news
+  categories:
+  - adoption
+  - animal-birth-control
+  - transport-slaughter
+  - birds
+  - campaigns-civic-action
+  - cattle-gaushalas
+  - community-dogs
+  - courts-judgments
+  - cruelty-prosecution
+  - disaster-rescue
+  - feeders-caregivers
+  - laws-rules
+  - performing-captive-animals
+  - pets-breeding
+  - policy-government
+  - rabies-public-health
+  - veterinary-care
+  - wildlife
+  - animal-experimentation
+  tags: []
+  tag_rules: []
+  summary: aw_news
+- post_type: aw_legal
+  label: Library
+  worker_type: legal
+  categories:
+  - adoption
+  - animal-birth-control
+  - transport-slaughter
+  - birds
+  - campaigns-civic-action
+  - cattle-gaushalas
+  - community-dogs
+  - courts-judgments
+  - cruelty-prosecution
+  - disaster-rescue
+  - feeders-caregivers
+  - laws-rules
+  - performing-captive-animals
+  - pets-breeding
+  - policy-government
+  - rabies-public-health
+  - veterinary-care
+  - wildlife
+  - animal-experimentation
+  tags:
+  - act
+  - advisory
+  - circular
+  - judgment
+  - notification
+  - official-release
+  - order
+  - rule
+  - template
+  tag_rules: []
+  summary: aw_legal
+- post_type: post
+  label: Resources
+  worker_type: research
+  categories:
+  - adoption
+  - animal-birth-control
+  - transport-slaughter
+  - birds
+  - campaigns-civic-action
+  - cattle-gaushalas
+  - community-dogs
+  - courts-judgments
+  - cruelty-prosecution
+  - disaster-rescue
+  - feeders-caregivers
+  - laws-rules
+  - performing-captive-animals
+  - pets-breeding
+  - policy-government
+  - rabies-public-health
+  - veterinary-care
+  - wildlife
+  - animal-experimentation
+  tags:
+  - faq
+  - guide
+  - research
+  tag_rules: []
+  summary: post
+- post_type: aw_campaign
+  label: Campaign Hub
+  worker_type: ''
+  categories:
+  - adoption
+  - animal-birth-control
+  - transport-slaughter
+  - birds
+  - campaigns-civic-action
+  - cattle-gaushalas
+  - community-dogs
+  - courts-judgments
+  - cruelty-prosecution
+  - disaster-rescue
+  - feeders-caregivers
+  - laws-rules
+  - performing-captive-animals
+  - pets-breeding
+  - policy-government
+  - rabies-public-health
+  - veterinary-care
+  - wildlife
+  - animal-experimentation
+  tags: []
+  tag_rules: []
+  summary: aw_news
+- post_type: aw_opportunity
+  label: Opportunities
+  worker_type: opportunity
+  categories:
+  - community-dogs
+  - cattle-gaushalas
+  - wildlife
+  - birds
+  - veterinary-care
+  - animal-birth-control
+  - adoption
+  - disaster-rescue
+  - feeders-caregivers
+  - campaigns-civic-action
+  - policy-government
+  tags:
+  - event
+  - fellowship
+  - grant
+  - internship
+  - job
+  - volunteer
+  - boarding-foster
+  tag_rules: []
+  summary: aw_news
+- post_type: aw_listing
+  label: Directory
+  worker_type: ''
+  categories:
+  - community-dogs
+  - cattle-gaushalas
+  - wildlife
+  - birds
+  - veterinary-care
+  - animal-birth-control
+  - adoption
+  - disaster-rescue
+  tags:
+  - abc-centre
+  - adoption-network
+  - animal-ambulance
+  - animal-shelter
+  - animal-welfare-organisation
+  - bird-hospital
+  - emergency-rescue
+  - feeder-network
+  - gaushala
+  - legal-aid
+  - mobile-veterinary-unit
+  - rescue-group
+  - sanctuary
+  - veterinary-clinic
+  - veterinary-dispensary
+  - veterinary-hospital
+  - veterinary-office
+  - wildlife-rescue
+  - adoption
+  - ambulance
+  - boarding-foster
+  - cattle-care
+  - feeding
+  - legal-help
+  - rescue
+  - shelter
+  - sterilisation
+  - treatment
+  - vaccination
+  tag_rules: []
+  summary: aw_news
+- post_type: aw_press
+  label: Press coverage
+  worker_type: press
+  categories: []
+  tags: []
+  tag_rules: []
+  summary: aw_news

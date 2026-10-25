@@ -1,0 +1,1037 @@
+{
+  "schema": {
+    "group": "group_aw_listing",
+    "fields": [
+      {
+        "name": "aw_email",
+        "label": "Email",
+        "type": "email",
+        "repeats": false,
+        "enrich": [
+          "email"
+        ]
+      },
+      {
+        "name": "aw_phones",
+        "label": "Phone numbers",
+        "type": "repeater",
+        "repeats": true,
+        "enrich": [
+          "phone",
+          "whatsapp",
+          "emergency"
+        ]
+      },
+      {
+        "name": "aw_area",
+        "label": "Area or landmark",
+        "type": "text",
+        "repeats": false,
+        "enrich": []
+      },
+      {
+        "name": "aw_address",
+        "label": "Full address",
+        "type": "text",
+        "repeats": false,
+        "enrich": [
+          "address"
+        ]
+      },
+      {
+        "name": "aw_maps_url",
+        "label": "Google Maps link",
+        "type": "url",
+        "repeats": false,
+        "enrich": [
+          "maps_url"
+        ]
+      },
+      {
+        "name": "aw_lat",
+        "label": "Latitude",
+        "type": "text",
+        "repeats": false,
+        "enrich": [
+          "lat"
+        ]
+      },
+      {
+        "name": "aw_lng",
+        "label": "Longitude",
+        "type": "text",
+        "repeats": false,
+        "enrich": [
+          "lng"
+        ]
+      },
+      {
+        "name": "aw_place_id",
+        "label": "Google place ID",
+        "type": "text",
+        "repeats": false,
+        "enrich": [
+          "place_id"
+        ]
+      },
+      {
+        "name": "aw_opening_hours",
+        "label": "Opening hours by day",
+        "type": "repeater",
+        "repeats": true,
+        "enrich": [
+          "hours"
+        ]
+      },
+      {
+        "name": "aw_registration",
+        "label": "Registration",
+        "type": "text",
+        "repeats": false,
+        "enrich": [
+          "registration"
+        ]
+      },
+      {
+        "name": "aw_reg_12a",
+        "label": "12A",
+        "type": "text",
+        "repeats": false,
+        "enrich": [
+          "reg_12a"
+        ]
+      },
+      {
+        "name": "aw_reg_80g",
+        "label": "80G",
+        "type": "text",
+        "repeats": false,
+        "enrich": [
+          "reg_80g"
+        ]
+      },
+      {
+        "name": "aw_darpan_id",
+        "label": "NGO Darpan ID",
+        "type": "text",
+        "repeats": false,
+        "enrich": [
+          "darpan_id"
+        ]
+      },
+      {
+        "name": "aw_reg_type",
+        "label": "Registered as",
+        "type": "text",
+        "repeats": false,
+        "enrich": [
+          "reg_type"
+        ]
+      },
+      {
+        "name": "aw_reg_authority",
+        "label": "Registration authority",
+        "type": "text",
+        "repeats": false,
+        "enrich": []
+      },
+      {
+        "name": "aw_reg_act",
+        "label": "Registered under (Act)",
+        "type": "text",
+        "repeats": false,
+        "enrich": []
+      },
+      {
+        "name": "aw_reg_date",
+        "label": "Registration date",
+        "type": "date_picker",
+        "repeats": false,
+        "enrich": []
+      },
+      {
+        "name": "aw_sectors",
+        "label": "Sectors (NGO Darpan)",
+        "type": "text",
+        "repeats": false,
+        "enrich": []
+      },
+      {
+        "name": "aw_fcra",
+        "label": "FCRA",
+        "type": "text",
+        "repeats": false,
+        "enrich": [
+          "fcra"
+        ]
+      },
+      {
+        "name": "aw_awbi_code",
+        "label": "AWBI recognition code",
+        "type": "text",
+        "repeats": false,
+        "enrich": []
+      },
+      {
+        "name": "aw_awbi_recognised",
+        "label": "AWBI recognised on",
+        "type": "date_picker",
+        "repeats": false,
+        "enrich": []
+      },
+      {
+        "name": "aw_awbi_renewed",
+        "label": "AWBI renewed on",
+        "type": "date_picker",
+        "repeats": false,
+        "enrich": []
+      },
+      {
+        "name": "aw_awbi_valid",
+        "label": "AWBI valid until",
+        "type": "date_picker",
+        "repeats": false,
+        "enrich": []
+      },
+      {
+        "name": "aw_aliases",
+        "label": "Also known as",
+        "type": "text",
+        "repeats": false,
+        "enrich": []
+      },
+      {
+        "name": "aw_founded",
+        "label": "Year established",
+        "type": "text",
+        "repeats": false,
+        "enrich": [
+          "founded"
+        ]
+      },
+      {
+        "name": "aw_head",
+        "label": "Head of the organisation",
+        "type": "text",
+        "repeats": false,
+        "enrich": [
+          "head"
+        ]
+      },
+      {
+        "name": "aw_animals",
+        "label": "Animals helped",
+        "type": "text",
+        "repeats": false,
+        "enrich": [
+          "animals"
+        ]
+      },
+      {
+        "name": "aw_areas_served",
+        "label": "Areas served",
+        "type": "text",
+        "repeats": false,
+        "enrich": [
+          "areas_served"
+        ]
+      },
+      {
+        "name": "aw_services",
+        "label": "Services (as stated)",
+        "type": "text",
+        "repeats": false,
+        "enrich": []
+      },
+      {
+        "name": "aw_services_source",
+        "label": "Stated by",
+        "type": "text",
+        "repeats": false,
+        "enrich": []
+      },
+      {
+        "name": "aw_services_on",
+        "label": "Stated on",
+        "type": "date_picker",
+        "repeats": false,
+        "enrich": []
+      },
+      {
+        "name": "aw_languages",
+        "label": "Languages",
+        "type": "text",
+        "repeats": false,
+        "enrich": []
+      },
+      {
+        "name": "aw_website",
+        "label": "Website",
+        "type": "url",
+        "repeats": false,
+        "enrich": [
+          "website"
+        ]
+      },
+      {
+        "name": "aw_instagram",
+        "label": "Instagram",
+        "type": "url",
+        "repeats": false,
+        "enrich": [
+          "instagram"
+        ]
+      },
+      {
+        "name": "aw_facebook",
+        "label": "Facebook",
+        "type": "url",
+        "repeats": false,
+        "enrich": [
+          "facebook"
+        ]
+      },
+      {
+        "name": "aw_x",
+        "label": "X (Twitter)",
+        "type": "url",
+        "repeats": false,
+        "enrich": [
+          "x"
+        ]
+      },
+      {
+        "name": "aw_youtube",
+        "label": "YouTube",
+        "type": "url",
+        "repeats": false,
+        "enrich": [
+          "youtube"
+        ]
+      },
+      {
+        "name": "aw_linkedin",
+        "label": "LinkedIn",
+        "type": "url",
+        "repeats": false,
+        "enrich": [
+          "linkedin"
+        ]
+      },
+      {
+        "name": "aw_wikidata",
+        "label": "Wikidata ID",
+        "type": "text",
+        "repeats": false,
+        "enrich": [
+          "wikidata"
+        ]
+      },
+      {
+        "name": "aw_ig_followers",
+        "label": "Instagram followers",
+        "type": "text",
+        "repeats": false,
+        "enrich": [
+          "ig_followers"
+        ]
+      },
+      {
+        "name": "aw_ig_posts",
+        "label": "Instagram posts",
+        "type": "text",
+        "repeats": false,
+        "enrich": [
+          "ig_posts"
+        ]
+      },
+      {
+        "name": "aw_last_post",
+        "label": "Latest social post",
+        "type": "text",
+        "repeats": false,
+        "enrich": [
+          "last_post"
+        ]
+      },
+      {
+        "name": "aw_ngobase_url",
+        "label": "ngobase.org profile",
+        "type": "url",
+        "repeats": false,
+        "enrich": []
+      },
+      {
+        "name": "aw_g_profile",
+        "label": "Google Business Profile link",
+        "type": "url",
+        "repeats": false,
+        "enrich": []
+      },
+      {
+        "name": "aw_g_category",
+        "label": "Google category",
+        "type": "text",
+        "repeats": false,
+        "enrich": []
+      },
+      {
+        "name": "aw_g_rating",
+        "label": "Google rating",
+        "type": "text",
+        "repeats": false,
+        "enrich": []
+      },
+      {
+        "name": "aw_g_reviews",
+        "label": "Google reviews",
+        "type": "text",
+        "repeats": false,
+        "enrich": []
+      },
+      {
+        "name": "aw_gallery",
+        "label": "Photos",
+        "type": "gallery",
+        "repeats": true,
+        "enrich": [
+          "photos"
+        ]
+      },
+      {
+        "name": "aw_donate_url",
+        "label": "Donate link",
+        "type": "url",
+        "repeats": false,
+        "enrich": [
+          "donate_url"
+        ]
+      },
+      {
+        "name": "aw_volunteer_url",
+        "label": "Volunteer link",
+        "type": "url",
+        "repeats": false,
+        "enrich": [
+          "volunteer_url"
+        ]
+      },
+      {
+        "name": "aw_adopt_url",
+        "label": "Adopt link",
+        "type": "url",
+        "repeats": false,
+        "enrich": [
+          "adopt_url"
+        ]
+      },
+      {
+        "name": "aw_upi",
+        "label": "UPI ID",
+        "type": "text",
+        "repeats": false,
+        "enrich": [
+          "upi"
+        ]
+      },
+      {
+        "name": "aw_rel_nofollow",
+        "label": "Links nofollow",
+        "type": "true_false",
+        "repeats": false,
+        "enrich": []
+      },
+      {
+        "name": "aw_verified",
+        "label": "Verified",
+        "type": "true_false",
+        "repeats": false,
+        "enrich": []
+      },
+      {
+        "name": "aw_verified_on",
+        "label": "Verified on",
+        "type": "date_picker",
+        "repeats": false,
+        "enrich": []
+      },
+      {
+        "name": "aw_needs_reverify",
+        "label": "Needs re-check",
+        "type": "true_false",
+        "repeats": false,
+        "enrich": []
+      },
+      {
+        "name": "aw_source_url",
+        "label": "Source URL",
+        "type": "url",
+        "repeats": false,
+        "enrich": []
+      },
+      {
+        "name": "aw_source_name",
+        "label": "Source name",
+        "type": "text",
+        "repeats": false,
+        "enrich": []
+      },
+      {
+        "name": "aw_source_date",
+        "label": "Source date",
+        "type": "date_picker",
+        "repeats": false,
+        "enrich": []
+      },
+      {
+        "name": "aw_detail_sources",
+        "label": "Where each detail comes from",
+        "type": "repeater",
+        "repeats": true,
+        "enrich": []
+      }
+    ],
+    "special": [
+      {
+        "field": "phone",
+        "label": "Phone",
+        "store": "phones"
+      },
+      {
+        "field": "whatsapp",
+        "label": "WhatsApp",
+        "store": "phones"
+      },
+      {
+        "field": "emergency",
+        "label": "Emergency / ambulance",
+        "store": "phones"
+      },
+      {
+        "field": "pincode",
+        "label": "PIN code",
+        "store": "aw_pincode"
+      },
+      {
+        "field": "hours",
+        "label": "Opening hours",
+        "store": "hours"
+      },
+      {
+        "field": "logo",
+        "label": "Logo",
+        "store": "logo"
+      },
+      {
+        "field": "photos",
+        "label": "Photos",
+        "store": "photos"
+      },
+      {
+        "field": "description",
+        "label": "About (short bio)",
+        "store": "excerpt"
+      },
+      {
+        "field": "services",
+        "label": "Services",
+        "store": "services"
+      },
+      {
+        "field": "closed",
+        "label": "Reported closed",
+        "store": "aw_reported_closed"
+      },
+      {
+        "field": "place",
+        "label": "State and district",
+        "store": "place"
+      },
+      {
+        "field": "merge_into",
+        "label": "Duplicate: merge into",
+        "store": "merge"
+      }
+    ],
+    "listing_types": [
+      "abc-centre",
+      "adoption-network",
+      "animal-ambulance",
+      "animal-shelter",
+      "animal-welfare-organisation",
+      "bird-hospital",
+      "emergency-rescue",
+      "feeder-network",
+      "gaushala",
+      "legal-aid",
+      "mobile-veterinary-unit",
+      "rescue-group",
+      "sanctuary",
+      "veterinary-clinic",
+      "veterinary-dispensary",
+      "veterinary-hospital",
+      "veterinary-office",
+      "wildlife-rescue",
+      "adoption",
+      "ambulance",
+      "boarding-foster",
+      "cattle-care",
+      "feeding",
+      "legal-help",
+      "rescue",
+      "shelter",
+      "sterilisation",
+      "treatment",
+      "vaccination"
+    ],
+    "services": {
+      "rescue": "Rescue Work",
+      "treatment": "Treatment and Vet Care",
+      "shelter": "Sheltering",
+      "adoption": "Adoption Service",
+      "feeding": "Feeding",
+      "sterilisation": "Sterilisation (ABC)",
+      "vaccination": "Vaccination",
+      "ambulance": "Ambulance Service",
+      "boarding-foster": "Boarding and Fostering",
+      "wildlife-rescue": "Wildlife Rescue",
+      "legal-help": "Legal Help",
+      "cattle-care": "Cattle Care",
+      "animal-welfare": "Animal Welfare",
+      "bird-treatment": "Bird Treatment",
+      "emergency-rescue": "Emergency Rescue"
+    }
+  },
+  "priority": [
+    "claim",
+    "website",
+    "darpan",
+    "wikidata",
+    "osm",
+    "social",
+    "awbi",
+    "google_places"
+  ],
+  "field_rules": {
+    "phone": {
+      "on": true,
+      "sources": [],
+      "multi": 2,
+      "official": "",
+      "ai": false,
+      "invite": true,
+      "social": false,
+      "apply": "both"
+    },
+    "whatsapp": {
+      "on": true,
+      "sources": [],
+      "multi": 1,
+      "official": "",
+      "ai": false,
+      "invite": false,
+      "social": false,
+      "apply": "both"
+    },
+    "emergency": {
+      "on": true,
+      "sources": [],
+      "multi": 1,
+      "official": "",
+      "ai": false,
+      "invite": false,
+      "social": false,
+      "apply": "both"
+    },
+    "email": {
+      "on": true,
+      "sources": [],
+      "multi": 0,
+      "official": "",
+      "ai": false,
+      "invite": false,
+      "social": false,
+      "apply": "both"
+    },
+    "website": {
+      "on": true,
+      "sources": [],
+      "multi": 0,
+      "official": "",
+      "ai": false,
+      "invite": true,
+      "social": false,
+      "apply": "both"
+    },
+    "address": {
+      "on": true,
+      "sources": [],
+      "multi": 0,
+      "official": "awbi",
+      "ai": false,
+      "invite": true,
+      "social": false,
+      "apply": "empty"
+    },
+    "pincode": {
+      "on": true,
+      "sources": [],
+      "multi": 0,
+      "official": "awbi",
+      "ai": false,
+      "invite": false,
+      "social": false,
+      "apply": "empty"
+    },
+    "lat": {
+      "on": true,
+      "sources": [],
+      "multi": 0,
+      "official": "",
+      "ai": false,
+      "invite": false,
+      "social": false,
+      "apply": "empty"
+    },
+    "lng": {
+      "on": true,
+      "sources": [],
+      "multi": 0,
+      "official": "",
+      "ai": false,
+      "invite": false,
+      "social": false,
+      "apply": "empty"
+    },
+    "maps_url": {
+      "on": true,
+      "sources": [],
+      "multi": 0,
+      "official": "",
+      "ai": false,
+      "invite": false,
+      "social": false,
+      "apply": "empty"
+    },
+    "place_id": {
+      "on": true,
+      "sources": [],
+      "multi": 0,
+      "official": "",
+      "ai": false,
+      "invite": false,
+      "social": false,
+      "apply": "empty"
+    },
+    "hours": {
+      "on": true,
+      "sources": [],
+      "multi": 0,
+      "official": "",
+      "ai": false,
+      "invite": true,
+      "social": false,
+      "apply": "empty"
+    },
+    "logo": {
+      "on": true,
+      "sources": [],
+      "multi": 0,
+      "official": "",
+      "ai": false,
+      "invite": false,
+      "social": false,
+      "apply": "empty"
+    },
+    "photos": {
+      "on": true,
+      "sources": [],
+      "multi": 0,
+      "official": "",
+      "ai": false,
+      "invite": false,
+      "social": false,
+      "apply": "empty"
+    },
+    "description": {
+      "on": true,
+      "sources": [],
+      "multi": 0,
+      "official": "",
+      "ai": true,
+      "invite": false,
+      "social": false,
+      "apply": "empty"
+    },
+    "founded": {
+      "on": true,
+      "sources": [],
+      "multi": 0,
+      "official": "",
+      "ai": false,
+      "invite": false,
+      "social": false,
+      "apply": "empty"
+    },
+    "reg_type": {
+      "on": true,
+      "sources": [],
+      "multi": 0,
+      "official": "",
+      "ai": true,
+      "invite": false,
+      "social": false,
+      "apply": "empty"
+    },
+    "registration": {
+      "on": true,
+      "sources": [],
+      "multi": 0,
+      "official": "",
+      "ai": false,
+      "invite": false,
+      "social": false,
+      "apply": "empty"
+    },
+    "darpan_id": {
+      "on": true,
+      "sources": [],
+      "multi": 0,
+      "official": "",
+      "ai": false,
+      "invite": false,
+      "social": false,
+      "apply": "empty"
+    },
+    "reg_80g": {
+      "on": true,
+      "sources": [],
+      "multi": 0,
+      "official": "",
+      "ai": false,
+      "invite": false,
+      "social": false,
+      "apply": "empty"
+    },
+    "reg_12a": {
+      "on": true,
+      "sources": [],
+      "multi": 0,
+      "official": "",
+      "ai": false,
+      "invite": false,
+      "social": false,
+      "apply": "empty"
+    },
+    "fcra": {
+      "on": true,
+      "sources": [],
+      "multi": 0,
+      "official": "",
+      "ai": false,
+      "invite": false,
+      "social": false,
+      "apply": "empty"
+    },
+    "services": {
+      "on": true,
+      "sources": [],
+      "multi": 0,
+      "official": "",
+      "ai": true,
+      "invite": false,
+      "social": false,
+      "apply": "both"
+    },
+    "animals": {
+      "on": true,
+      "sources": [],
+      "multi": 0,
+      "official": "",
+      "ai": true,
+      "invite": false,
+      "social": false,
+      "apply": "both"
+    },
+    "areas_served": {
+      "on": true,
+      "sources": [],
+      "multi": 0,
+      "official": "",
+      "ai": true,
+      "invite": false,
+      "social": false,
+      "apply": "both"
+    },
+    "donate_url": {
+      "on": true,
+      "sources": [],
+      "multi": 0,
+      "official": "",
+      "ai": false,
+      "invite": false,
+      "social": false,
+      "apply": "empty"
+    },
+    "upi": {
+      "on": true,
+      "sources": [],
+      "multi": 0,
+      "official": "",
+      "ai": false,
+      "invite": false,
+      "social": false,
+      "apply": "empty"
+    },
+    "volunteer_url": {
+      "on": true,
+      "sources": [],
+      "multi": 0,
+      "official": "",
+      "ai": false,
+      "invite": false,
+      "social": false,
+      "apply": "empty"
+    },
+    "adopt_url": {
+      "on": true,
+      "sources": [],
+      "multi": 0,
+      "official": "",
+      "ai": false,
+      "invite": false,
+      "social": false,
+      "apply": "empty"
+    },
+    "instagram": {
+      "on": true,
+      "sources": [],
+      "multi": 0,
+      "official": "",
+      "ai": false,
+      "invite": false,
+      "social": true,
+      "apply": "empty"
+    },
+    "facebook": {
+      "on": true,
+      "sources": [],
+      "multi": 0,
+      "official": "",
+      "ai": false,
+      "invite": false,
+      "social": true,
+      "apply": "empty"
+    },
+    "x": {
+      "on": true,
+      "sources": [],
+      "multi": 0,
+      "official": "",
+      "ai": false,
+      "invite": false,
+      "social": true,
+      "apply": "empty"
+    },
+    "youtube": {
+      "on": true,
+      "sources": [],
+      "multi": 0,
+      "official": "",
+      "ai": false,
+      "invite": false,
+      "social": true,
+      "apply": "empty"
+    },
+    "linkedin": {
+      "on": true,
+      "sources": [],
+      "multi": 0,
+      "official": "",
+      "ai": false,
+      "invite": false,
+      "social": true,
+      "apply": "empty"
+    },
+    "ig_followers": {
+      "on": true,
+      "sources": [],
+      "multi": 0,
+      "official": "",
+      "ai": false,
+      "invite": false,
+      "social": false,
+      "apply": "empty"
+    },
+    "ig_posts": {
+      "on": true,
+      "sources": [],
+      "multi": 0,
+      "official": "",
+      "ai": false,
+      "invite": false,
+      "social": false,
+      "apply": "empty"
+    },
+    "last_post": {
+      "on": true,
+      "sources": [],
+      "multi": 0,
+      "official": "",
+      "ai": false,
+      "invite": false,
+      "social": false,
+      "apply": "empty"
+    },
+    "head": {
+      "on": true,
+      "sources": [],
+      "multi": 0,
+      "official": "",
+      "ai": true,
+      "invite": false,
+      "social": false,
+      "apply": "empty"
+    },
+    "wikidata": {
+      "on": true,
+      "sources": [],
+      "multi": 0,
+      "official": "",
+      "ai": false,
+      "invite": false,
+      "social": false,
+      "apply": "empty"
+    },
+    "closed": {
+      "on": true,
+      "sources": [],
+      "multi": 0,
+      "official": "",
+      "ai": false,
+      "invite": false,
+      "social": false,
+      "apply": "review"
+    },
+    "place": {
+      "on": true,
+      "sources": [],
+      "multi": 0,
+      "official": "",
+      "ai": false,
+      "invite": false,
+      "social": false,
+      "apply": "empty"
+    },
+    "merge_into": {
+      "on": true,
+      "sources": [],
+      "multi": 0,
+      "official": "",
+      "ai": false,
+      "invite": false,
+      "social": false,
+      "apply": "review"
+    }
+  }
+}
