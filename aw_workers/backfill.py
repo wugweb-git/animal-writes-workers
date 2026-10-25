@@ -178,7 +178,7 @@ def main() -> int:
             lists = sources.site_lists(raw) or lists
         except Exception as exc:  # the site applies the policy too
             log.warning("policy unavailable: %s", exc)
-    source_list, defaults = sources.load_sources_data(lists)
+    source_list, defaults = sources.load_sources_data(lists, relevance=raw.get("relevance") if policy is not None else None)
     source_list += keyword_feeds(lists, {s.id for s in source_list})  # phase 2: the Google News feeds that became keywords
     defaults = dict(defaults, max_items_per_source=int(os.environ.get("AW_BACKFILL_PER_SOURCE", "100")))
     plan_list = plan(source_list, floor, today)

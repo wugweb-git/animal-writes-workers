@@ -1,4 +1,5 @@
 from datetime import date
+from pathlib import Path
 
 from aw_workers import sources
 from aw_workers.sources import Source
@@ -8,6 +9,10 @@ TODAY = date(2026, 10, 5)
 
 def src(kind, type_="news", keywords=None, url="https://example.com/"):
     return Source(id="t", name="Test", kind=kind, type=type_, url=url, keywords=keywords or [])
+
+
+# sources.yaml is copied from the site; tests that need fixed sources read the copy of 25 Oct 2026 (before phase 2).
+FROZEN = Path(__file__).parent / "fixtures" / "sources_frozen.yaml"
 
 
 def test_sources_yaml_loads():
@@ -43,7 +48,7 @@ def test_pib_real_feed_parses(fixture_text):
 
 
 def test_pib_keyword_filter_and_date_fallback(fixture_text):
-    loaded, _ = sources.load_sources("sources.yaml")
+    loaded, _ = sources.load_sources(FROZEN)
     pib = next(s for s in loaded if s.id == "pib-releases")
     items = sources.collect(pib, fixture_text("pib_sample.xml"), TODAY, 14, 15)
     assert [i.url[-7:] for i in items] == ["1000001", "1000002"]  # English + Hindi match, highway dropped
@@ -69,7 +74,7 @@ def test_awbi_undated_rows_use_upload_timestamp():
 
 
 def test_category_tagging():
-    loaded, _ = sources.load_sources("sources.yaml")
+    loaded, _ = sources.load_sources(FROZEN)
     src_ = loaded[0]
     item = sources.Item(src_, "High Court orders ABC programme for street dogs after rabies cases", "https://x", TODAY)
     tags = sources.categories_for(item)
@@ -81,7 +86,7 @@ def test_category_tagging():
 
 
 def test_short_keywords_match_whole_words_only():
-    loaded, _ = sources.load_sources("sources.yaml")
+    loaded, _ = sources.load_sources(FROZEN)
     item = sources.Item(loaded[0], "First action taken at the impact assessment", "https://z", TODAY)
     tags = sources.categories_for(item)
     assert "cruelty-prosecution" not in tags  # "fir" must not match "first"

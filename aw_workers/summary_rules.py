@@ -11,9 +11,8 @@ Sections: news (News), library (Library: court orders, Acts, Rules, circulars, r
 From the sourcing restructure's phase 3 (owner, 25 Oct 2026) the site keeps one rule per section, keyed by post type,
 and sends them as `by_type` beside the v1 `sections`: {"aw_news": {..., "alias": "news"}, "aw_legal": {..., "alias":
 "library"}, "post": {..., "alias": "research"}, "aw_campaign": {..., "inherit": "aw_news"}, ...}. An item's rule is the
-one for its post type (section_for); a section that inherits uses the rule it inherits, and a section the site does
-not list follows News (as the site's own rule for a new section). Only rules without `by_type` at all (a site before
-phase 3, or the defaults) use the old map (SECTION_OF_TYPE).
+one for its post type (section_for); a section that inherits uses the rule it inherits. Without `by_type` the v1 map
+(SECTION_OF_TYPE) applies, as before.
 A summary is never shorter than the page's search description: each section's minimum is well above the 155 characters
 of the description, which is the summary's lead sentence (titles.php in aw-seo-extras).
 """
@@ -132,8 +131,7 @@ def reset() -> None:
 
 def section_for(kind: str, rules: dict | None = None) -> str:
     """The rule set an item of this type follows: its post type's rule when the site sends rules by post type (an
-    inheriting section follows the rule it inherits; one it does not list follows News), else the old map. Returns a
-    key of rules["sections"]."""
+    inheriting section follows the rule it inherits), else the v1 map. Returns a key of rules["sections"]."""
     rules = rules or current()
     bt = rules.get("by_type") or {}
     pt = sections_mod.post_type_for(kind or "")
@@ -147,8 +145,6 @@ def section_for(kind: str, rules: dict | None = None) -> str:
             return alias
         if pt in rules["sections"]:
             return pt
-    if bt:  # rules by post type (phase 3 on): the old map is not read
-        return "news"
     return SECTION_OF_TYPE.get(kind or "", SECTION_OF_TYPE.get(pt, "news"))
 
 

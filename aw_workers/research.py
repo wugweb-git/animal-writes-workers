@@ -345,7 +345,7 @@ def main() -> int:
             raw = client.policy()
             site = sources.site_lists(raw)
             if site is not None:
-                sources.load_sources_data(site)
+                sources.load_sources_data(site, relevance=raw.get("relevance"))
         except Exception as exc:
             log.warning("policy unavailable: %s", exc)
     backends = summarise.backends_from_env(os.environ, ledger={})

@@ -1,17 +1,15 @@
 from aw_workers import run as run_mod
 from aw_workers.policy import Policy, host
 
-def _kw(label, role, lang="en"):
-    return {"id": label, "label": label, "variants": [], "roles": [role], "lang": lang, "searches": [], "categories": [],
-            "sections": []}
-
-
-# The policy as the site sends it from phase 4: the switch in `relevance`, the lists as roles on the keyword table.
 POLICY = {
     "publishers": {"blocked": ["bollyspice.com"], "allowed": ["thehindu.com"], "gnews_allow_only": False},
-    "relevance": {"enabled": True},
-    "keywords": [_kw("animal welfare", "include"), _kw("रेबीज", "include", "hi"), _kw("dog", "animal"), _kw("cow", "animal"),
-                 _kw("court", "context"), _kw("rescue", "context"), _kw("bull market", "exclude")],
+    "relevance": {
+        "enabled": True,
+        "strong": ["animal welfare", "रेबीज"],
+        "animal": ["dog", "cow"],
+        "context": ["court", "rescue"],
+        "exclude": ["bull market"],
+    },
 }
 
 
@@ -30,7 +28,7 @@ def test_relevance_rules():
     assert p.verdict("https://example.com/a", "src", "Dog rescue in Pune") == ""
     assert p.verdict("https://example.com/a", "src", "Dog wins a show") == "filtered"
     assert p.verdict("https://example.com/a", "src", "Bull market for cow futures, court says") == "filtered"
-    assert p.verdict("https://example.com/a", "src", "रेबीज के मामले बढ़े") == "filtered"  # Hindi keywords carry no Sourcing role
+    assert p.verdict("https://example.com/a", "src", "रेबीज के मामले बढ़े") == ""
 
 
 def test_allowed_publisher_skips_keyword_check():
@@ -69,7 +67,7 @@ def test_animal_guard():
     assert about_animals("गाय की मौत")
     assert not about_animals("Taurus Horoscope Today, August 31, 2026")
     assert not about_animals("NEET PG 2025 | Supreme Court Dismisses Plea Seeking Special Stray Vacancy Counselling Round")
-    p = Policy.from_json({**POLICY, "keywords": [*POLICY["keywords"], _kw("abc programme", "include")]})
+    p = Policy.from_json({**POLICY, "relevance": {**POLICY["relevance"], "strong": ["abc programme"]}})
     assert about_animals("Municipal ABC programme review", p)
 
 

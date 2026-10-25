@@ -165,7 +165,7 @@ def main() -> int:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     dry_run = truthy(os.environ.get("DRY_RUN"), default=True)
     keys = web_keys(os.environ)
-    cfg = keywords.press_config(yaml.safe_load(Path("sources.yaml").read_text(encoding="utf-8")) or {})  # Press keywords (an old sources.yaml: its queries)
+    cfg = keywords.press_config(yaml.safe_load(Path("sources.yaml").read_text(encoding="utf-8")) or {})  # Press keywords, else v1
     floor = str(cfg.get("date_floor", "2025-11-01"))
     client = None if dry_run else ingest.Client(os.environ["WP_BASE_URL"], os.environ["WP_INGEST_USER"], os.environ["WP_INGEST_APP_PASSWORD"])
     if client:

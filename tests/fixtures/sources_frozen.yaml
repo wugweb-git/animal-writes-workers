@@ -1,0 +1,1098 @@
+# Sources for the Animal Writes sourcing workers. COPIED FROM THE SITE (Settings → Sourcing) by
+# .github/workflows/sources-sync.yml while "Workers use these lists" is on: edit the lists on the site, not here.
+# The workers read this file only when the site cannot be reached.
+defaults:
+  lookback_days: 14
+  max_items_per_source: 15
+keywords:
+- animal welfare
+- animal cruelty
+- cruelty to animals
+- stray dog
+- street dog
+- community dog
+- animal birth control
+- ABC Rules
+- PCA Act
+- Prevention of Cruelty
+- AWBI
+- Animal Welfare Board
+- gaushala
+- rabies
+- animal rescue
+- animal shelter
+- wildlife crime
+- poaching
+- पशु क्रूरता
+- रेबीज
+- stray
+- wildlife
+- veterinary
+- cow shelter
+- world animal day 2026
+- animal testing india
+sources:
+- id: gnews-animal-welfare
+  name: Google News – animal welfare India
+  kind: rss
+  type: news
+  url: https://news.google.com/rss/search?q=%22animal+welfare%22+India&hl=en-IN&gl=IN&ceid=IN:en
+  host: news.google.com
+- id: gnews-animal-cruelty
+  name: Google News – animal cruelty India
+  kind: rss
+  type: news
+  url: https://news.google.com/rss/search?q=%22animal+cruelty%22+India&hl=en-IN&gl=IN&ceid=IN:en
+  host: news.google.com
+- id: the-hindu-environment
+  name: The Hindu – Energy & Environment
+  kind: rss
+  type: news
+  url: https://www.thehindu.com/sci-tech/energy-and-environment/feeder/default.rss
+  keywords:
+  - animal welfare
+  - animal cruelty
+  - cruelty to animals
+  - stray
+  - street dog
+  - community dog
+  - cow shelter
+  - gaushala
+  - wildlife
+  - veterinary
+  - rabies
+  - animal birth control
+  - ABC Rules
+  - PCA Act
+  - Prevention of Cruelty
+  - AWBI
+  - Animal Welfare Board
+  - पशु
+  - जानवर
+  - पशुपालन
+  - रेबीज
+  host: thehindu.com
+- id: awbi-circulars
+  name: Animal Welfare Board of India – Circulars
+  kind: awbi
+  type: legal
+  source_type: awbi
+  url: https://awbi.gov.in/circulars
+  host: awbi.gov.in
+- id: awbi-notifications
+  name: Animal Welfare Board of India – Notifications
+  kind: awbi
+  type: legal
+  source_type: awbi
+  url: https://awbi.gov.in/notifications
+  host: awbi.gov.in
+- id: livelaw-top
+  name: LiveLaw
+  kind: rss
+  type: news
+  source_type: auto-court
+  url: https://www.livelaw.in/category/top-stories/google_feeds.xml
+  keywords:
+  - animal welfare
+  - animal cruelty
+  - cruelty to animals
+  - stray
+  - street dog
+  - community dog
+  - cow shelter
+  - gaushala
+  - wildlife
+  - veterinary
+  - rabies
+  - animal birth control
+  - ABC Rules
+  - PCA Act
+  - Prevention of Cruelty
+  - AWBI
+  - Animal Welfare Board
+  - पशु
+  - जानवर
+  - पशुपालन
+  - रेबीज
+  host: livelaw.in
+- id: barandbench
+  name: Bar & Bench
+  kind: rss
+  type: news
+  source_type: auto-court
+  url: https://www.barandbench.com/feed
+  keywords:
+  - animal welfare
+  - animal cruelty
+  - cruelty to animals
+  - stray
+  - street dog
+  - community dog
+  - cow shelter
+  - gaushala
+  - wildlife
+  - veterinary
+  - rabies
+  - animal birth control
+  - ABC Rules
+  - PCA Act
+  - Prevention of Cruelty
+  - AWBI
+  - Animal Welfare Board
+  - पशु
+  - जानवर
+  - पशुपालन
+  - रेबीज
+  host: barandbench.com
+- id: court-news-animals
+  name: Court news – LiveLaw
+  kind: rss
+  type: news
+  source_type: auto-court
+  url: https://news.google.com/rss/search?q=site:livelaw.in+(animal+OR+animals+OR+dogs+OR+cattle+OR+cow+OR+wildlife+OR+cruelty+OR+stray+OR+livestock)+when:7d&hl=en-IN&gl=IN&ceid=IN:en
+  lookback_days: 7
+  host: livelaw.in
+- id: court-news-barandbench
+  name: Court news – Bar & Bench
+  kind: rss
+  type: news
+  source_type: auto-court
+  url: https://news.google.com/rss/search?q=site:barandbench.com+(animal+OR+animals+OR+dogs+OR+cattle+OR+cow+OR+wildlife+OR+cruelty+OR+stray+OR+livestock)+when:7d&hl=en-IN&gl=IN&ceid=IN:en
+  lookback_days: 7
+  host: barandbench.com
+- id: court-news-scobserver
+  name: Court news – SC Observer
+  kind: rss
+  type: news
+  source_type: auto-court
+  url: https://news.google.com/rss/search?q=site:scobserver.in+(animal+OR+animals+OR+dogs+OR+cattle+OR+cow+OR+wildlife+OR+cruelty+OR+stray+OR+livestock)+when:7d&hl=en-IN&gl=IN&ceid=IN:en
+  lookback_days: 7
+  host: scobserver.in
+- id: pib-releases
+  name: Press Information Bureau
+  kind: rss
+  type: legal
+  source_type: pib
+  url: https://news.google.com/rss/search?q=site:pib.gov.in+(animal+OR+rabies+OR+veterinary+OR+livestock+OR+wildlife)&hl=en-IN&gl=IN&ceid=IN:en
+  keywords:
+  - animal welfare
+  - animal cruelty
+  - cruelty to animals
+  - stray
+  - street dog
+  - community dog
+  - cow shelter
+  - gaushala
+  - wildlife
+  - veterinary
+  - rabies
+  - animal birth control
+  - ABC Rules
+  - PCA Act
+  - Prevention of Cruelty
+  - AWBI
+  - Animal Welfare Board
+  - पशु
+  - जानवर
+  - पशुपालन
+  - रेबीज
+  host: pib.gov.in
+- id: ccsea-whats-new
+  name: CCSEA – What's New
+  kind: ccsea
+  type: legal
+  source_type: ccsea
+  url: https://ccsea.gov.in/CCSEAWhatsNews.aspx
+  lookback_days: 30
+  skip_urls:
+  - https://ccsea.gov.in/WriteReadData/LnPdf/DraftPreventionofCrueltytoAnimals(ControlandSupervisionofExperiment,BreedingandTradingofLaboratoryAnimals)Rules,2026.pdf
+  - https://ccsea.gov.in/WriteReadData/LnPdf/InspectionsofanimalhousefacilitiesandIAECmeetings.pdf
+  - https://ccsea.gov.in/WriteReadData/LnPdf/AdministrativeCCSEAAmendmentRules2026.pdf
+  - https://ccsea.gov.in/WriteReadData/LnPdf/ConveningIAECmeetingthroughphysicalmode.pdf
+  - https://ccsea.gov.in/WriteReadData/LnPdf/PublicNotice_LetterofPeTAIndia.pdf
+  - https://ccsea.gov.in/WriteReadData/LnPdf/IAECFunctioning-projectpresentationbyPrincipalInvestigator(PI).pdf
+  - https://ccsea.gov.in/WriteReadData/LnPdf/VaccinetrialsusingDogs(1).pdf
+  - https://ccsea.gov.in/WriteReadData/LnPdf/FeeStructureorder.pdf
+  host: ccsea.gov.in
+- id: gnews-lab-animal-rules
+  name: Google News – lab animal rules India
+  kind: rss
+  type: news
+  url: https://news.google.com/rss/search?q=(%22CCSEA%22+OR+%22lab+animal+rules%22+OR+%22laboratory+animals+rules%22+OR+%22animal+experiments%22)+India+when:7d&hl=en-IN&gl=IN&ceid=IN:en
+  keywords:
+  - CCSEA
+  - CPCSEA
+  - laboratory animal
+  - lab animal
+  - animal experiment
+  - animal testing
+  - G.S.R. 864
+  - IAEC
+  - Palamur
+  - non-animal method
+  file_as: press
+  host: news.google.com
+- id: pfa-substack
+  name: People For Animals (Substack)
+  kind: rss
+  type: news
+  url: https://peopleforanimals.substack.com/feed
+  keywords:
+  - CCSEA
+  - CPCSEA
+  - laboratory animal
+  - lab animal
+  - animal experiment
+  - animal testing
+  - G.S.R. 864
+  - IAEC
+  - Palamur
+  - non-animal method
+  host: peopleforanimals.substack.com
+- id: peta-india
+  name: PETA India
+  kind: rss
+  type: news
+  url: https://www.petaindia.com/feed/
+  keywords:
+  - CCSEA
+  - CPCSEA
+  - laboratory animal
+  - lab animal
+  - animal experiment
+  - animal testing
+  - G.S.R. 864
+  - IAEC
+  - Palamur
+  - non-animal method
+  host: petaindia.com
+- id: gazette-of-india
+  name: Gazette of India
+  kind: egazette
+  type: legal
+  source_type: gazette
+  url: https://egazette.gov.in/
+  lookback_days: 30
+  ministries:
+  - Ministry of Fisheries, Animal Husbandry and Dairying
+  - Ministry of Environment, Forest and Climate Change
+  host: egazette.gov.in
+- id: judgments-supreme-court
+  name: Supreme Court judgments (open dataset, CC BY 4.0)
+  kind: judgments-sc
+  type: legal
+  url: https://indian-supreme-court-judgments.s3.ap-south-1.amazonaws.com/
+  lookback_days: 120
+  host: indian-supreme-court-judgments.s3.ap-south-1.amazonaws.com
+- id: opp-wwf-india
+  name: WWF-India careers
+  org: WWF-India
+  kind: zoho
+  type: opportunity
+  opportunity_type: job
+  lookback_days: 120
+  url: https://wwfindia.zohorecruit.com/jobs/careers
+  match: title
+  keywords:
+  - conservation
+  - wildlife
+  - biodiversity
+  - species
+  - raptor
+  - tiger
+  - elephant
+  - rhino
+  - bird
+  - aquatic
+  - wetland
+  - river
+  - marine
+  - forest
+  - habitat
+  - veterinar
+  - animal
+  - brahmaputra
+  host: wwfindia.zohorecruit.com
+- id: opp-awbi-notifications
+  name: Animal Welfare Board of India – Notifications
+  org: Animal Welfare Board of India
+  kind: awbi
+  type: opportunity
+  opportunity_type: event
+  lookback_days: 120
+  url: https://awbi.gov.in/Notifications
+  keywords:
+  - invitation for
+  - inviting
+  - award
+  - vacancy
+  - vacancies
+  - recruitment
+  - internship
+  - applications are invited
+  - walk-in
+  host: awbi.gov.in
+categories:
+  community-dogs:
+  - stray dog
+  - street dog
+  - community dog
+  - stray dogs
+  - street dogs
+  - community animals
+  - कुत्त
+  animal-birth-control:
+  - animal birth control
+  - abc rules
+  - abc programme
+  - abc program
+  - sterilis
+  - steriliz
+  - neuter
+  rabies-public-health:
+  - rabies
+  - रेबीज
+  - dog bite
+  - anti-rabies
+  - vaccination drive
+  cruelty-prosecution:
+  - cruelty
+  - fir
+  - arrested
+  - prosecution
+  - torture
+  - abuse
+  - poison
+  feeders-caregivers:
+  - feeder
+  - feeding
+  - caregiver
+  cattle-gaushalas:
+  - cattle
+  - cow
+  - gaushala
+  - gaushalas
+  - bovine
+  - बैल
+  - गाय
+  transport-slaughter:
+  - slaughter
+  - transportation of animals
+  - illegal transport
+  - smuggl
+  wildlife:
+  - wildlife
+  - tiger
+  - leopard
+  - elephant
+  - pangolin
+  - forest department
+  - poach
+  - sanctuary
+  - national park
+  birds:
+  - bird
+  - birds
+  - avian
+  - pigeon
+  - kite
+  - peacock
+  pets-breeding:
+  - pet shop
+  - breeder
+  - breeding
+  - dog breed
+  - pet
+  adoption:
+  - adopt
+  - adoption
+  performing-captive-animals:
+  - circus
+  - performing animals
+  - captive
+  - zoo
+  - elephant ride
+  laws-rules:
+  - act
+  - rules
+  - amendment
+  - notification
+  - guidelines
+  - circular
+  - gazette
+  courts-judgments:
+  - supreme court
+  - high court
+  - court
+  - judgment
+  - bench
+  - petition
+  - tribunal
+  policy-government:
+  - ministry
+  - government
+  - minister
+  - municipal
+  - corporation
+  - policy
+  - scheme
+  - cabinet
+  disaster-rescue:
+  - flood
+  - cyclone
+  - earthquake
+  - disaster
+  - rescue operation
+  veterinary-care:
+  - veterinary
+  - vet
+  - hospital
+  - clinic
+  campaigns-civic-action:
+  - campaign
+  - petition
+  - protest
+  - letter
+  - signature
+  - awareness
+  animal-experimentation:
+  - animal testing
+  - animal experiment
+  - experiments on animals
+  - laboratory animal
+  - lab animal
+  - ccsea
+  - cpcsea
+  - iaec
+  - non-animal method
+  - vivisection
+  - animal research
+sections:
+  aw_legal:
+    tags:
+    - act
+    - advisory
+    - circular
+    - judgment
+    - notification
+    - official-release
+    - order
+    - rule
+    - template
+    categories:
+    - adoption
+    - animal-birth-control
+    - transport-slaughter
+    - birds
+    - campaigns-civic-action
+    - cattle-gaushalas
+    - community-dogs
+    - courts-judgments
+    - cruelty-prosecution
+    - disaster-rescue
+    - feeders-caregivers
+    - laws-rules
+    - performing-captive-animals
+    - pets-breeding
+    - policy-government
+    - rabies-public-health
+    - veterinary-care
+    - wildlife
+    - animal-experimentation
+  post:
+    tags:
+    - faq
+    - guide
+    - research
+    categories:
+    - adoption
+    - animal-birth-control
+    - transport-slaughter
+    - birds
+    - campaigns-civic-action
+    - cattle-gaushalas
+    - community-dogs
+    - courts-judgments
+    - cruelty-prosecution
+    - disaster-rescue
+    - feeders-caregivers
+    - laws-rules
+    - performing-captive-animals
+    - pets-breeding
+    - policy-government
+    - rabies-public-health
+    - veterinary-care
+    - wildlife
+    - animal-experimentation
+  aw_opportunity:
+    tags:
+    - event
+    - fellowship
+    - grant
+    - internship
+    - job
+    - volunteer
+    - boarding-foster
+    categories:
+    - community-dogs
+    - cattle-gaushalas
+    - wildlife
+    - birds
+    - veterinary-care
+    - animal-birth-control
+    - adoption
+    - disaster-rescue
+    - feeders-caregivers
+    - campaigns-civic-action
+    - policy-government
+  aw_listing:
+    tags:
+    - abc-centre
+    - adoption-network
+    - animal-ambulance
+    - animal-shelter
+    - animal-welfare-organisation
+    - bird-hospital
+    - emergency-rescue
+    - feeder-network
+    - gaushala
+    - legal-aid
+    - mobile-veterinary-unit
+    - rescue-group
+    - sanctuary
+    - veterinary-clinic
+    - veterinary-dispensary
+    - veterinary-hospital
+    - veterinary-office
+    - wildlife-rescue
+    - adoption
+    - ambulance
+    - boarding-foster
+    - cattle-care
+    - feeding
+    - legal-help
+    - rescue
+    - shelter
+    - sterilisation
+    - treatment
+    - vaccination
+    categories:
+    - community-dogs
+    - cattle-gaushalas
+    - wildlife
+    - birds
+    - veterinary-care
+    - animal-birth-control
+    - adoption
+    - disaster-rescue
+  aw_news:
+    categories:
+    - adoption
+    - animal-birth-control
+    - transport-slaughter
+    - birds
+    - campaigns-civic-action
+    - cattle-gaushalas
+    - community-dogs
+    - courts-judgments
+    - cruelty-prosecution
+    - disaster-rescue
+    - feeders-caregivers
+    - laws-rules
+    - performing-captive-animals
+    - pets-breeding
+    - policy-government
+    - rabies-public-health
+    - veterinary-care
+    - wildlife
+    - animal-experimentation
+    tags: []
+  aw_campaign:
+    categories:
+    - adoption
+    - animal-birth-control
+    - transport-slaughter
+    - birds
+    - campaigns-civic-action
+    - cattle-gaushalas
+    - community-dogs
+    - courts-judgments
+    - cruelty-prosecution
+    - disaster-rescue
+    - feeders-caregivers
+    - laws-rules
+    - performing-captive-animals
+    - pets-breeding
+    - policy-government
+    - rabies-public-health
+    - veterinary-care
+    - wildlife
+    - animal-experimentation
+    tags: []
+press:
+  enabled: true
+  date_floor: '2025-11-01'
+  every_days: 7
+  monthly_requests: 900
+  weekly_requests: 200
+  backfill_requests: 300
+  queries:
+  - Animal Writes
+  - AnimalWrites
+  - '#animalwrites'
+  - animalwrites.in
+  - letter petition Supreme Court dogs
+  - handwritten letters Supreme Court stray dogs
+  - 29 November post office letters Supreme Court
+  - draft lab animal rules
+  - CCSEA draft rules
+  - animal testing rules objection
+  - GSR 864 animal experiments
+  sites:
+  - instagram.com
+  - facebook.com
+  - fb.watch
+  - x.com
+  - twitter.com
+  - youtube.com
+  - threads.net
+  - linkedin.com
+  - reddit.com
+topic_tags:
+  campaign-lab-animals-2026:
+    any:
+    - ccsea
+    - cpcsea
+    - laboratory animal
+    - lab animal
+    - animal experiment
+    - animal testing
+    - g.s.r. 864
+    - iaec
+    - palamur
+    - non-animal method
+    hold:
+    - laboratory animals\)? rules,? 2026
+    unless:
+    - draft
+    - objection
+    - comments
+    hold_reason: final lab animal rules may have been notified; check and update the campaign page
+category_names:
+  adoption: Adoption
+  animal-birth-control: Animal Birth Control
+  animal-experimentation: Animal Experimentation
+  transport-slaughter: Animal Transport and Slaughter
+  birds: Birds
+  campaigns-civic-action: Campaigns and Civic Action
+  cattle-gaushalas: Cattle and Gaushalas
+  community-dogs: Community Dogs
+  courts-judgments: Courts and Judgments
+  cruelty-prosecution: Cruelty and Prosecution
+  disaster-rescue: Disaster and Emergency Rescue
+  feeders-caregivers: Feeders and Caregivers
+  laws-rules: Laws and Rules
+  performing-captive-animals: Performing and Captive Animals
+  pets-breeding: Pets, Breeding and Pet Shops
+  policy-government: Policy and Government
+  rabies-public-health: Rabies and Public Health
+  veterinary-care: Veterinary Care
+  wildlife: Wildlife
+schema:
+  sources: 2
+sources_v2:
+- id: gnews-animal-welfare
+  name: Google News – animal welfare India
+  kind: rss
+  type: news
+  url: https://news.google.com/rss/search?q=%22animal+welfare%22+India&hl=en-IN&gl=IN&ceid=IN:en
+  host: news.google.com
+  relay: false
+  read_by: feed
+  check:
+    roles: []
+    categories: []
+- id: gnews-animal-cruelty
+  name: Google News – animal cruelty India
+  kind: rss
+  type: news
+  url: https://news.google.com/rss/search?q=%22animal+cruelty%22+India&hl=en-IN&gl=IN&ceid=IN:en
+  host: news.google.com
+  relay: false
+  read_by: feed
+  check:
+    roles: []
+    categories: []
+- id: the-hindu-environment
+  name: The Hindu – Energy & Environment
+  kind: rss
+  type: news
+  url: https://www.thehindu.com/sci-tech/energy-and-environment/feeder/default.rss
+  keywords:
+  - animal welfare
+  - animal cruelty
+  - cruelty to animals
+  - stray
+  - street dog
+  - community dog
+  - cow shelter
+  - gaushala
+  - wildlife
+  - veterinary
+  - rabies
+  - animal birth control
+  - ABC Rules
+  - PCA Act
+  - Prevention of Cruelty
+  - AWBI
+  - Animal Welfare Board
+  - पशु
+  - जानवर
+  - पशुपालन
+  - रेबीज
+  host: thehindu.com
+  relay: false
+  read_by: feed
+  check:
+    roles: []
+    categories: []
+- id: awbi-circulars
+  name: Animal Welfare Board of India – Circulars
+  kind: awbi
+  type: legal
+  source_type: awbi
+  url: https://awbi.gov.in/circulars
+  host: awbi.gov.in
+  relay: true
+  read_by: code
+  check:
+    roles: []
+    categories: []
+- id: awbi-notifications
+  name: Animal Welfare Board of India – Notifications
+  kind: awbi
+  type: legal
+  source_type: awbi
+  url: https://awbi.gov.in/notifications
+  host: awbi.gov.in
+  relay: true
+  read_by: code
+  check:
+    roles: []
+    categories: []
+- id: livelaw-top
+  name: LiveLaw
+  kind: rss
+  type: news
+  source_type: auto-court
+  url: https://www.livelaw.in/category/top-stories/google_feeds.xml
+  keywords:
+  - animal welfare
+  - animal cruelty
+  - cruelty to animals
+  - stray
+  - street dog
+  - community dog
+  - cow shelter
+  - gaushala
+  - wildlife
+  - veterinary
+  - rabies
+  - animal birth control
+  - ABC Rules
+  - PCA Act
+  - Prevention of Cruelty
+  - AWBI
+  - Animal Welfare Board
+  - पशु
+  - जानवर
+  - पशुपालन
+  - रेबीज
+  host: livelaw.in
+  relay: false
+  read_by: feed
+  check:
+    roles: []
+    categories: []
+- id: barandbench
+  name: Bar & Bench
+  kind: rss
+  type: news
+  source_type: auto-court
+  url: https://www.barandbench.com/feed
+  keywords:
+  - animal welfare
+  - animal cruelty
+  - cruelty to animals
+  - stray
+  - street dog
+  - community dog
+  - cow shelter
+  - gaushala
+  - wildlife
+  - veterinary
+  - rabies
+  - animal birth control
+  - ABC Rules
+  - PCA Act
+  - Prevention of Cruelty
+  - AWBI
+  - Animal Welfare Board
+  - पशु
+  - जानवर
+  - पशुपालन
+  - रेबीज
+  host: barandbench.com
+  relay: false
+  read_by: feed
+  check:
+    roles: []
+    categories: []
+- id: court-news-animals
+  name: Court news – LiveLaw
+  kind: rss
+  type: news
+  source_type: auto-court
+  url: https://news.google.com/rss/search?q=site:livelaw.in+(animal+OR+animals+OR+dogs+OR+cattle+OR+cow+OR+wildlife+OR+cruelty+OR+stray+OR+livestock)+when:7d&hl=en-IN&gl=IN&ceid=IN:en
+  lookback_days: 7
+  host: livelaw.in
+  relay: false
+  read_by: feed
+  check:
+    roles: []
+    categories: []
+- id: court-news-barandbench
+  name: Court news – Bar & Bench
+  kind: rss
+  type: news
+  source_type: auto-court
+  url: https://news.google.com/rss/search?q=site:barandbench.com+(animal+OR+animals+OR+dogs+OR+cattle+OR+cow+OR+wildlife+OR+cruelty+OR+stray+OR+livestock)+when:7d&hl=en-IN&gl=IN&ceid=IN:en
+  lookback_days: 7
+  host: barandbench.com
+  relay: false
+  read_by: feed
+  check:
+    roles: []
+    categories: []
+- id: court-news-scobserver
+  name: Court news – SC Observer
+  kind: rss
+  type: news
+  source_type: auto-court
+  url: https://news.google.com/rss/search?q=site:scobserver.in+(animal+OR+animals+OR+dogs+OR+cattle+OR+cow+OR+wildlife+OR+cruelty+OR+stray+OR+livestock)+when:7d&hl=en-IN&gl=IN&ceid=IN:en
+  lookback_days: 7
+  host: scobserver.in
+  relay: false
+  read_by: feed
+  check:
+    roles: []
+    categories: []
+- id: pib-releases
+  name: Press Information Bureau
+  kind: rss
+  type: legal
+  source_type: pib
+  url: https://news.google.com/rss/search?q=site:pib.gov.in+(animal+OR+rabies+OR+veterinary+OR+livestock+OR+wildlife)&hl=en-IN&gl=IN&ceid=IN:en
+  keywords:
+  - animal welfare
+  - animal cruelty
+  - cruelty to animals
+  - stray
+  - street dog
+  - community dog
+  - cow shelter
+  - gaushala
+  - wildlife
+  - veterinary
+  - rabies
+  - animal birth control
+  - ABC Rules
+  - PCA Act
+  - Prevention of Cruelty
+  - AWBI
+  - Animal Welfare Board
+  - पशु
+  - जानवर
+  - पशुपालन
+  - रेबीज
+  host: pib.gov.in
+  relay: false
+  read_by: feed
+  check:
+    roles: []
+    categories: []
+- id: ccsea-whats-new
+  name: CCSEA – What's New
+  kind: ccsea
+  type: legal
+  source_type: ccsea
+  url: https://ccsea.gov.in/CCSEAWhatsNews.aspx
+  lookback_days: 30
+  skip_urls:
+  - https://ccsea.gov.in/WriteReadData/LnPdf/DraftPreventionofCrueltytoAnimals(ControlandSupervisionofExperiment,BreedingandTradingofLaboratoryAnimals)Rules,2026.pdf
+  - https://ccsea.gov.in/WriteReadData/LnPdf/InspectionsofanimalhousefacilitiesandIAECmeetings.pdf
+  - https://ccsea.gov.in/WriteReadData/LnPdf/AdministrativeCCSEAAmendmentRules2026.pdf
+  - https://ccsea.gov.in/WriteReadData/LnPdf/ConveningIAECmeetingthroughphysicalmode.pdf
+  - https://ccsea.gov.in/WriteReadData/LnPdf/PublicNotice_LetterofPeTAIndia.pdf
+  - https://ccsea.gov.in/WriteReadData/LnPdf/IAECFunctioning-projectpresentationbyPrincipalInvestigator(PI).pdf
+  - https://ccsea.gov.in/WriteReadData/LnPdf/VaccinetrialsusingDogs(1).pdf
+  - https://ccsea.gov.in/WriteReadData/LnPdf/FeeStructureorder.pdf
+  host: ccsea.gov.in
+  relay: true
+  read_by: code
+  check:
+    roles: []
+    categories: []
+- id: gnews-lab-animal-rules
+  name: Google News – lab animal rules India
+  kind: rss
+  type: news
+  url: https://news.google.com/rss/search?q=(%22CCSEA%22+OR+%22lab+animal+rules%22+OR+%22laboratory+animals+rules%22+OR+%22animal+experiments%22)+India+when:7d&hl=en-IN&gl=IN&ceid=IN:en
+  keywords:
+  - CCSEA
+  - CPCSEA
+  - laboratory animal
+  - lab animal
+  - animal experiment
+  - animal testing
+  - G.S.R. 864
+  - IAEC
+  - Palamur
+  - non-animal method
+  file_as: press
+  host: news.google.com
+  relay: false
+  read_by: feed
+  check:
+    roles: []
+    categories: []
+- id: pfa-substack
+  name: People For Animals (Substack)
+  kind: rss
+  type: news
+  url: https://peopleforanimals.substack.com/feed
+  keywords:
+  - CCSEA
+  - CPCSEA
+  - laboratory animal
+  - lab animal
+  - animal experiment
+  - animal testing
+  - G.S.R. 864
+  - IAEC
+  - Palamur
+  - non-animal method
+  host: peopleforanimals.substack.com
+  relay: true
+  read_by: feed
+  check:
+    roles: []
+    categories: []
+- id: peta-india
+  name: PETA India
+  kind: rss
+  type: news
+  url: https://www.petaindia.com/feed/
+  keywords:
+  - CCSEA
+  - CPCSEA
+  - laboratory animal
+  - lab animal
+  - animal experiment
+  - animal testing
+  - G.S.R. 864
+  - IAEC
+  - Palamur
+  - non-animal method
+  host: petaindia.com
+  relay: false
+  read_by: feed
+  check:
+    roles: []
+    categories: []
+- id: gazette-of-india
+  name: Gazette of India
+  kind: egazette
+  type: legal
+  source_type: gazette
+  url: https://egazette.gov.in/
+  lookback_days: 30
+  ministries:
+  - Ministry of Fisheries, Animal Husbandry and Dairying
+  - Ministry of Environment, Forest and Climate Change
+  host: egazette.gov.in
+  relay: true
+  read_by: code
+  check:
+    roles: []
+    categories: []
+- id: judgments-supreme-court
+  name: Supreme Court judgments (open dataset, CC BY 4.0)
+  kind: judgments-sc
+  type: legal
+  url: https://indian-supreme-court-judgments.s3.ap-south-1.amazonaws.com/
+  lookback_days: 120
+  host: indian-supreme-court-judgments.s3.ap-south-1.amazonaws.com
+  relay: false
+  read_by: code
+  check:
+    roles: []
+    categories: []
+- id: opp-wwf-india
+  name: WWF-India careers
+  org: WWF-India
+  kind: zoho
+  type: opportunity
+  opportunity_type: job
+  lookback_days: 120
+  url: https://wwfindia.zohorecruit.com/jobs/careers
+  match: title
+  keywords:
+  - conservation
+  - wildlife
+  - biodiversity
+  - species
+  - raptor
+  - tiger
+  - elephant
+  - rhino
+  - bird
+  - aquatic
+  - wetland
+  - river
+  - marine
+  - forest
+  - habitat
+  - veterinar
+  - animal
+  - brahmaputra
+  host: wwfindia.zohorecruit.com
+  relay: false
+  read_by: code
+  check:
+    roles: []
+    categories: []
+- id: opp-awbi-notifications
+  name: Animal Welfare Board of India – Notifications
+  org: Animal Welfare Board of India
+  kind: awbi
+  type: opportunity
+  opportunity_type: event
+  lookback_days: 120
+  url: https://awbi.gov.in/Notifications
+  keywords:
+  - invitation for
+  - inviting
+  - award
+  - vacancy
+  - vacancies
+  - recruitment
+  - internship
+  - applications are invited
+  - walk-in
+  host: awbi.gov.in
+  relay: true
+  read_by: code
+  check:
+    roles: []
+    categories: []

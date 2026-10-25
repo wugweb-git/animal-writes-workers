@@ -1,15 +1,14 @@
 """The site's keyword table (sourcing restructure, phase 2, owner 25 Oct 2026).
 
-From phase 2 the sourcing policy sends one list of keywords (from phase 4, owner 25 Oct 2026, without the old lists
-beside it):
+From phase 2 the sourcing policy sends one list of keywords beside the v1 lists:
 
     keywords: [{id, label, variants[], roles[], lang, searches[], categories[], sections[], queries[]}]
 
-at the top level and, the same list, as `config.keywords_v2` (so Sources sync copies it into sources.yaml; in a
-sources.yaml from before phase 4 `keywords` is the old list of Include words). Roles: include, animal, context, exclude, search, category (the Sourcing roles) and
+at the top level and, the same list, as `config.keywords_v2` (so Sources sync copies it into sources.yaml; `config.keywords`
+stays the v1 list of Include words). Roles: include, animal, context, exclude, search, category (the Sourcing roles) and
 press. A keyword's spellings are its label plus its variants; a trailing `*` matches the start of a word.
 
-The site's lists are read only with this block (sources.is_v2); a sources.yaml without it is read the old way. From it:
+Workers read this block when it is there and the v1 lists otherwise (dual-read until phase 4):
 - relevance lists (policy.py) and keyword checks by role: the spellings of the keywords with that role;
 - category words: the spellings of `category` keywords, by the category slugs they map to;
 - Google News searches: each keyword's `searches`, keeping their feed ids (run.keyword_searches);
@@ -43,7 +42,7 @@ def _is_list_of_keywords(value) -> bool:
 
 def raw_block(data: dict | None) -> list | None:
     """The keyword list in a lists dict (`keywords_v2`, or `keywords` when it holds objects, not v1 strings), or in a
-    policy response (top-level `keywords`, else `config.keywords_v2`). None when there is none."""
+    policy response (top-level `keywords`, else `config.keywords_v2`). None when there is none: v1 is read."""
     data = data or {}
     for v in (data.get("keywords_v2"), data.get("keywords")):
         if _is_list_of_keywords(v):
@@ -60,8 +59,7 @@ def _strs(value) -> list[str]:
 
 def from_data(data: dict | None) -> list[dict] | None:
     """The usable keywords: English records with at least one known role, each cleaned to the payload's shape. None when
-    the block is absent, or when not one record in it is usable (then the lists are not the site's: sources.yaml is
-    read, rather than empty lists)."""
+    the block is absent, or when not one record in it is usable (then the v1 lists apply, rather than empty lists)."""
     block = raw_block(data)
     if block is None:
         return None
@@ -83,7 +81,7 @@ def from_data(data: dict | None) -> list[dict] | None:
             "queries": _strs(k.get("queries")),
         })
     if not out:
-        _warn_once("the keyword table has %d record(s) and none is usable: these lists are not used", len(block))
+        _warn_once("the keyword table has %d record(s) and none is usable: reading the v1 lists", len(block))
         return None
     return out
 
@@ -102,13 +100,13 @@ def role_words(kws: list[dict], role: str) -> list[str]:
 
 
 def relevance_lists(kws: list[dict]) -> dict:
-    """The four relevance lists (strong, animal, context, exclude), built from the roles."""
+    """The four relevance lists in the v1 shape (policy `relevance`), built from the roles."""
     return {"strong": role_words(kws, "include"), "animal": role_words(kws, "animal"),
             "context": role_words(kws, "context"), "exclude": role_words(kws, "exclude")}
 
 
 def category_words(kws: list[dict], slugs=()) -> dict[str, list[str]]:
-    """slug -> spellings of the `category` keywords mapped to it (the site no longer keeps word lists per category). `slugs` (the
+    """slug -> spellings of the `category` keywords mapped to it (replaces the v1 `categories` lists). `slugs` (the
     site's category list) come first, so every category stays known even before it has a word."""
     out: dict[str, list[str]] = {str(s): [] for s in slugs or []}
     for k in kws:
@@ -144,10 +142,11 @@ def press_queries(kws: list[dict]) -> list[str]:
 
 def press_config(data: dict | None) -> dict:
     """The press settings (`enabled`, `date_floor`, `every_days`) with the queries from the Press role when the keyword
-    block is there (any `queries` the press block still carries are not read); a sources.yaml from before phase 2: its
-    `press` block as it is."""
+    block is there; the v1 `press` block as it is otherwise."""
     cfg = dict((data or {}).get("press") or {})
     kws = from_data(data)
     if kws is not None:
-        cfg["queries"] = press_queries(kws)
+        queries = press_queries(kws)
+        if queries:
+            cfg["queries"] = queries
     return cfg

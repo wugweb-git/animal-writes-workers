@@ -94,7 +94,7 @@ def collect(client, dry_run: bool, cfg: dict, floor: date, windows, gate=None) -
 def main() -> int:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     dry_run = truthy(os.environ.get("DRY_RUN"), default=True)
-    cfg = keywords.press_config(yaml.safe_load(Path("sources.yaml").read_text(encoding="utf-8")) or {})  # Press keywords (an old sources.yaml: its queries)
+    cfg = keywords.press_config(yaml.safe_load(Path("sources.yaml").read_text(encoding="utf-8")) or {})  # Press keywords, else v1
     floor = date.fromisoformat(str(cfg.get("date_floor", "2025-11-01")))
     client = None
     if not dry_run:

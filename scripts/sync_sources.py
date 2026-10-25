@@ -29,10 +29,10 @@ SCHEMA_KEYS = ("schema", "priority", "field_rules")
 
 
 def sync_lists(raw: dict) -> bool | None:
-    """sources.yaml from the policy: True changed, False unchanged, None when the site sent no lists the workers read
-    (the lists' switch is off, or a site from before phase 2): sources.yaml then stays as it is. The blocks
+    """sources.yaml from the policy: True changed, False unchanged, None when the lists' switch is off. The blocks
     (sources_v2, category_names, match, schema, the keyword table as keywords_v2, sections_v2) may come beside
-    `config`: they are kept in the copy too. From phase 4 they are all the lists the site sends."""
+    `config`: they are kept in the copy too. From phase 4 they are all the lists the site sends (no `config.sources`),
+    and sources.site_lists accepts that shape as well as the v1 one."""
     config = sources.site_lists(raw)
     if config is None:
         return None
@@ -80,7 +80,7 @@ def main() -> int:
     client = ingest.Client(os.environ["WP_BASE_URL"], os.environ["WP_INGEST_USER"], os.environ["WP_INGEST_APP_PASSWORD"])
     lists = sync_lists(client.policy())
     if lists is None:
-        print("sources.yaml: unchanged (the site sent no lists: Workers use these lists is off, or the site is from before phase 2)")
+        print("sources.yaml: unchanged (Workers use these lists is off: sources.yaml stays as it is)")
     else:
         print("sources.yaml: " + ("changed" if lists else "unchanged"))
     done = {"lists": lists}

@@ -18,16 +18,6 @@ from aw_workers.directory.model import CHECK, Context, Fact
 ROOT = Path(__file__).resolve().parent.parent
 SEED = json.loads((ROOT / "tests" / "fixtures" / "enrich_field_rules_seed.json").read_text(encoding="utf-8"))
 YAML = yaml.safe_load((ROOT / "sources.yaml").read_text(encoding="utf-8"))
-# The keyword table the site sends beside sources_v2 (phase 2 on): with it the lists are read the site's way (phase 4).
-KEYWORDS = json.loads((Path(__file__).parent / "fixtures" / "sourcing_phase2_policy.json").read_text(encoding="utf-8"))["migrated"]["keywords"]
-
-
-def with_table(lists: dict) -> dict:
-    out = copy.deepcopy(lists)
-    out["keywords_v2"] = copy.deepcopy(KEYWORDS)
-    if not sources.v2_sources(out):  # a sources.yaml from before phase 1: its sources as sources_v2
-        out["sources_v2"] = copy.deepcopy(out["sources"])
-    return out
 WORKER_TYPES = {"aw_news": "news", "aw_legal": "legal", "post": "research", "aw_opportunity": "opportunity",
                 "aw_press": "press"}
 
@@ -154,7 +144,7 @@ def test_sections_v2_give_the_same_allowed_lists_as_v1():
     v1 = YAML["sections"]
     sources.load_sources_data(copy.deepcopy(YAML))
     before = {t: (sources.allowed_categories(t), sources.allowed_tags(t)) for t in ("news", "legal", "opportunity", "research")}
-    lists = with_table(YAML)
+    lists = copy.deepcopy(YAML)
     lists["sections_v2"] = as_v2_sections(v1, {"aw_press": {"categories": [], "tags": []}})
     sources.load_sources_data(lists)
     after = {t: (sources.allowed_categories(t), sources.allowed_tags(t)) for t in ("news", "legal", "opportunity", "research")}
@@ -288,7 +278,7 @@ def test_claim_always_counts_and_v2_sections_are_not_replaced_by_v1():
     merge.use_config({"field_rules": rules, "priority": SEED["priority"]})
     c = ctx_with(Fact("email", "own@x.org", "claim", "C"), Fact("email", "o@x.org", "osm", "O"))
     assert [(p["value"], p["confidence"]) for p in merge.proposals(c)[0]] == [("own@x.org", "high")]
-    lists = with_table(YAML)
+    lists = copy.deepcopy(YAML)
     lists["sections_v2"] = [{"post_type": "aw_news", "worker_type": "news", "categories": ["wildlife"], "tags": []}]
     sources.load_sources_data(lists)
     sources.set_sections({"aw_news": {"categories": ["birds"], "tags": []}})  # relevance-config's v1 dict, later in the run

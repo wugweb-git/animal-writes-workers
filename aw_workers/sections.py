@@ -8,9 +8,7 @@ site sends them in the sourcing policy as `sections_v2` (inside `config`, so Sou
 
 `worker_type` is the item type the workers give an item of that section ("news", "legal", "research", ...); an empty
 one means the workers never file items there. The code map below is the fallback for sites (or sources.yaml copies)
-from before phase 3, and it is exactly the map the workers used until then. From phase 4 the site sends no other
-section lists in the policy; GET relevance-config still sends each section's allowed categories and tags by name, used
-only until sections_v2 is in force.
+from before phase 3, and it is exactly the map the workers used until then.
 """
 
 from __future__ import annotations
@@ -27,11 +25,11 @@ _v2: list[dict] = []
 
 
 def valid(v2) -> list[dict] | None:
-    """The `sections_v2` list when every entry names its post type; None otherwise (then the code map applies)."""
+    """The `sections_v2` list when every entry names its post type; None otherwise (then the v1 `sections` are read)."""
     if not isinstance(v2, list) or not v2:
         return None
     if not all(isinstance(s, dict) and str(s.get("post_type") or "").strip() for s in v2):
-        log.warning("sections_v2 has an entry without a post type: the code map applies")
+        log.warning("sections_v2 has an entry without a post type: reading the v1 sections")
         return None
     return v2
 
