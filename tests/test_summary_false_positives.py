@@ -79,6 +79,15 @@ def test_leading_zero_and_dotted_dates():
     assert any("31" in p for p in merge._unsourced("The study had 31 participants.", src))
 
 
+def test_digits_inside_a_name_are_not_a_number():
+    row = {"title": "t", "publisher": "P", "summary": ""}
+    ours = "A buffalo worth Rs 21 crore died at the Pushkar fair, The Indian Express reported, citing News18."
+    s = "A buffalo worth Rs 21 crore died at the Pushkar fair in Rajasthan after its health worsened."
+    hard, _ = summary_rewrite.evaluate(s, ours, row, s, "news", [])
+    assert not any("left out" in p for p in hard)
+    assert "numbers not in the reports: 18" in merge._unsourced("Police counted 18 dogs.", "News18 covered it.")
+
+
 def test_numbers_of_the_current_summary_kept_in_words():
     row = {"title": "t", "publisher": "P", "summary": ""}
     ours = "Police rescued 4 dogs in Pune."

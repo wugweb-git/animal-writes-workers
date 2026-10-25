@@ -87,9 +87,10 @@ def _norm_num(s: str) -> str:
 
 
 def _numbers(text: str) -> set[str]:
-    """Numbers written in digits. A date written 09.10.2026 also gives 9, 10 and 2026 (its day, month and year)."""
+    """Numbers written in digits. A date written 09.10.2026 also gives 9, 10 and 2026 (its day, month and year). Digits
+    that are part of a name (News18, G20) are not: "citing News18" holds no 18."""
     out = set()
-    for n in re.findall(r"\d[\d,.]*", text or ""):
+    for n in re.findall(r"(?<![A-Za-z\d])\d[\d,.]*", text or ""):
         out.add(_norm_num(n))
         if re.fullmatch(r"\d{1,2}\.\d{1,2}\.\d{2,4}\.?", n):
             out.update(_norm_num(p) for p in n.rstrip(".").split("."))
