@@ -1,7 +1,8 @@
 """The AI pass (the workers' provider chain): services, animals, areas served, a short description, how it is registered
 and its head, read from the organisation's own pages and bio. Nothing is kept that the text does not say: every list
 item must be one of the fixed values, every place and name must appear in the text, every number in the description
-must appear in the text, and the description is at most 60 words in the model's own words."""
+must appear in the text, every service must be named in the text, and the description is at most 40 plain, factual
+words in the model's own words with no praise or marketing words (owner, 25 Oct 2026)."""
 
 from __future__ import annotations
 
@@ -23,13 +24,27 @@ Text from its pages:
 
 Answer with one JSON object and nothing else:
 {{"services": [], "animals": [], "areas_served": [], "description": "", "reg_type": "", "head": ""}}
-- services: only from {services}, and only those the text says the organisation offers.
+- services: only from {services}, and only those the text names as something the organisation does. Never add one
+  the text does not mention.
 - animals: only from {animals}, only those the text says it helps.
 - areas_served: places (cities, districts, states) the text says it serves; [] if not stated.
-- description: at most 60 words, in your own words, about what the organisation does, using only facts in the text.
-  No praise, no numbers that are not in the text, no claims about the future. "" if the text says too little.
+- description: at most 40 words, plain and factual, in your own words: what the organisation does, for which animals,
+  where. Only facts in the text above (the organisation's own pages). No praise or marketing words (dedicated,
+  passionate, best, leading, first, trusted, tireless, compassionate, committed...), no "we"/"our", no numbers that are
+  not in the text, no claims about the future, no services the text does not name. "" if the text says too little.
 - reg_type: "Trust", "Society" or "Section 8 company" only if the text says how it is registered, else "".
 - head: "Name, Role" of the founder or head only if the text names them with that role, else ""."""
+
+
+# Praise and marketing words a description never carries (owner, 25 Oct 2026): a description with one is dropped.
+PRAISE = re.compile(
+    r"\b(best|finest|leading|premier|top|renowned|famous|trusted|reputed|award[- ]winning|world[- ]class|unique|"
+    r"unparalleled|unmatched|outstanding|exceptional|excellent|remarkable|extraordinary|amazing|incredible|wonderful|"
+    r"great|dedicated|passionate|tireless(ly)?|selfless(ly)?|devoted|committed|compassionate|caring|loving|noble|"
+    r"inspiring|heart[- ]?warming|tirelessly|strives?|striving|mission|vision|journey|making a difference|"
+    r"voice(s)? for the voiceless|furry|fur ?bab(y|ies)|(india[’']?s|the|country[’']?s) (first|only|largest|biggest|oldest))\b",
+    re.I,
+)
 
 
 def _json(reply: str) -> dict:
@@ -44,11 +59,17 @@ def _in(text: str, s: str) -> bool:
     return re.sub(r"\s+", " ", s.lower()).strip() in text
 
 
+def _named(text: str, slug: str, label: str) -> bool:
+    """A service the text names: a word of its label (or slug) of 4+ letters, by its first 5 letters (rescue/rescues)."""
+    words = [w for w in re.findall(r"[a-z]{4,}", f"{label} {slug}".lower()) if w not in ("care", "service", "services")]
+    return any(w[:5] in text for w in words)
+
+
 def checked(data: dict, text: str, services: dict) -> dict:
     """Only what the text supports."""
     low = re.sub(r"\s+", " ", text.lower())
     out = {}
-    svc = [s for s in data.get("services") or [] if s in services]
+    svc = [s for s in data.get("services") or [] if s in services and _named(low, s, services[s])]
     if svc:
         out["services"] = list(dict.fromkeys(svc))
     an = [a for a in data.get("animals") or [] if a in ANIMALS]
@@ -61,7 +82,8 @@ def checked(data: dict, text: str, services: dict) -> dict:
     nums_ok = all(n in low for n in re.findall(r"\d[\d,]*", desc.lower()))
     names = re.findall(r"(?<!^)(?<![.!?] )\b([A-Z][a-z]{2,}(?:\s[A-Z][a-z]+)*)", desc)
     names_ok = all(_in(low, n) for n in names)
-    if desc and len(desc.split()) <= 60 and nums_ok and names_ok:
+    plain = not PRAISE.search(desc) and not re.search(r"\b(we|our|us)\b", desc, re.I)
+    if desc and len(desc.split()) <= 40 and nums_ok and names_ok and plain:
         out["description"] = desc
     rt = str(data.get("reg_type") or "")
     if rt in ("Trust", "Society", "Section 8 company") and re.search(r"\b(trust|society|section\s?8)\b", low):
