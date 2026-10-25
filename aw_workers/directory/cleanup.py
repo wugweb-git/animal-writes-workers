@@ -190,6 +190,10 @@ def place_finding(L: dict, places: Places, pins: PinBook) -> dict | None:
 
     if by_pin[0]:
         s, d = by_pin
+        named = places.states_in(L.get("name") or "") | places.states_in(text)  # owner, 25 Oct 2026: the PIN never overrules the listing's own name or address
+        if named and s not in named:
+            return {**out, "value": {"state": s, "district": d}, "confidence": "low", "sources": [pin_src],
+                    "why": f"PIN {pin} is in {places.label(s, d)}; the listing's own name or address says {', '.join(places.states.get(x, '') for x in sorted(named))}"}
         if state and s != state:
             return {**out, "value": {"state": s, "district": d}, "confidence": "low", "sources": [pin_src],
                     "why": f"PIN {pin} is in {places.label(s, d)}; the listing says {places.states.get(state)}"}
