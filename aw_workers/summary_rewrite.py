@@ -96,7 +96,9 @@ Write the summary again from the CURRENT SUMMARY and the SOURCE text.
   write fewer words.
 - Keep every number of the current summary. Write any date as day, three-letter month, year (for example 3 Oct 2026).
 - Never give the publication date as the date of the event.
-- Do not mention the publisher or "the report"; do not name other publishers.
+- Never credit the publisher as the source ("according to {publisher}", "{publisher} said/reported", "the report
+  says"); the page credits it. Name the publisher only where it is part of the story itself (it rescued, complained,
+  went to court, is the subject), and then attribute its claims as you would any party's. Do not name other publishers.
 {rules}
 - Output only the summary text, nothing else."""
 
@@ -135,15 +137,16 @@ def evaluate(summary: str, ours: str, row: dict, text: str, section: str, pubs) 
     """(hard problems, 'too short' problems). Hard ones block publishing; short ones are never fixed by padding."""
     title = row.get("title") or ""
     rules = summary_rules.current()
-    names = " ".join(summary_rules.entities_in(f"{ours} {title} {text}", rules))
-    hard = merge._unsourced(summary, f"{ours} {title} {text} {names} {_MONTHS}")
+    publisher = row.get("publisher") or ""  # the issuer of a Library document (Animal Welfare Board of India) is sourced
+    names = " ".join(summary_rules.entities_in(f"{ours} {title} {text} {publisher}", rules))
+    hard = merge._unsourced(summary, f"{ours} {title} {text} {publisher} {names} {_MONTHS}")
     wrong = event_dates.pub_date_mentions(summary, pubs, f"{title}. {text}") if pubs else []
     if wrong:
         hard.append(event_dates.problem(wrong))
-    lost = sorted(merge._numbers(event_dates.without_pub_dates(ours, pubs)) - merge._numbers(summary))
+    lost = sorted(merge._numbers(event_dates.without_pub_dates(ours, pubs)) - merge._number_forms(summary))
     if lost:
         hard.append("numbers from the current summary left out: " + ", ".join(lost))
-    found = summary_rules.problems(summary, section, f"{title}. {text}", rules, publisher=row.get("publisher") or "")
+    found = summary_rules.problems(summary, section, f"{title}. {text}", rules, publisher=publisher, context=title)
     hard += [p for p in found if not p.startswith(summary_rules.SHORT)]
     if len(summary_rules.words(summary)) < 8:
         hard.append("no usable summary in the answer")
@@ -153,6 +156,12 @@ def evaluate(summary: str, ours: str, row: dict, text: str, section: str, pubs) 
     if lost_apos:
         hard.append("apostrophe lost in: " + ", ".join(lost_apos))
     return hard, [p for p in found if p.startswith(summary_rules.SHORT)]
+
+
+def glyph_codes(text: str) -> bool:
+    """Whether a PDF's text is font glyph codes ("/g69/g75/g100 …") rather than words."""
+    codes = len(re.findall(r"/g\d+", text or ""))
+    return codes >= 20 and codes * 4 >= len(summary_rules.words(text))
 
 
 def read_source(url: str, session=None) -> dict:
@@ -170,7 +179,10 @@ def read_source(url: str, session=None) -> dict:
                 return {"text": "", "published": [], "status": "pdf too large"}
             from .documents import pdf_text
 
-            return {"text": re.sub(r"\s+", " ", pdf_text(r.content, max_pages=12))[:20000], "published": [], "status": "pdf"}
+            text = re.sub(r"\s+", " ", pdf_text(r.content, max_pages=12))[:20000]
+            if glyph_codes(text):  # 25 Oct 2026: a PDF with no text layer read as "/g69/g75/g100 …"; never a source
+                return {"text": "", "published": [], "status": "pdf without text"}
+            return {"text": text, "published": [], "status": "pdf"}
         except Exception as exc:  # noqa: BLE001
             return {"text": "", "published": [], "status": type(exc).__name__}
     return summary_dates.read_page(url, session)
@@ -279,7 +291,7 @@ def process(rw: Rewriter, row: dict) -> dict:
     section = row.get("section") or SECTION.get(row["type"], "news")
     ours = row.get("summary") or ""
     rules = summary_rules.current()
-    cur = summary_rules.problems(ours, section, "", rules, publisher=row.get("publisher") or "")
+    cur = summary_rules.problems(ours, section, "", rules, publisher=row.get("publisher") or "", context=row.get("title") or "")
     why = "; ".join(cur) or "rewrite"
     page = read_source(row.get("source_url") or "")
     text = page.get("text") or ""
@@ -343,7 +355,8 @@ def candidates(client, batch: int, only: list[int] | None, dry: bool, log_) -> l
             if not (row.get("source_url") or "").strip():
                 continue  # our own content has no source: never rewritten (20 Oct 2026: letter templates got unrelated stories)
             section = row.get("section") or SECTION.get(row["type"], "news")
-            probs = summary_rules.problems(row.get("summary") or "", section, "", publisher=row.get("publisher") or "")
+            probs = summary_rules.problems(row.get("summary") or "", section, "", publisher=row.get("publisher") or "",
+                                           context=row.get("title") or "")
             if not probs and not only:
                 ok_ids.append(row["id"])
             elif row.get("tries", 0) < 2 or only:
