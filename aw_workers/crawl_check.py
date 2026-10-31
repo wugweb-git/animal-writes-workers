@@ -28,7 +28,8 @@ from . import ingest
 
 log = logging.getLogger("crawl_check")
 
-TIMEOUT = 25
+TIMEOUT = (10, 15)  # connect, read: a site that hangs must not use up the job
+DEADLINE = 600  # seconds for the whole check; the job has 15 minutes, so a partial result is still sent
 BURST_SIZE = 20
 BURST_PARALLEL = 5
 GAP = 1.0  # seconds between the sample-page requests of one agent
@@ -89,7 +90,8 @@ def verdict(status: int, body: str) -> str:
         return "refused"
     if CHALLENGE.search(body[:20000]) and "animalwrites.in" not in body[:20000]:
         return "challenge"
-    if 'rel="canonical"' not in body and "rel='canonical'" not in body:
+    # One of our pages has a canonical link or (noindex pages) our /wp-content/ assets; a CDN challenge has neither.
+    if 'rel="canonical"' not in body and "rel='canonical'" not in body and "/wp-content/" not in body:
         return "challenge"
     return "ok"
 
@@ -104,16 +106,23 @@ def fetch(url: str, ua: str, get: Callable = requests.get) -> dict:
         return {"code": 0, "ms": int((time.monotonic() - t) * 1000), "bytes": 0, "result": "refused", "error": type(exc).__name__}
 
 
-def run(plan: dict, agents: dict, get: Callable = requests.get, sleep: Callable = time.sleep) -> dict:
-    checks = []
+def run(plan: dict, agents: dict, get: Callable = requests.get, sleep: Callable = time.sleep,
+        clock: Callable[[], float] = time.monotonic, deadline: float = DEADLINE) -> dict:
+    """Every agent on every sample page, then the bursts; stops at the deadline and says so (cut)."""
+    start, checks, cut = clock(), [], False
     for name, ua in agents.items():
         for i, p in enumerate(plan["pages"]):
+            if clock() - start > deadline:
+                cut = True
+                break
             if i:
                 sleep(GAP)
             checks.append({"agent": name, "kind": p["kind"], "url": p["url"], **fetch(p["url"], ua, get)})
+        if cut:
+            break
     bursts = []
     for name in BURST_AGENTS:
-        if name not in agents or not plan.get("burst"):
+        if cut or name not in agents or not plan.get("burst"):
             continue
         with ThreadPoolExecutor(BURST_PARALLEL) as ex:
             got = list(ex.map(lambda u, ua=agents[name]: fetch(u, ua, get), plan["burst"]))
@@ -127,7 +136,7 @@ def run(plan: dict, agents: dict, get: Callable = requests.get, sleep: Callable 
             "codes": codes,
             "max_ms": max((g["ms"] for g in got), default=0),
         })
-    return {"runner": "github", "checks": checks, "burst": bursts}
+    return {"runner": "github", "checks": checks, "burst": bursts, "cut": cut}
 
 
 def table(res: dict) -> str:
@@ -136,6 +145,8 @@ def table(res: dict) -> str:
         mine = [c for c in res["checks"] if c["agent"] == name]
         bad = [f"{c['kind']} {c['code']} {c['result']}" for c in mine if c["result"] != "ok"]
         rows.append(f"| {name} | {len(mine) - len(bad)}/{len(mine)} | {', '.join(bad) or '—'} |")
+    if res.get("cut"):
+        rows.append(f"| (stopped after {DEADLINE} s: the rest was not asked) | | |")
     for b in res["burst"]:
         rows.append(f"| Burst ({b['agent']}, {b['n']} pages, {BURST_PARALLEL} at a time) | {b['ok']}/{b['n']} | codes {b['codes']}, slowest {b['max_ms']} ms |")
     return "\n".join(rows)

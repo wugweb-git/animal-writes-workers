@@ -20,6 +20,7 @@ def test_verdicts():
     assert cc.verdict(429, "") == "refused"
     assert cc.verdict(200, CHALLENGE) == "challenge"
     assert cc.verdict(200, "<html>a blank page</html>") == "challenge"  # not one of our pages
+    assert cc.verdict(200, '<html><link href="/wp-content/themes/x.css"></html>') == "ok"  # a noindex page of ours
 
 
 def test_fetch_records_network_errors_as_refused():
@@ -91,3 +92,11 @@ def test_main_live_needs_secrets(monkeypatch):
         monkeypatch.delenv(k, raising=False)
     monkeypatch.setenv("DRY_RUN", "false")
     assert cc.main([]) == 1
+
+
+def test_run_stops_at_the_deadline_and_says_so():
+    t = iter(range(0, 10000, 100))  # every clock reading is 100 s later
+    plan = {"pages": [{"kind": "home", "url": "https://animalwrites.in/"}] * 3, "burst": ["https://animalwrites.in/"]}
+    res = cc.run(plan, {"Browser": "UA", "GPTBot": "GPTBot"}, lambda u, **kw: Resp(), lambda s: None, lambda: next(t), deadline=250)
+    assert res["cut"] is True and len(res["checks"]) < 6 and res["burst"] == []
+    assert "stopped after" in cc.table(res)
