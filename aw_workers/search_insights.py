@@ -39,7 +39,7 @@ from urllib.parse import quote
 
 import requests
 
-from . import counts, ingest, relay
+from . import counts, ingest, relay, sources
 
 log = logging.getLogger("aw_workers.search_insights")
 
@@ -60,7 +60,6 @@ GDELT_RATIO = 3.0     # flag at 3x the 14-day average, as the Sourcing spikes on
 GDELT_MIN = 5         # and at least 5 articles that day
 WIKI_PAUSE = 1.0
 GDELT_PAUSE = 5.5
-RELAY_HOSTS = ("gdeltproject.org",)  # asked through the site when refused from GitHub (relay switch on in Sourcing → Sources)
 AC_PAUSE = (2.0, 4.0)
 TRENDS_PAUSE = (2.0, 4.0)
 AC_CACHE_DAYS = 6     # a seed fetched within 6 days is not asked again (a re-run in the same week sends no request)
@@ -622,6 +621,17 @@ def _days(value: str) -> int:
     return n
 
 
+def relay_hosts(client) -> list[str]:
+    """The hosts whose relay switch is on (Sourcing → Sources), from the site's policy as sourcing reads them; none when
+    the policy cannot be read (a refused request then stays refused)."""
+    try:
+        raw = client.policy()
+    except Exception as exc:  # noqa: BLE001  the relay is an extra; the run goes on without it
+        log.warning("relay hosts not read from the site: %s", exc)
+        return []
+    return sources.relay_hosts(sources.site_lists(raw) or {}, raw.get("relay_hosts"))
+
+
 def main(argv: list[str] | None = None) -> int:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
@@ -650,7 +660,7 @@ def main(argv: list[str] | None = None) -> int:
         config = dict(DEFAULTS)
     config["_dry_run"] = dry_run
     if client is not None:
-        relay.configure(client, RELAY_HOSTS)  # the site fetches only hosts whose relay switch is on there
+        relay.configure(client, relay_hosts(client))
     names_ = [s for j in (JOBS if a.job == "all" else [a.job]) for s in JOBS[j]]
     if a.only:
         names_ = [s for s in names_ if s in a.only.split(",")]

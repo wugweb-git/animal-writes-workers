@@ -142,15 +142,17 @@ class Client:
         # (headline_case.press_caser; owner, 20 Oct 2026)
         self.title_caser = None
         self.sleep = time.sleep
+        self.refused = False  # the one retry already failed in this run
 
     def _send(self, send, *args, **kw):
         """send(*args, **kw) once; a 401/403 is tried once more after AUTH_RETRY_WAIT seconds. The site refused the
         workers' own login for one run at a time (25 and 30 Oct 2026), and the next run worked with the same password."""
         resp = send(*args, **kw)
-        if resp.status_code in (401, 403):
+        if resp.status_code in (401, 403) and not self.refused:
             log.warning("site answered HTTP %s, trying once more in %ss", resp.status_code, AUTH_RETRY_WAIT)
             self.sleep(AUTH_RETRY_WAIT)
             resp = send(*args, **kw)
+            self.refused = resp.status_code in (401, 403)  # refused twice: later refusals in this run fail at once
         return resp
 
     def policy(self) -> dict:

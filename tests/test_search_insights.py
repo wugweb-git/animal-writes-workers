@@ -406,7 +406,7 @@ def test_gdelt_refused_from_github_is_read_through_the_site():
     d = TODAY - timedelta(days=1)
     timeline = {"timeline": [{"series": "Article Count", "data": [{"date": d.strftime("%Y%m%d") + "T000000Z", "value": 7}]}]}
     site = _SiteSession(body=timeline)
-    relay.configure(_SiteClient(site), si.RELAY_HOSTS)
+    relay.configure(_SiteClient(site), ["gdeltproject.org"])
     try:
         f = fetcher([("gdeltproject", Resp(429, "Please limit requests"))])
         out = si.run_source("gdelt", f, {"gdelt": ["rabies", "dog bite"]}, TODAY, 1)
@@ -421,7 +421,7 @@ def test_gdelt_refused_by_the_site_too_stops_after_one_attempt():
     from aw_workers import relay
 
     site = _SiteSession(status=429, body={})
-    relay.configure(_SiteClient(site), si.RELAY_HOSTS)
+    relay.configure(_SiteClient(site), ["gdeltproject.org"])
     try:
         f = fetcher([("gdeltproject", Resp(429, "Please limit requests"))])
         out = si.run_source("gdelt", f, {"gdelt": ["rabies", "dog bite"]}, TODAY, 1)
@@ -439,3 +439,18 @@ def test_a_source_with_an_error_and_no_data_fails_the_run(monkeypatch, tmp_path)
     monkeypatch.setenv("DRY_RUN", "true")
     monkeypatch.delenv("WP_BASE_URL", raising=False)
     assert si.main(["daily", "--only", "gdelt", "--config", str(cfg)]) == 1
+
+
+def test_relay_hosts_come_from_the_site_policy():
+    class Policy:
+        def __init__(self, raw):
+            self.raw = raw
+
+        def policy(self):
+            if isinstance(self.raw, Exception):
+                raise self.raw
+            return self.raw
+
+    assert si.relay_hosts(Policy({"relay_hosts": ["gdeltproject.org", "substack.com"]})) == ["gdeltproject.org", "substack.com"]
+    assert si.relay_hosts(Policy({})) == []  # the switch is off on the site: the worker does not try the relay
+    assert si.relay_hosts(Policy(RuntimeError("HTTP 500"))) == []

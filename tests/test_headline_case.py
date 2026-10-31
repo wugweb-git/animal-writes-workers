@@ -143,3 +143,7 @@ def test_a_refused_login_is_tried_once_more():
     with pytest.raises(ingest.AuthError):
         bad._call("GET", "/search-insights")
     assert bad.session.calls == 2  # one retry only
+    bad.session.codes = [403]
+    with pytest.raises(ingest.AuthError):
+        bad._call("GET", "/summary-rules")
+    assert bad.session.calls == 3  # refused twice already: the next refusal fails at once, without the wait
