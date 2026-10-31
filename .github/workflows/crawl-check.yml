@@ -1,0 +1,51 @@
+name: "Search Insights: crawler access"
+
+# Owner, 31 Oct 2026 (Search Insights step 3): from a GitHub runner (an outside data-centre address, like SEO tools and the
+# AI crawlers), ask the site's sample pages with each crawler's user agent, then a 20-page burst, and send the results to
+# aw/v1/search-insights/crawl (aw_workers/crawl_check.py). The site turns refusals and challenge pages into a Site Health
+# problem and an alert; its own weekly self-test is the inside check. Weekly, Monday 09:15 IST.
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run: check and print the table, send nothing"
+        type: boolean
+        default: true
+  schedule:
+    - cron: "45 3 * * 1" # weekly, Monday 09:15 IST
+
+concurrency:
+  group: crawl-check
+  cancel-in-progress: false
+
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      # Scheduled runs stay dry until the repository variable CRAWL_LIVE is "true" (the site route ships with it).
+      DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && (inputs.dry_run && 'true' || 'false') || (vars.CRAWL_LIVE == 'true' && 'false' || 'true') }}
+      WP_BASE_URL: ${{ secrets.WP_BASE_URL }}
+      WP_INGEST_USER: ${{ secrets.WP_INGEST_USER }}
+      WP_INGEST_APP_PASSWORD: ${{ secrets.WP_INGEST_APP_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Report the start to the site
+        uses: ./.github/actions/report
+        with:
+          phase: start
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - run: python -m aw_workers.crawl_check
+        id: main
+      - name: Report the end to the site (Settings → Sourcing → Workers)
+        if: always()
+        uses: ./.github/actions/report
+        with:
+          phase: end
+          main: main
+          steps: ${{ toJSON(steps) }}
+          status: ${{ job.status }}

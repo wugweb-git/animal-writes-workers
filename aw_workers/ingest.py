@@ -231,6 +231,14 @@ class Client:
         """One source's rising terms and figures (aw/v1/search-insights); the site records the source's run."""
         return self._call("POST", "/search-insights", json=body, timeout=90)
 
+    def crawl_check_plan(self) -> dict:
+        """The crawler-access check's sample pages, burst pages and user agents (GET aw/v1/search-insights/crawl)."""
+        return self._call("GET", "/search-insights/crawl", timeout=60)
+
+    def crawl_check_post(self, body: dict) -> dict:
+        """The outside crawler-access results (POST aw/v1/search-insights/crawl); the site raises Site Health problems."""
+        return self._call("POST", "/search-insights/crawl", json=body, timeout=90)
+
     def post(self, payload: dict) -> str:
         """Returns 'created', 'duplicate', or 'blocked' / 'filtered' (refused by the site's sourcing policy)."""
         if self.title_caser and payload.get("type") == "press" and payload.get("title"):
