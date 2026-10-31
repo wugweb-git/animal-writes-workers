@@ -60,3 +60,11 @@ def _frozen_summary_rules(monkeypatch):
     yield
     summary_rules.reset()
     sections.use(None)
+
+
+@pytest.fixture(autouse=True)
+def _no_auth_retry_wait(monkeypatch):
+    """The site client's one retry after a 401/403 waits 60 seconds on GitHub; tests do not wait."""
+    from aw_workers import ingest
+
+    monkeypatch.setattr(ingest, "AUTH_RETRY_WAIT", 0)

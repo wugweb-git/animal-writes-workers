@@ -100,7 +100,7 @@ def test_live_counts_created_and_duplicate(fixture_text):
 @pytest.mark.parametrize("code", [401, 403])
 def test_auth_failure_stops_run(fixture_text, code):
     src = [s for s in all_sources()[0] if s.id == "pib-releases"]
-    client = ingest.Client("https://site.test", "ingest", "x", session=FakeSession([FakeResp(code, {"code": "rest_forbidden"})]))
+    client = ingest.Client("https://site.test", "ingest", "x", session=FakeSession([FakeResp(code, {"code": "rest_forbidden"})] * 2))  # refused, and refused again on the one retry
     with pytest.raises(ingest.AuthError):
         run.run(src, {}, dry_run=False, summariser=DryRunSummariser(), client=client,
                 fetch=fake_fetch(fixture_text), today=TODAY)
