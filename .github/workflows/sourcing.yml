@@ -6,6 +6,10 @@ on:
     - cron: "47 2-23/6 * * *" # backup, 2.5 hours later (seen-items state makes repeats harmless)
   workflow_dispatch:
     inputs:
+      scheduled_cron:
+        description: "Set by the site's scheduler (wp aw workers-tick): run as GitHub's schedule would for this cron"
+        type: string
+        default: ""
       dry_run:
         description: "Dry run (no POSTs to WordPress)"
         type: boolean
@@ -23,12 +27,13 @@ concurrency:
 # sourcing (owner, 22 Oct 2026: a sources.yaml copy from the site failed a test and skipped two runs).
 jobs:
   run:
+    if: github.event_name != 'schedule' || vars.AW_SCHEDULER != 'site'  # the site starts it on time (wp aw workers-tick)
     runs-on: ubuntu-latest
     timeout-minutes: 45 # the run stops taking new items after 25 minutes (AW_TIME_BUDGET_MIN) and saves as it goes
     env:
       # DRY_RUN stays ON unless the repo variable DRY_RUN is set to "false"
       # (manual runs use the checkbox instead).
-      DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && (inputs.dry_run && 'true' || 'false') || vars.DRY_RUN || 'true' }}
+      DRY_RUN: ${{ (github.event_name == 'workflow_dispatch' && inputs.scheduled_cron == '') && (inputs.dry_run && 'true' || 'false') || vars.DRY_RUN || 'true' }}
       AW_WINDOW: ${{ inputs.window || '2d' }}
       WP_BASE_URL: ${{ secrets.WP_BASE_URL }}
       WP_INGEST_USER: ${{ secrets.WP_INGEST_USER }}

@@ -7,6 +7,10 @@ name: "Focus keywords (Rank Math)"
 on:
   workflow_dispatch:
     inputs:
+      scheduled_cron:
+        description: "Set by the site's scheduler (wp aw workers-tick): run as GitHub's schedule would for this cron"
+        type: string
+        default: ""
       repick:
         description: "Re-pick keywords that are not words of the SEO title"
         type: boolean
@@ -24,6 +28,7 @@ concurrency:
 
 jobs:
   keywords:
+    if: github.event_name != 'schedule' || vars.AW_SCHEDULER != 'site'  # the site starts it on time (wp aw workers-tick)
     runs-on: ubuntu-latest
     timeout-minutes: 90
     env:

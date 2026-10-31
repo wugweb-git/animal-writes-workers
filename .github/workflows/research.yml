@@ -5,6 +5,10 @@ name: "Research (India, Europe PMC and Crossref)"
 on:
   workflow_dispatch:
     inputs:
+      scheduled_cron:
+        description: "Set by the site's scheduler (wp aw workers-tick): run as GitHub's schedule would for this cron"
+        type: string
+        default: ""
       dry_run:
         description: "Dry run (search and report only; nothing sent, no summaries written)"
         type: boolean
@@ -18,12 +22,13 @@ on:
 
 jobs:
   research:
+    if: github.event_name != 'schedule' || vars.AW_SCHEDULER != 'site'  # the site starts it on time (wp aw workers-tick)
     runs-on: ubuntu-latest
     timeout-minutes: 120
     env:
-      DRY_RUN: ${{ github.event_name == 'schedule' && 'false' || (inputs.dry_run && 'true' || 'false') }}
+      DRY_RUN: ${{ (github.event_name == 'schedule' || inputs.scheduled_cron != '') && 'false' || (inputs.dry_run && 'true' || 'false') }}
       AW_RESEARCH_FLOOR: ${{ inputs.floor }}
-      AW_RESEARCH_DAYS: ${{ github.event_name == 'schedule' && '30' || '' }}
+      AW_RESEARCH_DAYS: ${{ (github.event_name == 'schedule' || inputs.scheduled_cron != '') && '30' || '' }}
       WP_BASE_URL: ${{ secrets.WP_BASE_URL }}
       WP_INGEST_USER: ${{ secrets.WP_INGEST_USER }}
       WP_INGEST_APP_PASSWORD: ${{ secrets.WP_INGEST_APP_PASSWORD }}

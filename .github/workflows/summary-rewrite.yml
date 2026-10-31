@@ -7,6 +7,10 @@ name: "Summaries: rewrite those that break the current rules"
 on:
   workflow_dispatch:
     inputs:
+      scheduled_cron:
+        description: "Set by the site's scheduler (wp aw workers-tick): run as GitHub's schedule would for this cron"
+        type: string
+        default: ""
       ids:
         description: "Only these post IDs (comma-separated); empty = the next batch"
         type: string
@@ -32,6 +36,7 @@ permissions:
 
 jobs:
   rewrite:
+    if: github.event_name != 'schedule' || vars.AW_SCHEDULER != 'site'  # the site starts it on time (wp aw workers-tick)
     runs-on: ubuntu-latest
     timeout-minutes: 50
     env:

@@ -8,6 +8,10 @@ name: "Search Insights: rising terms"
 on:
   workflow_dispatch:
     inputs:
+      scheduled_cron:
+        description: "Set by the site's scheduler (wp aw workers-tick): run as GitHub's schedule would for this cron"
+        type: string
+        default: ""
       job:
         description: "Which sources"
         type: choice
@@ -32,13 +36,14 @@ concurrency:
 
 jobs:
   rising:
+    if: github.event_name != 'schedule' || vars.AW_SCHEDULER != 'site'  # the site starts it on time (wp aw workers-tick)
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
       # Scheduled runs stay dry until the repository variable SI_LIVE is "true" (its own switch, as ENRICH_LIVE: the shared
       # DRY_RUN variable is already false for sourcing, and the site route must be deployed before this sends anything).
-      DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && (inputs.dry_run && 'true' || 'false') || (vars.SI_LIVE == 'true' && 'false' || 'true') }}
-      AW_SI_JOB: ${{ github.event_name == 'workflow_dispatch' && inputs.job || (github.event.schedule == '0 3 * * 1' && 'weekly' || (github.event.schedule == '30 3 1 * *' && 'monthly' || 'daily')) }}
+      DRY_RUN: ${{ (github.event_name == 'workflow_dispatch' && inputs.scheduled_cron == '') && (inputs.dry_run && 'true' || 'false') || (vars.SI_LIVE == 'true' && 'false' || 'true') }}
+      AW_SI_JOB: ${{ (github.event_name == 'workflow_dispatch' && inputs.scheduled_cron == '') && inputs.job || ((github.event.schedule || inputs.scheduled_cron) == '0 3 * * 1' && 'weekly' || ((github.event.schedule || inputs.scheduled_cron) == '30 3 1 * *' && 'monthly' || 'daily')) }}
       AW_SI_DAYS: ${{ inputs.days }}
       WP_BASE_URL: ${{ secrets.WP_BASE_URL }}
       WP_INGEST_USER: ${{ secrets.WP_INGEST_USER }}
