@@ -25,6 +25,7 @@ runs:
         MAIN: ${{ inputs.main }}
         STEPS: ${{ inputs.steps }}
         STATUS: ${{ inputs.status }}
+        SCHEDULED_CRON: ${{ github.event.inputs.scheduled_cron }}
       run: |
         set +e
         if [ "$GITHUB_REF" != "refs/heads/main" ] || [ -z "$WP_BASE_URL" ] || [ -z "$WP_INGEST_USER" ] || [ -z "$WP_INGEST_APP_PASSWORD" ]; then
@@ -45,9 +46,11 @@ runs:
           *) if [ -n "$MAIN" ] && [ "$main_outcome" = "skipped" ]; then result=skipped; else result=success; fi ;;
         esac
         [ "$PHASE" = "start" ] && result=running
+        # Started by the site's scheduler (wp aw workers-tick): reported as a scheduled run, not "by hand".
+        EVENT="$GITHUB_EVENT_NAME"; [ -n "$SCHEDULED_CRON" ] && EVENT=schedule
         body=$(jq -n \
           --arg workflow "$(basename "${GITHUB_WORKFLOW_REF%%@*}")" --arg name "$GITHUB_WORKFLOW" \
-          --arg run_id "$GITHUB_RUN_ID" --arg attempt "$GITHUB_RUN_ATTEMPT" --arg event "$GITHUB_EVENT_NAME" \
+          --arg run_id "$GITHUB_RUN_ID" --arg attempt "$GITHUB_RUN_ATTEMPT" --arg event "$EVENT" \
           --arg phase "$PHASE" --arg sha "${GITHUB_SHA:0:7}" --arg dry "${DRY_RUN:-}" \
           --arg link "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
           --argjson started "$started" --arg result "$result" --arg failed "$failed" --arg main "$MAIN" \
