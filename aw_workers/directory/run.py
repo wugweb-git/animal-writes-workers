@@ -30,6 +30,8 @@ from .model import Context, Polite, now_ist
 from .sources import REGISTRY, google_places
 
 log = logging.getLogger("aw_workers.directory")
+MAX_UNSAVED = 5  # listings the site failed to save (timeouts) before the run stops: the site is in trouble
+RESULTS_RETRY_WAIT = 30  # seconds before the one retry of a results POST that timed out
 SWEEP_MIN = 3  # listings of one district in a batch before a district search is made
 
 
@@ -46,6 +48,26 @@ def file_leads(listing_id: int) -> dict:
         return {k: v for k, v in (json.loads(LEADS_FILE.read_text()).get(str(listing_id)) or {}).items() if v}
     except (OSError, ValueError):
         return {}
+
+
+def save_results(client, body: dict):
+    """POST aw/v1/enrich/results; a gateway timeout (502/503/504, 27 and 28 Oct 2026: one slow listing stopped the whole
+    run) or a client timeout is tried once more; None when the second try fails too (the listing is skipped)."""
+    import requests
+
+    for attempt in (1, 2):
+        try:
+            return client._call("POST", "/enrich/results", timeout=120, json=body)
+        except (requests.Timeout, requests.ConnectionError) as exc:
+            err = str(exc)[:120]
+        except requests.HTTPError as exc:
+            if getattr(exc.response, "status_code", 0) not in (502, 503, 504):
+                raise
+            err = f"HTTP {exc.response.status_code}"
+        log.warning("%s: results not saved (%s)%s", body["listing_id"], err, ", trying once more" if attempt == 1 else ", skipped")
+        if attempt == 1:
+            time.sleep(RESULTS_RETRY_WAIT)
+    return None
 
 
 def enrich_one(listing: dict, env: dict, http, on: dict, summariser, services: dict) -> Context:
@@ -138,6 +160,7 @@ def main(env=None) -> int:
         summariser = None
     http = Polite(gap=1.0)
     report, run_id, spent_run, done = Report(dry), env.get("GITHUB_RUN_ID") or f"local-{int(time.time())}", 0.0, 0
+    unsaved: list[int] = []
     reason, google_note = "", ""
     sweeps, taken, carry = {}, {}, 0.0
     while done < batch and time.time() < stop_at:
@@ -149,6 +172,15 @@ def main(env=None) -> int:
         params["google"] = 1 if env.get("GOOGLE_PLACES_KEY") else 0  # listings checked while Google was off come back first once it is on
         q = client._call("GET", "/enrich/queue", params=params, timeout=120)
         items = q.get("items") or []
+        if params["google"] and float(q.get("google_spent") or 0) + spent_run + google_places.COST_USD > limit + 1e-9:
+            # The month's Google quota was already used before this batch: ask again without Google. Otherwise the
+            # listings waiting for Google come back, are checked without it and wait again, the same ones every run
+            # (30 and 31 Oct 2026: listings 42, 920 … 965, 25 a day, nothing to apply).
+            google_note = (f"Google free quota ({free} requests) used for this month" if budget <= 0
+                           else f"Google limit ({free} free requests + ${budget:.0f}) reached for this month")
+            env["GOOGLE_PLACES_KEY"] = ""
+            log.info("%s: carrying on without Google", google_note)
+            continue
         if dry and done:
             break
         if not items:
@@ -190,11 +222,18 @@ def main(env=None) -> int:
                 for p in props:
                     outcome[merge.would(listing, p)].append(p["field"])
             else:
-                outcome = client._call("POST", "/enrich/results", timeout=120, json={
+                body = {
                     "listing_id": listing["id"], "run": run_id, "google_cost": ctx.google_cost,
                     "google_skipped": not env.get("GOOGLE_PLACES_KEY") and bool(cfg.get("sources", {}).get("google_places", True)),
                     "sources_used": [k for k, v in ctx.status.items() if v != "off"],
-                    "proposals": [{k: p[k] for k in ("field", "value", "confidence", "sources")} for p in props], "flags": flags})
+                    "proposals": [{k: p[k] for k in ("field", "value", "confidence", "sources")} for p in props], "flags": flags}
+                outcome = save_results(client, body)
+                if outcome is None:  # the site timed out twice: not marked checked, so it comes back next run
+                    unsaved.append(listing["id"])
+                    if len(unsaved) >= MAX_UNSAVED:
+                        reason = f"the site did not save {len(unsaved)} listings (timeouts)"
+                        break
+                    continue
             report.add(listing, ctx, props, invite, outcome)
             done += 1
             log.info("%s %s: %s", listing["id"], listing["name"][:50], ", ".join(f"{p['field']}:{p['confidence'][0]}" for p in props) or "nothing")
@@ -203,7 +242,7 @@ def main(env=None) -> int:
     out = Path(env.get("REPORT_DIR") or "enrich-report")
     out.mkdir(parents=True, exist_ok=True)
     google_n = round(spent_run / google_places.COST_USD)
-    md = report.markdown(f"Google requests this run: {google_n}" + (" (free quota, no charge)." if budget <= 0 else f" (${spent_run:.2f}).") + (f" {google_note}: the rest of the run went on without Google." if google_note else "") + (f" Stopped: {reason}." if reason and reason != "queue empty" else ""))
+    md = report.markdown(f"Google requests this run: {google_n}" + (" (free quota, no charge)." if budget <= 0 else f" (${spent_run:.2f}).") + (f" {google_note}: the rest of the run went on without Google." if google_note else "") + (f" Not saved (the site timed out; they come back next run): {', '.join(map(str, unsaved))}." if unsaved else "") + (f" Stopped: {reason}." if reason and reason != "queue empty" else ""))
     (out / "report.md").write_text(md)
     (out / "report.json").write_text(json.dumps({"dry_run": dry, "listings": report.listings,
                                                  "fields": report.field, "sources": report.source}, indent=1, default=dict))
@@ -211,8 +250,8 @@ def main(env=None) -> int:
         with open(env["GITHUB_STEP_SUMMARY"], "a") as fh:
             fh.write(md.split("## Listings")[0])
     print(md.split("## Listings")[0])
-    counts.write(listings=done, google_requests=google_n, dry_run=dry)
-    return 0
+    counts.write(listings=done, google_requests=google_n, dry_run=dry, unsaved=len(unsaved))
+    return 1 if len(unsaved) >= MAX_UNSAVED else 0
 
 
 if __name__ == "__main__":

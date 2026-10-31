@@ -232,3 +232,60 @@ def test_spelling_variants_and_bracketed_names():
     assert names_in_text("Poona Panjrapole Trust", "Poona Panjarpol Trust, Pune since 1855") >= 0.6
     assert names_in_text("The Paws Pack (Resq Charitable Trust)", "RESQ Charitable Trust, Pune") >= 0.6
     assert names_in_text("Rashtriya Ahimsa Pratishthan", "Ahimsa Fellowship works for animals") < 0.6
+
+
+def test_a_used_google_quota_asks_the_queue_again_without_google(monkeypatch, tmp_path):
+    """30 and 31 Oct 2026: the same 25 listings waiting for Google came back every run once the month's quota was used."""
+    from aw_workers.directory import run
+
+    asked = []
+
+    class Site:
+        def __init__(self, *a, **k):
+            pass
+
+        def _call(self, method, path, **kw):
+            if path == "/enrich/config":
+                return {"sources": {}, "services": {}}
+            if path == "/enrich/queue":
+                asked.append(kw["params"]["google"])
+                waiting = [{"id": 42, "name": "Waiting for Google", "state": "Odisha", "district": "Angul"}]
+                return {"items": waiting if kw["params"]["google"] else [], "google_spent": 999}
+            raise AssertionError(path)
+
+    monkeypatch.setattr(run.ingest, "Client", Site)
+    env = {"WP_BASE_URL": "https://animalwrites.in", "WP_INGEST_USER": "u", "WP_INGEST_APP_PASSWORD": "p",
+           "GOOGLE_PLACES_KEY": "k", "GOOGLE_PLACES_FREE_REQUESTS": "950", "DRY_RUN": "false", "BATCH": "50",
+           "REPORT_DIR": str(tmp_path)}
+    run.main(env)
+    assert asked == [1, 0]  # asked once with Google, then again without it; listing 42 was not checked
+
+
+def test_a_results_timeout_is_tried_once_more_then_skipped(monkeypatch):
+    """27 and 28 Oct 2026: one 504 on enrich/results stopped the whole run."""
+    import pytest
+    import requests
+
+    from aw_workers.directory import run
+
+    monkeypatch.setattr(run, "RESULTS_RETRY_WAIT", 0)
+
+    class Site:
+        def __init__(self, answers):
+            self.answers, self.calls = list(answers), 0
+
+        def _call(self, method, path, **kw):
+            self.calls += 1
+            a = self.answers.pop(0)
+            if isinstance(a, int):
+                resp = requests.Response()
+                resp.status_code = a
+                raise requests.HTTPError(f"{a} Server Error", response=resp)
+            return a
+
+    ok = Site([504, {"applied": ["email"]}])
+    assert run.save_results(ok, {"listing_id": 1}) == {"applied": ["email"]} and ok.calls == 2
+    gone = Site([504, 504])
+    assert run.save_results(gone, {"listing_id": 2}) is None and gone.calls == 2
+    with pytest.raises(requests.HTTPError):
+        run.save_results(Site([500]), {"listing_id": 3})  # not a timeout: a real error still stops the run
