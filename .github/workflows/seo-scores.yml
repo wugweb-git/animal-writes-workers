@@ -5,6 +5,11 @@ name: "SEO scores (Rank Math)"
 # (scripts/seo-scores/score.js). Only items with a focus keyword and no stored score: daily, after the focus keywords.
 on:
   workflow_dispatch:
+    inputs:
+      scheduled_cron:
+        description: "Set by the site's scheduler (wp aw workers-tick): run as GitHub's schedule would for this cron"
+        type: string
+        default: ""
   schedule:
     - cron: "45 23 * * *" # 05:15 India time, after focus-keywords (04:00)
 
@@ -14,6 +19,7 @@ concurrency:
 
 jobs:
   scores:
+    if: github.event_name != 'schedule' || vars.AW_SCHEDULER != 'site'  # the site starts it on time (wp aw workers-tick)
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:

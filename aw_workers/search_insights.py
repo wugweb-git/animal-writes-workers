@@ -39,7 +39,7 @@ from urllib.parse import quote
 
 import requests
 
-from . import counts, ingest
+from . import counts, ingest, relay, sources
 
 log = logging.getLogger("aw_workers.search_insights")
 
@@ -148,6 +148,7 @@ class Fetcher:
         self.rand = rand
         self.last: dict[str, float] = {}
         self.refused: dict[str, str] = {}  # service -> why: one attempt per service per run, across sources
+        self.relayed: set[str] = set()  # services refused from GitHub but read through the site: the rest of the run goes that way
         self.requests = 0
 
     def pace(self, service: str, gap: float | tuple[float, float]) -> None:
@@ -161,13 +162,31 @@ class Fetcher:
         if service in self.refused:
             raise Refused(self.refused[service] + " (earlier in this run; not asked again)")
         self.pace(service, gap)
+        if service in self.relayed:  # refused from GitHub earlier in this run: straight through the site
+            try:
+                self.requests += 1
+                via = relay.get(url)
+            finally:
+                self.last[service] = time.monotonic()
+            if via is not None and via.status_code == 200:
+                return via
+            self.refused[service] = f"{service} refused the request through the site (HTTP {getattr(via, 'status_code', 'none')})"
+            raise Refused(self.refused[service])
         try:
             self.requests += 1
             resp = self.session.get(url, timeout=kw.pop("timeout", TIMEOUT), **kw)
         finally:
             self.last[service] = time.monotonic()
         if resp.status_code in (403, 429) or "/sorry/" in (resp.url or ""):
-            self.refused[service] = f"{service} refused the request (HTTP {resp.status_code})"
+            # Refused from GitHub's servers (GDELT has answered 429 to the first request of every run since 25 Oct
+            # 2026): a host whose relay switch is on (Sourcing → Sources) is asked once more through the site.
+            via = relay.get(url) if relay.allowed(url) else None
+            if via is not None and via.status_code == 200:
+                log.info("%s: refused from GitHub (HTTP %s), read through the site from now on", service, resp.status_code)
+                self.relayed.add(service)
+                return via
+            self.refused[service] = f"{service} refused the request (HTTP {resp.status_code})" + (
+                f"; through the site: HTTP {via.status_code}" if via is not None else "")
             raise Refused(self.refused[service])
         return resp
 
@@ -319,7 +338,7 @@ def _gdelt_series(f: Fetcher, topic: str, days: int) -> dict[date, int]:
     resp = f.get("gdelt", url, GDELT_PAUSE, timeout=60)
     resp.raise_for_status()
     try:
-        data = resp.json()
+        data = json.loads(resp.text)  # also a relayed answer, which has no .json()
     except ValueError as exc:  # GDELT answers a malformed query with plain text
         raise ValueError(f"GDELT: {resp.text[:120]}") from exc
     out: dict[date, int] = {}
@@ -602,6 +621,17 @@ def _days(value: str) -> int:
     return n
 
 
+def relay_hosts(client) -> list[str]:
+    """The hosts whose relay switch is on (Sourcing → Sources), from the site's policy as sourcing reads them; none when
+    the policy cannot be read (a refused request then stays refused)."""
+    try:
+        raw = client.policy()
+    except Exception as exc:  # noqa: BLE001  the relay is an extra; the run goes on without it
+        log.warning("relay hosts not read from the site: %s", exc)
+        return []
+    return sources.relay_hosts(sources.site_lists(raw) or {}, raw.get("relay_hosts"))
+
+
 def main(argv: list[str] | None = None) -> int:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
@@ -629,6 +659,8 @@ def main(argv: list[str] | None = None) -> int:
         log.warning("the site's lists are unavailable (%s): using the defaults", exc)
         config = dict(DEFAULTS)
     config["_dry_run"] = dry_run
+    if client is not None:
+        relay.configure(client, relay_hosts(client))
     names_ = [s for j in (JOBS if a.job == "all" else [a.job]) for s in JOBS[j]]
     if a.only:
         names_ = [s for s in names_ if s in a.only.split(",")]
@@ -663,7 +695,12 @@ def main(argv: list[str] | None = None) -> int:
             fh.write(f"\n### Top {a.top} rising\n\n{table(best)}\n")
     counts.write(rising=sum(len(r["rising"]) for r in results), figures=sum(len(r["obs"]) for r in results),
                  source_errors=sum(1 for r in results if r["error"]), requests=f.requests)
-    return 1 if failed_posts else 0
+    # A source that answered with an error and no figures at all read nothing today: the run fails, so the Workers tab
+    # shows it (GDELT was refused for 7 days in Oct 2026 while every run showed success).
+    dead = [r["source"] for r in results if r["error"] and not r["obs"] and not r["rising"]]
+    if dead:
+        log.error("no data today from: %s", ", ".join(dead))
+    return 1 if failed_posts or dead else 0
 
 
 if __name__ == "__main__":

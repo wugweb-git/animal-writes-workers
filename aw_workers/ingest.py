@@ -4,14 +4,18 @@ from __future__ import annotations
 
 import os
 
+import logging
 import re
+import time
 
 import requests
 
 from .titles import no_hyphens, no_section
 from .sources import Item, allowed_categories, allowed_tags, categories_for, topic_tags_for
 
+log = logging.getLogger(__name__)
 TIMEOUT = 30
+AUTH_RETRY_WAIT = 60  # seconds before the one retry of a request the site refused with 401/403
 
 
 class AuthError(Exception):
@@ -137,17 +141,30 @@ class Client:
         # title -> (title, flag): press titles in sentence case on the way in, set by a run that has the provider chain
         # (headline_case.press_caser; owner, 20 Oct 2026)
         self.title_caser = None
+        self.sleep = time.sleep
+        self.refused = False  # the one retry already failed in this run
+
+    def _send(self, send, *args, **kw):
+        """send(*args, **kw) once; a 401/403 is tried once more after AUTH_RETRY_WAIT seconds. The site refused the
+        workers' own login for one run at a time (25 and 30 Oct 2026), and the next run worked with the same password."""
+        resp = send(*args, **kw)
+        if resp.status_code in (401, 403) and not self.refused:
+            log.warning("site answered HTTP %s, trying once more in %ss", resp.status_code, AUTH_RETRY_WAIT)
+            self.sleep(AUTH_RETRY_WAIT)
+            resp = send(*args, **kw)
+            self.refused = resp.status_code in (401, 403)  # refused twice: later refusals in this run fail at once
+        return resp
 
     def policy(self) -> dict:
         """Sourcing policy from WP Admin (News → Sourcing)."""
-        resp = self.session.get(self.url.replace("/ingest", "/sourcing-policy"), timeout=TIMEOUT)
+        resp = self._send(self.session.get, self.url.replace("/ingest", "/sourcing-policy"), timeout=TIMEOUT)
         if resp.status_code in (401, 403):
             raise AuthError(f"policy rejected credentials: HTTP {resp.status_code}")
         resp.raise_for_status()
         return resp.json()
 
     def _call(self, method: str, path: str, **kw):
-        resp = self.session.request(method, self.url.replace("/ingest", path), timeout=kw.pop("timeout", TIMEOUT), **kw)
+        resp = self._send(self.session.request, method, self.url.replace("/ingest", path), timeout=kw.pop("timeout", TIMEOUT), **kw)
         if resp.status_code in (401, 403):
             raise AuthError(f"{path} rejected credentials: HTTP {resp.status_code}")
         resp.raise_for_status()
@@ -245,7 +262,7 @@ class Client:
             payload["title"], flag = self.title_caser(payload["title"])
             if flag:
                 payload["title_flag"] = "; ".join(filter(None, [payload.get("title_flag", ""), flag]))  # the site notes why
-        resp = self.session.post(self.url, json=payload, timeout=TIMEOUT)
+        resp = self._send(self.session.post, self.url, json=payload, timeout=TIMEOUT)
         if resp.status_code in (401, 403):
             raise AuthError(f"ingest rejected credentials: HTTP {resp.status_code}")
         try:

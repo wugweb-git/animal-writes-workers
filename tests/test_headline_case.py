@@ -110,3 +110,40 @@ def test_press_titles_are_cased_on_the_way_in_and_news_is_left_to_run():
 
 def test_press_caser_needs_a_provider_key():
     assert hc.press_caser({}) is None
+
+
+def test_a_refused_login_is_tried_once_more():
+    """25 and 30 Oct 2026: the site refused the workers' login for one run; the next run worked."""
+    from aw_workers import ingest
+
+    class Flaky:
+        def __init__(self, codes):
+            self.codes, self.calls = list(codes), 0
+
+        def request(self, method, url, **kw):
+            self.calls += 1
+            code = self.codes.pop(0)
+
+            class R:
+                status_code = code
+
+                def raise_for_status(self):
+                    pass
+
+                def json(self):
+                    return {"ok": True}
+
+            return R()
+
+    ok = ingest.Client("https://x.test", "u", "p", session=Flaky([403, 200]))
+    assert ok._call("GET", "/search-insights") == {"ok": True} and ok.session.calls == 2
+    bad = ingest.Client("https://x.test", "u", "p", session=Flaky([403, 403]))
+    import pytest
+
+    with pytest.raises(ingest.AuthError):
+        bad._call("GET", "/search-insights")
+    assert bad.session.calls == 2  # one retry only
+    bad.session.codes = [403]
+    with pytest.raises(ingest.AuthError):
+        bad._call("GET", "/summary-rules")
+    assert bad.session.calls == 3  # refused twice already: the next refusal fails at once, without the wait

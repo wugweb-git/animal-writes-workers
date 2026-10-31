@@ -25,6 +25,7 @@ runs:
         MAIN: ${{ inputs.main }}
         STEPS: ${{ inputs.steps }}
         STATUS: ${{ inputs.status }}
+        SCHEDULED_CRON: ${{ github.event.inputs.scheduled_cron }}
       run: |
         set +e
         if [ "$GITHUB_REF" != "refs/heads/main" ] || [ -z "$WP_BASE_URL" ] || [ -z "$WP_INGEST_USER" ] || [ -z "$WP_INGEST_APP_PASSWORD" ]; then
@@ -45,9 +46,11 @@ runs:
           *) if [ -n "$MAIN" ] && [ "$main_outcome" = "skipped" ]; then result=skipped; else result=success; fi ;;
         esac
         [ "$PHASE" = "start" ] && result=running
+        # Started by the site's scheduler (wp aw workers-tick): reported as a scheduled run, not "by hand".
+        EVENT="$GITHUB_EVENT_NAME"; [ -n "$SCHEDULED_CRON" ] && EVENT=schedule
         body=$(jq -n \
           --arg workflow "$(basename "${GITHUB_WORKFLOW_REF%%@*}")" --arg name "$GITHUB_WORKFLOW" \
-          --arg run_id "$GITHUB_RUN_ID" --arg attempt "$GITHUB_RUN_ATTEMPT" --arg event "$GITHUB_EVENT_NAME" \
+          --arg run_id "$GITHUB_RUN_ID" --arg attempt "$GITHUB_RUN_ATTEMPT" --arg event "$EVENT" \
           --arg phase "$PHASE" --arg sha "${GITHUB_SHA:0:7}" --arg dry "${DRY_RUN:-}" \
           --arg link "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
           --argjson started "$started" --arg result "$result" --arg failed "$failed" --arg main "$MAIN" \
@@ -60,8 +63,15 @@ runs:
         cfg=$(umask 077; mktemp "$RUNNER_TEMP/aw-curl.XXXXXX")
         esc() { printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'; }
         printf 'user = "%s:%s"\n' "$(esc "$WP_INGEST_USER")" "$(esc "$WP_INGEST_APP_PASSWORD")" > "$cfg"
-        code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 15 -K "$cfg" \
-          -H 'Content-Type: application/json' -d "$body" "${WP_BASE_URL%/}/wp-json/aw/v1/worker-run")
+        send() { curl -sS -o /dev/null -w '%{http_code}' --max-time 15 -K "$cfg" \
+          -H 'Content-Type: application/json' -d "$body" "${WP_BASE_URL%/}/wp-json/aw/v1/worker-run"; }
+        code=$(send || true)
+        # The site refused the workers' login for single runs (25 and 30 Oct 2026): one more try after 30 seconds.
+        if [ "$code" = "401" ] || [ "$code" = "403" ]; then
+          echo "worker report ($PHASE): HTTP $code, trying once more in 30 s"
+          sleep 30
+          code=$(send || true)
+        fi
         rm -f "$cfg"
         echo "worker report ($PHASE, $result): HTTP $code"
         exit 0
