@@ -149,6 +149,7 @@ class Fetcher:
         self.rand = rand
         self.last: dict[str, float] = {}
         self.refused: dict[str, str] = {}  # service -> why: one attempt per service per run, across sources
+        self.relayed: set[str] = set()  # services refused from GitHub but read through the site: the rest of the run goes that way
         self.requests = 0
 
     def pace(self, service: str, gap: float | tuple[float, float]) -> None:
@@ -162,6 +163,16 @@ class Fetcher:
         if service in self.refused:
             raise Refused(self.refused[service] + " (earlier in this run; not asked again)")
         self.pace(service, gap)
+        if service in self.relayed:  # refused from GitHub earlier in this run: straight through the site
+            try:
+                self.requests += 1
+                via = relay.get(url)
+            finally:
+                self.last[service] = time.monotonic()
+            if via is not None and via.status_code == 200:
+                return via
+            self.refused[service] = f"{service} refused the request through the site (HTTP {getattr(via, 'status_code', 'none')})"
+            raise Refused(self.refused[service])
         try:
             self.requests += 1
             resp = self.session.get(url, timeout=kw.pop("timeout", TIMEOUT), **kw)
@@ -172,7 +183,8 @@ class Fetcher:
             # 2026): a host whose relay switch is on (Sourcing → Sources) is asked once more through the site.
             via = relay.get(url) if relay.allowed(url) else None
             if via is not None and via.status_code == 200:
-                log.info("%s: refused from GitHub (HTTP %s), read through the site", service, resp.status_code)
+                log.info("%s: refused from GitHub (HTTP %s), read through the site from now on", service, resp.status_code)
+                self.relayed.add(service)
                 return via
             self.refused[service] = f"{service} refused the request (HTTP {resp.status_code})" + (
                 f"; through the site: HTTP {via.status_code}" if via is not None else "")

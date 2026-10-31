@@ -289,3 +289,26 @@ def test_a_results_timeout_is_tried_once_more_then_skipped(monkeypatch):
     assert run.save_results(gone, {"listing_id": 2}) is None and gone.calls == 2
     with pytest.raises(requests.HTTPError):
         run.save_results(Site([500]), {"listing_id": 3})  # not a timeout: a real error still stops the run
+
+
+def test_a_listing_not_saved_is_not_offered_again_in_the_same_run(monkeypatch, tmp_path):
+    from aw_workers.directory import run
+
+    monkeypatch.setattr(run, "save_results", lambda client, body: None)  # the site never saves it
+    fetched = []
+
+    class Site:
+        def __init__(self, *a, **k):
+            pass
+
+        def _call(self, method, path, **kw):
+            if path == "/enrich/config":
+                return {"sources": {k: False for k in run.REGISTRY}, "services": {}}
+            fetched.append(1)
+            return {"items": [{"id": 7, "name": "Slow to save", "state": "Odisha", "district": "Angul"}], "google_spent": 0}
+
+    monkeypatch.setattr(run.ingest, "Client", Site)
+    env = {"WP_BASE_URL": "https://animalwrites.in", "WP_INGEST_USER": "u", "WP_INGEST_APP_PASSWORD": "p",
+           "DRY_RUN": "false", "BATCH": "50", "REPORT_DIR": str(tmp_path)}
+    assert run.main(env) == 0
+    assert len(fetched) == 2  # the second fetch offers only listing 7 again: the run stops instead of retrying it

@@ -186,6 +186,10 @@ def main(env=None) -> int:
         if not items:
             reason = reason or "queue empty"
             break
+        items = [L for L in items if L["id"] not in unsaved]  # not saved this run: not marked checked, so the queue offers it again
+        if not items:
+            reason = f"the queue offers only listings the site did not save this run ({len(unsaved)})"
+            break
         need = [L for L in items if not file_leads(L["id"]) and not (L.get("now") or {}).get("website") and not (L.get("claim") or {}).get("aw_website")]
         gemini = [k for k in (env.get("GEMINI_API_KEY"), env.get("GEMINI_API_KEY_2")) if k]
         asked = lead_finder.find(need, gemini, http) if need and gemini and on.get("website", True) and env.get("LEAD_FINDER") == "1" else {}  # off: leads come from searches in the browser (owner, 21 Oct 2026; no Gemini billing)

@@ -412,7 +412,8 @@ def test_gdelt_refused_from_github_is_read_through_the_site():
         out = si.run_source("gdelt", f, {"gdelt": ["rabies", "dog bite"]}, TODAY, 1)
     finally:
         relay.configure(None, ())
-    assert out["error"] == "" and len(site.calls) == 2  # each topic: refused from GitHub, then read through the site
+    assert out["error"] == "" and len(site.calls) == 2  # both topics read through the site
+    assert len(f.session.calls) == 1  # GitHub's request is made once; after the refusal the rest go through the site
     assert [o["value"] for o in out["obs"]] == [7, 7]
 
 
