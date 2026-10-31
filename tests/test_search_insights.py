@@ -379,3 +379,62 @@ def test_scheduled_runs_have_their_own_live_switch():
 
     wf = (Path(__file__).resolve().parent.parent / ".github/workflows/search-insights.yml").read_text()
     assert "vars.SI_LIVE == 'true'" in wf and "vars.DRY_RUN" not in wf
+
+
+class _SiteSession:
+    """The site's relay: answers GET aw/v1/relay with the page as the site read it."""
+
+    def __init__(self, status=200, body=None):
+        self.calls, self.status, self.body = [], status, body
+
+    def get(self, url, params=None, timeout=None):
+        import base64
+
+        self.calls.append(params["url"])
+        payload = {"status": self.status, "content_type": "application/json", "body": base64.b64encode(json.dumps(self.body).encode()).decode()}
+        return Resp(200, payload)
+
+
+class _SiteClient:
+    def __init__(self, session):
+        self.session, self.url = session, "https://animalwrites.in/wp-json/aw/v1/ingest"
+
+
+def test_gdelt_refused_from_github_is_read_through_the_site():
+    from aw_workers import relay
+
+    d = TODAY - timedelta(days=1)
+    timeline = {"timeline": [{"series": "Article Count", "data": [{"date": d.strftime("%Y%m%d") + "T000000Z", "value": 7}]}]}
+    site = _SiteSession(body=timeline)
+    relay.configure(_SiteClient(site), si.RELAY_HOSTS)
+    try:
+        f = fetcher([("gdeltproject", Resp(429, "Please limit requests"))])
+        out = si.run_source("gdelt", f, {"gdelt": ["rabies", "dog bite"]}, TODAY, 1)
+    finally:
+        relay.configure(None, ())
+    assert out["error"] == "" and len(site.calls) == 2  # each topic: refused from GitHub, then read through the site
+    assert [o["value"] for o in out["obs"]] == [7, 7]
+
+
+def test_gdelt_refused_by_the_site_too_stops_after_one_attempt():
+    from aw_workers import relay
+
+    site = _SiteSession(status=429, body={})
+    relay.configure(_SiteClient(site), si.RELAY_HOSTS)
+    try:
+        f = fetcher([("gdeltproject", Resp(429, "Please limit requests"))])
+        out = si.run_source("gdelt", f, {"gdelt": ["rabies", "dog bite"]}, TODAY, 1)
+    finally:
+        relay.configure(None, ())
+    assert "HTTP 429" in out["error"] and "through the site: HTTP 429" in out["error"] and len(site.calls) == 1
+
+
+def test_a_source_with_an_error_and_no_data_fails_the_run(monkeypatch, tmp_path):
+    cfg = tmp_path / "lists.json"
+    cfg.write_text(json.dumps({"gdelt": ["rabies"]}))
+    refused = fetcher([("gdeltproject", Resp(429, "Please limit requests"))])
+    monkeypatch.setattr(si, "Fetcher", lambda: refused)
+    monkeypatch.delenv("GITHUB_STEP_SUMMARY", raising=False)
+    monkeypatch.setenv("DRY_RUN", "true")
+    monkeypatch.delenv("WP_BASE_URL", raising=False)
+    assert si.main(["daily", "--only", "gdelt", "--config", str(cfg)]) == 1
