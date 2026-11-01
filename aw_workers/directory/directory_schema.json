@@ -129,34 +129,6 @@
         ]
       },
       {
-        "name": "aw_reg_authority",
-        "label": "Registration authority",
-        "type": "text",
-        "repeats": false,
-        "enrich": []
-      },
-      {
-        "name": "aw_reg_act",
-        "label": "Registered under (Act)",
-        "type": "text",
-        "repeats": false,
-        "enrich": []
-      },
-      {
-        "name": "aw_reg_date",
-        "label": "Registration date",
-        "type": "date_picker",
-        "repeats": false,
-        "enrich": []
-      },
-      {
-        "name": "aw_sectors",
-        "label": "Sectors (NGO Darpan)",
-        "type": "text",
-        "repeats": false,
-        "enrich": []
-      },
-      {
         "name": "aw_fcra",
         "label": "FCRA",
         "type": "text",
@@ -173,6 +145,41 @@
         "enrich": []
       },
       {
+        "name": "aw_awbi_valid",
+        "label": "AWBI valid until",
+        "type": "date_picker",
+        "repeats": false,
+        "enrich": []
+      },
+      {
+        "name": "aw_reg_date",
+        "label": "Registration date",
+        "type": "date_picker",
+        "repeats": false,
+        "enrich": []
+      },
+      {
+        "name": "aw_reg_authority",
+        "label": "Registration authority",
+        "type": "text",
+        "repeats": false,
+        "enrich": []
+      },
+      {
+        "name": "aw_reg_act",
+        "label": "Registered under (Act)",
+        "type": "text",
+        "repeats": false,
+        "enrich": []
+      },
+      {
+        "name": "aw_sectors",
+        "label": "Sectors (NGO Darpan)",
+        "type": "text",
+        "repeats": false,
+        "enrich": []
+      },
+      {
         "name": "aw_awbi_recognised",
         "label": "AWBI recognised on",
         "type": "date_picker",
@@ -182,13 +189,6 @@
       {
         "name": "aw_awbi_renewed",
         "label": "AWBI renewed on",
-        "type": "date_picker",
-        "repeats": false,
-        "enrich": []
-      },
-      {
-        "name": "aw_awbi_valid",
-        "label": "AWBI valid until",
         "type": "date_picker",
         "repeats": false,
         "enrich": []
@@ -399,15 +399,6 @@
         ]
       },
       {
-        "name": "aw_donate_url",
-        "label": "Donate link",
-        "type": "url",
-        "repeats": false,
-        "enrich": [
-          "donate_url"
-        ]
-      },
-      {
         "name": "aw_volunteer_url",
         "label": "Volunteer link",
         "type": "url",
@@ -426,6 +417,22 @@
         ]
       },
       {
+        "name": "aw_rel_nofollow",
+        "label": "Links nofollow",
+        "type": "true_false",
+        "repeats": false,
+        "enrich": []
+      },
+      {
+        "name": "aw_donate_url",
+        "label": "Donate link",
+        "type": "url",
+        "repeats": false,
+        "enrich": [
+          "donate_url"
+        ]
+      },
+      {
         "name": "aw_upi",
         "label": "UPI ID",
         "type": "text",
@@ -435,22 +442,15 @@
         ]
       },
       {
-        "name": "aw_rel_nofollow",
-        "label": "Links nofollow",
-        "type": "true_false",
-        "repeats": false,
-        "enrich": []
-      },
-      {
         "name": "aw_verified",
-        "label": "Verified",
+        "label": "Claimed",
         "type": "true_false",
         "repeats": false,
         "enrich": []
       },
       {
         "name": "aw_verified_on",
-        "label": "Verified on",
+        "label": "Claimed on",
         "type": "date_picker",
         "repeats": false,
         "enrich": []
