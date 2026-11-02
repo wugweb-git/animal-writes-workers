@@ -29,6 +29,26 @@ from .run import truthy
 from .sources import Item, Source
 
 log = logging.getLogger("aw_workers.research")
+_STARTED = time.monotonic()  # the run's clock starts with the process (the search before the papers counts too)
+
+# Time limits (2 Nov 2026: run 41438340089 spent 15 to 20 minutes on each of four papers whose providers all timed out
+# or answered 429/500, and GitHub cancelled the job at its 120-minute limit before the report was written).
+# AW_RESEARCH_PAPER_MIN: minutes one paper may take (relevance check excluded); then it is skipped, not marked seen,
+# and the next run tries it again. The 30-try cap (AW_MAX_TRIES_PER_ITEM) stays as an upper bound.
+# AW_RESEARCH_RUN_MIN: minutes from the start after which no new paper is started (the workflow sets it below its
+# timeout-minutes); a paper is started only when its whole budget fits before then. The rest wait for the next run.
+PAPER_MIN_DEFAULT = 6.0
+RUN_MIN_DEFAULT = 100.0
+SKIPPED = "skipped after {min:g} min; the next run tries again"
+NOT_REACHED = "not reached; the next run tries again"
+
+
+def _minutes(env, name: str, default: float) -> float:
+    try:
+        v = float(env.get(name) or default)
+    except ValueError:
+        return default
+    return v if v > 0 else default
 UA = {"User-Agent": "AnimalWritesWorkers/1.0 (https://animalwrites.in; mailto:contact@animalwrites.in)"}
 
 # Subject → words that must appear in the title or abstract (the query itself is broader).
@@ -358,8 +378,18 @@ def main() -> int:
     log.info("research: %d India papers since %s; %d already on the site; %d to check", len(papers), floor, already, len(todo))
     src = Source(id="research", name="Research", kind="api", type="research", url="")
     counts, rows = {"found": len(papers), "already on site": already, "summarised": 0, "sent": 0, "duplicate": 0, "failed": 0,
-                    "rejected": 0, "classifier unavailable": 0}, []
-    for p in todo:
+                    "rejected": 0, "classifier unavailable": 0, "skipped": 0, "not reached": 0}, []
+    paper_min = _minutes(os.environ, "AW_RESEARCH_PAPER_MIN", PAPER_MIN_DEFAULT)
+    run_end = _STARTED + _minutes(os.environ, "AW_RESEARCH_RUN_MIN", RUN_MIN_DEFAULT) * 60
+    deferred: list[dict] = []  # skipped or not reached: not marked known, so the next run tries them again
+    for n, p in enumerate(todo):
+        if time.monotonic() + paper_min * 60 > run_end:
+            for q in todo[n:]:
+                log.info("research: %s %s", NOT_REACHED, q["url"])
+                deferred.append({"date": q["date"], "title": q["title"], "url": q["url"], "result": "not reached"})
+            counts["not reached"] = len(todo) - n
+            log.warning("research: run time limit near; %d papers %s", counts["not reached"], NOT_REACHED)
+            break
         item = Item(source=src, title=p["title"], url=p["url"], date=date.fromisoformat(p["date"]),
                     text=p["abstract"] or p["title"], publisher=p["journal"])
         outcome, verdict = gate.admit(relevance.Candidate(kind="research", title=item.title, url=item.url, text=item.text,
@@ -368,6 +398,7 @@ def main() -> int:
         if outcome != "pass" and not (outcome == "reject" and verdict is not None and verdict.relevant and doubt):
             counts["rejected" if outcome == "reject" else "classifier unavailable"] += 1
             continue
+        summariser.deadline = min(time.monotonic() + paper_min * 60, run_end)  # this paper's time (summary to headline)
         try:
             summary = summariser.summarise(item)
             counts["summarised"] += 1
@@ -376,7 +407,10 @@ def main() -> int:
                                              ai_choice=ai_cat)
             payload = dict(ingest.build_payload(item, summary, cats), backfill=True, study_title=p["title"],
                            authors=p.get("authors") or [], journal=p.get("journal") or "")  # the study's credit (Sources block)
-            with_headline(payload, headline_fields(summariser, p, summary))
+            fields = {} if summarise.out_of_time(summariser) else headline_fields(summariser, p, summary)
+            if not fields and summarise.out_of_time(summariser):  # wait for the next run rather than hold it untitled
+                raise summarise.OutOfTime("time spent before the headline")
+            with_headline(payload, fields)
             if p.get("possible_duplicate"):  # same title and year, authors missing on one side (owner, 24 Oct 2026)
                 payload["hold"] = "; ".join(filter(None, [payload.get("hold", ""), possible_duplicate_hold(p["possible_duplicate"])]))
             if doubt:  # India not confirmed: sent for review, never published by itself (owner, 20 Oct 2026)
@@ -390,10 +424,17 @@ def main() -> int:
             result = client.post(payload) if client else "dry-run"
         except ingest.AuthError:
             raise
+        except summarise.OutOfTime as exc:
+            counts["skipped"] += 1
+            log.error("%s %s (%s)", SKIPPED.format(min=paper_min), p["url"], str(exc)[-300:])
+            deferred.append({"date": p["date"], "title": p["title"], "url": p["url"], "result": "skipped"})
+            continue
         except Exception as exc:
             counts["failed"] += 1
             log.error("failed %s: %s", p["url"], exc)
             continue
+        finally:
+            summariser.deadline = None
         counts["duplicate" if result == "duplicate" else "sent"] += 1
         if client and doi_of(p["url"]):
             known.add(doi_of(p["url"]))  # on the site now (sent, held or a duplicate): never summarised again
@@ -401,11 +442,17 @@ def main() -> int:
     if not dry_run:
         gate.save()
         save_known(known)
-    Path("research-report.json").write_text(json.dumps({"floor": floor.isoformat(), "counts": counts, "items": rows}, ensure_ascii=False, indent=1))
+    Path("research-report.json").write_text(json.dumps({"floor": floor.isoformat(), "counts": counts, "items": rows,
+                                                        "deferred": deferred}, ensure_ascii=False, indent=1))
     summary_file = os.environ.get("GITHUB_STEP_SUMMARY")
     if summary_file:
-        lines = [f"### Research (India) since {floor}", "", f"{counts}", "", "| Date | Journal | Title |", "|---|---|---|"]
+        lines = [f"### Research (India) since {floor}", "", f"{counts}", ""]
+        if deferred:
+            lines += [f"Skipped (over {paper_min:g} min each): {counts['skipped']}; not reached (run time limit): "
+                      f"{counts['not reached']}. The next run tries them again.", ""]
+        lines += ["| Date | Journal | Title |", "|---|---|---|"]
         lines += [f"| {r['date']} | {r['journal']} | [{r['title'][:90]}]({r['url']}) |" for r in rows]
+        lines += [f"| {r['date']} | {r['result']} | [{r['title'][:90]}]({r['url']}) |" for r in deferred]
         Path(summary_file).write_text("\n".join(lines) + "\n")
     print(json.dumps(counts))
     run_counts.write(**{k.replace(" ", "_"): v for k, v in counts.items()})

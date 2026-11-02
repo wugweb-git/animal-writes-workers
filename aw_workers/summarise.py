@@ -474,6 +474,16 @@ def wait_for_cooldown(owner, sleep=None) -> bool:
     return True
 
 
+class OutOfTime(SummaryError):
+    """The caller's time for this item is spent (Summariser.deadline, opt-in): no further tries; the next run tries again."""
+
+
+def out_of_time(owner) -> bool:
+    """True when `owner` carries a deadline (time.monotonic()) that has passed. Owners without one never run out."""
+    end = getattr(owner, "deadline", None)
+    return end is not None and time.monotonic() >= end
+
+
 class ShortSummary(SummaryError):
     """A summary that follows every rule but is below the section's minimum: the source gave too little."""
 
@@ -530,6 +540,9 @@ class Summariser:
         self.coverage = coverage  # (title, url, date, publisher) -> [coverage.Report]; default: coverage.find
         self.last_short = False
         self.last_coverage: list = []
+        # Opt-in time limit (time.monotonic()) for the item being summarised, set by the caller per item (Research,
+        # 2 Nov 2026: four papers took 15 to 20 minutes each and the job was cancelled). None: no limit, as before.
+        self.deadline: float | None = None
 
     def _try(self, backend, prompt: str, item: Item) -> str:
         summary = backend.ask(prompt)
@@ -537,6 +550,8 @@ class Summariser:
         if summary_rules.only_short(problems) and thin_source(item):
             raise ShortSummary(summary, "; ".join(problems))  # asking again would only pad: read the page instead
         problems += number_problems(summary, item)
+        if problems and out_of_time(self):
+            raise OutOfTime("time for this item spent before the corrected attempt")
         if problems:
             summary = backend.ask(
                 prompt + "\n\nYour previous attempt broke these rules: " + "; ".join(problems)
@@ -563,6 +578,9 @@ class Summariser:
                 if tries >= most:  # one hard item no longer walks ~150 key/model pairs (24 Oct 2026: Research ran 2 h)
                     reasons.append(f"stopped after {most} tries; the next run tries again")
                     raise SummaryError(" | ".join(reasons))
+                if out_of_time(self):  # the caller's time for this item (opt-in; normally hit before the try cap)
+                    reasons.append(f"time spent after {tries} tries")
+                    raise OutOfTime(" | ".join(reasons))
                 tries += 1
                 try:
                     summary = self._try(backend, prompt, item)
@@ -577,9 +595,17 @@ class Summariser:
                 note_success(self, i)
                 self.used[backend.name] = self.used.get(backend.name, 0) + 1
                 return summary
+            if self.deadline is not None and self._rest_ends_after_deadline():
+                reasons.append(f"time spent after {tries} tries (every live key resting)")
+                raise OutOfTime(" | ".join(reasons))
             if not wait_for_cooldown(self):
                 break
         raise SummaryError(" | ".join(reasons))
+
+    def _rest_ends_after_deadline(self) -> bool:
+        """Every live key that is resting comes back only after the deadline: waiting would only run past it."""
+        resting = [t for i, t in self.cool.items() if i not in self.dead]
+        return bool(resting) and min(resting) >= self.deadline
 
     def summarise(self, item: Item) -> str:
         self.last_short, self.last_coverage, self.last_numbers = False, [], []
@@ -601,7 +627,9 @@ class Summariser:
                 return finalise(self._summarise(base), item)
             except ShortSummary as again:
                 kept = again
-        reports = self._other_coverage(item)
+            except OutOfTime:  # the caller's time is spent (opt-in): the short summary stands
+                pass
+        reports = [] if out_of_time(self) else self._other_coverage(item)
         if reports:
             from . import coverage
 
@@ -669,6 +697,8 @@ def pick_categories(summariser, item: Item, summary: str, allowed: list[str], ai
         return found
     prompt = CATEGORY_PROMPT.format(slugs=", ".join(allowed), title=item.title, summary=summary)
     for i, backend in enumerate(summariser.backends):
+        if out_of_time(summariser):  # the caller's time for this item (opt-in): keyword categories only
+            break
         if not usable(summariser, i):
             continue
         try:

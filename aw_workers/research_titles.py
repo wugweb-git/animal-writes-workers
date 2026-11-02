@@ -178,6 +178,8 @@ def parse(reply: str) -> dict[int, dict]:
 def _ask(owner, prompt: str) -> tuple[dict[int, dict], str]:
     for _ in range(2):
         for i, backend in enumerate(owner.backends):
+            if summarise.out_of_time(owner):  # the caller's time for this paper (opt-in, Research): no answer
+                return {}, ""
             if not summarise.usable(owner, i):
                 continue
             try:
@@ -188,7 +190,7 @@ def _ask(owner, prompt: str) -> tuple[dict[int, dict], str]:
             if got:
                 summarise.note_success(owner, i)
                 return got, f"{backend.name}:{backend.model}"
-        if not summarise.wait_for_cooldown(owner):
+        if summarise.out_of_time(owner) or not summarise.wait_for_cooldown(owner):
             break
     return {}, ""
 
@@ -199,7 +201,7 @@ def draft(owner, papers: list[dict], tries: int = 3) -> dict[int, dict]:
     out: dict[int, dict] = {}
     todo, reasons = list(papers), {}
     for _ in range(tries):
-        if not todo:
+        if not todo or summarise.out_of_time(owner):
             break
         prompt = PROMPT.replace("@ITEMS@", _lines(todo))
         if reasons:
