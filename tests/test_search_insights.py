@@ -266,7 +266,7 @@ def test_main_dry_run_sends_nothing(monkeypatch, capsys):
     assert posted == [] and "| 1 | rabies |" in capsys.readouterr().out
     monkeypatch.setenv("DRY_RUN", "false")
     assert si.main(["daily"]) == 0
-    assert [p["source"] for p in posted] == ["trends_rss", "wikipedia", "gdelt"] and posted[0]["dry_run"] is False
+    assert [p["source"] for p in posted] == ["trends_rss", "wikipedia"] and posted[0]["dry_run"] is False
 
 
 def test_main_live_needs_the_site():
@@ -430,15 +430,74 @@ def test_gdelt_refused_by_the_site_too_stops_after_one_attempt():
     assert "HTTP 429" in out["error"] and "through the site: HTTP 429" in out["error"] and len(site.calls) == 1
 
 
-def test_a_source_with_an_error_and_no_data_fails_the_run(monkeypatch, tmp_path):
+def test_daily_job_no_longer_includes_gdelt():
+    assert "gdelt" not in si.JOBS["daily"] and all("gdelt" not in j for j in si.JOBS.values())
+    assert "gdelt" in si.SOURCES  # still runs by name
+
+
+def _live(monkeypatch, tmp_path, lists, routes):
+    """main() posting to a fake site; returns the bodies the site was sent."""
     cfg = tmp_path / "lists.json"
-    cfg.write_text(json.dumps({"gdelt": ["rabies"]}))
-    refused = fetcher([("gdeltproject", Resp(429, "Please limit requests"))])
-    monkeypatch.setattr(si, "Fetcher", lambda: refused)
+    cfg.write_text(json.dumps(lists))
+    posted = []
+
+    class Client:
+        def __init__(self, *a):
+            pass
+
+        def policy(self):
+            return {}
+
+        def search_insights_post(self, body):
+            posted.append(body)
+            return {"stored": 1}
+
+    f = fetcher(routes)
+    monkeypatch.setattr(si, "Fetcher", lambda: f)
+    monkeypatch.setattr(si.ingest, "Client", Client)
     monkeypatch.delenv("GITHUB_STEP_SUMMARY", raising=False)
-    monkeypatch.setenv("DRY_RUN", "true")
-    monkeypatch.delenv("WP_BASE_URL", raising=False)
-    assert si.main(["daily", "--only", "gdelt", "--config", str(cfg)]) == 1
+    monkeypatch.setenv("WP_BASE_URL", "https://x")
+    monkeypatch.setenv("WP_INGEST_USER", "ingest")
+    monkeypatch.setenv("WP_INGEST_APP_PASSWORD", "p")
+    monkeypatch.setenv("DRY_RUN", "false")
+    return posted
+
+
+def test_a_refused_source_is_reported_and_the_run_succeeds(monkeypatch, tmp_path, caplog):
+    posted = _live(monkeypatch, tmp_path, {"gdelt": ["rabies"]}, [("gdeltproject", Resp(429, "Please limit requests"))])
+    assert si.main(["daily", "--only", "gdelt", "--config", str(tmp_path / "lists.json")]) == 0
+    assert [p["source"] for p in posted] == ["gdelt"] and "HTTP 429" in posted[0]["error"]
+    assert not [r for r in caplog.records if r.levelname == "ERROR"]
+    assert any("refused today" in r.getMessage() and r.levelname == "WARNING" for r in caplog.records)
+
+
+def test_google_sorry_page_is_a_refusal_too(monkeypatch, tmp_path):
+    sorry = Resp(200, "<html>unusual traffic</html>", url="https://www.google.com/sorry/index?continue=x")
+    posted = _live(monkeypatch, tmp_path, {"interest": ["stray dogs"]}, [("trends.google.com", sorry)])
+    assert si.main(["monthly", "--config", str(tmp_path / "lists.json")]) == 0
+    assert [p["source"] for p in posted] == ["trends_interest"] and "refused" in posted[0]["error"]
+
+
+def test_a_crashing_source_fails_the_run(monkeypatch, tmp_path):
+    posted = _live(monkeypatch, tmp_path, {"gdelt": ["rabies"]}, [])
+    monkeypatch.setitem(si.SOURCES, "gdelt", lambda *a: (_ for _ in ()).throw(KeyError("crash")))
+    assert si.main(["daily", "--only", "gdelt", "--config", str(tmp_path / "lists.json")]) == 1
+    assert [p["source"] for p in posted] == ["gdelt"] and "KeyError" in posted[0]["error"]
+
+
+def test_a_source_that_reads_nothing_without_a_refusal_fails_the_run(monkeypatch, tmp_path):
+    _live(monkeypatch, tmp_path, {"gdelt": ["rabies"]}, [("gdeltproject", Resp(200, "not json"))])
+    assert si.main(["daily", "--only", "gdelt", "--config", str(tmp_path / "lists.json")]) == 1
+
+
+def test_the_site_refusing_the_post_fails_the_run(monkeypatch, tmp_path):
+    _live(monkeypatch, tmp_path, {"gdelt": ["rabies"]}, [("gdeltproject", Resp(429, "Please limit requests"))])
+
+    def no(self, body):
+        raise RuntimeError("HTTP 500")
+
+    monkeypatch.setattr(si.ingest.Client, "search_insights_post", no)
+    assert si.main(["daily", "--only", "gdelt", "--config", str(tmp_path / "lists.json")]) == 1
 
 
 def test_relay_hosts_come_from_the_site_policy():

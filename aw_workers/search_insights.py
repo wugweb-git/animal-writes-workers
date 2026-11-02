@@ -3,15 +3,18 @@ WordPress repository; owner, 24 Oct 2026).
 
 Daily (08:10 IST): Google Trends "Trending now" RSS for India, kept only when a trending term or its news names one of
 our keywords, topics or species; Wikipedia pageviews for a watchlist, flagged at 2x the 30-day average (a user-agent
-with a contact, at most one request a second); GDELT DOC timelines for a topic watchlist, India sources, flagged at 3x
-the 14-day average (5 s or more between requests).
+with a contact, at most one request a second). GDELT DOC timelines (a topic watchlist, India sources, flagged at 3x the
+14-day average, 5 s or more between requests) left the daily job on 2 Nov 2026: GDELT refuses every address and the
+site has it switched off; it still runs by name (--only gdelt, with any job).
 Weekly (Monday 08:30 IST): Google autocomplete in English (gl=in, 2-4 s between requests, snapshots cached in .state/),
 where a suggestion missing from the last snapshot is rising; Trends rising related queries for the seed topics.
 Monthly (1st, 09:00 IST): Trends interest over 12 months for the tracked keywords, anchored on "animal welfare" = 100.
 
 Google Trends and autocomplete are unofficial and often refuse GitHub's addresses: each gets one paced attempt per run.
 A refusal stops that source for the run, keeps what it had, and is reported to the site, where the owner pastes Trends
-figures into the form on the Rising tab instead. Nothing here reads Google search results.
+figures into the form on the Rising tab instead. A refusal (HTTP 403/429, Google's /sorry/ page) does not fail the run:
+the site shows it as an info line. Real faults still fail it (exit 1): a crash, the site refusing the post, an
+unexpected answer, a source that read nothing for any other reason. Nothing here reads Google search results.
 
 The site's lists (keywords, topics, species, watchlists, seeds) come from GET aw/v1/search-insights; results go to POST
 aw/v1/search-insights, one request per source, with the ingest user's application password (ingest.Client). The site
@@ -49,7 +52,7 @@ UA = f"AnimalWritesSearchInsights/1.0 ({CONTACT})"
 STATE = Path(os.environ.get("AW_STATE_DIR", ".state")) / "search-insights"
 
 JOBS = {
-    "daily": ["trends_rss", "wikipedia", "gdelt"],
+    "daily": ["trends_rss", "wikipedia"],  # gdelt dropped 2 Nov 2026 (refuses every address; off on the site)
     "weekly": ["autocomplete", "trends_related"],
     "monthly": ["trends_interest"],
 }
@@ -150,6 +153,7 @@ class Fetcher:
         self.refused: dict[str, str] = {}  # service -> why: one attempt per service per run, across sources
         self.relayed: set[str] = set()  # services refused from GitHub but read through the site: the rest of the run goes that way
         self.requests = 0
+        self.refusals = 0  # refusals raised by get() (HTTP 403/429, /sorry/): main() tells them from real faults
 
     def pace(self, service: str, gap: float | tuple[float, float]) -> None:
         wait = self.rand(*gap) if isinstance(gap, tuple) else gap
@@ -160,6 +164,7 @@ class Fetcher:
 
     def get(self, service: str, url: str, gap: float | tuple[float, float] = 0, **kw) -> requests.Response:
         if service in self.refused:
+            self.refusals += 1
             raise Refused(self.refused[service] + " (earlier in this run; not asked again)")
         self.pace(service, gap)
         if service in self.relayed:  # refused from GitHub earlier in this run: straight through the site
@@ -171,6 +176,7 @@ class Fetcher:
             if via is not None and via.status_code == 200:
                 return via
             self.refused[service] = f"{service} refused the request through the site (HTTP {getattr(via, 'status_code', 'none')})"
+            self.refusals += 1
             raise Refused(self.refused[service])
         try:
             self.requests += 1
@@ -187,6 +193,7 @@ class Fetcher:
                 return via
             self.refused[service] = f"{service} refused the request (HTTP {resp.status_code})" + (
                 f"; through the site: HTTP {via.status_code}" if via is not None else "")
+            self.refusals += 1
             raise Refused(self.refused[service])
         return resp
 
@@ -663,13 +670,19 @@ def main(argv: list[str] | None = None) -> int:
         relay.configure(client, relay_hosts(client))
     names_ = [s for j in (JOBS if a.job == "all" else [a.job]) for s in JOBS[j]]
     if a.only:
-        names_ = [s for s in names_ if s in a.only.split(",")]
+        only = [s.strip() for s in a.only.split(",")]
+        scheduled = {s for j in JOBS.values() for s in j}
+        # a source in no job (gdelt since 2 Nov 2026) runs only when named
+        names_ = [s for s in names_ if s in only] + [s for s in only if s in SOURCES and s not in scheduled]
     today = today_ist()
     f = Fetcher()
-    results, failed_posts = [], 0
+    results, failed_posts, refused = [], 0, set()
     for name in names_:
         days = a.days or (7 if name in JOBS["weekly"] else 30 if name in JOBS["monthly"] else 1)
+        before = f.refusals
         r = run_source(name, f, config, today, days)
+        if f.refusals > before:
+            refused.add(name)
         r["days"] = days
         r["dry_run"] = dry_run
         results.append(r)
@@ -695,9 +708,15 @@ def main(argv: list[str] | None = None) -> int:
             fh.write(f"\n### Top {a.top} rising\n\n{table(best)}\n")
     counts.write(rising=sum(len(r["rising"]) for r in results), figures=sum(len(r["obs"]) for r in results),
                  source_errors=sum(1 for r in results if r["error"]), requests=f.requests)
-    # A source that answered with an error and no figures at all read nothing today: the run fails, so the Workers tab
-    # shows it (GDELT was refused for 7 days in Oct 2026 while every run showed success).
-    dead = [r["source"] for r in results if r["error"] and not r["obs"] and not r["rising"]]
+    # A source that answered with an error and no figures at all read nothing today. When the service refused us
+    # (HTTP 403/429, /sorry/) the refusal was reported to the site, which shows it as an info line, so the run still
+    # succeeds (owner, 2 Nov 2026). Any other empty source fails the run, so a silent outage shows on the Workers tab
+    # (GDELT was refused for 7 days in Oct 2026 while every run showed success, before the site showed refusals).
+    empty = [r["source"] for r in results if r["error"] and not r["obs"] and not r["rising"]]
+    skipped = [s for s in empty if s in refused]
+    dead = [s for s in empty if s not in refused]
+    if skipped:
+        log.warning("refused today, skipped and reported to the site: %s", ", ".join(skipped))
     if dead:
         log.error("no data today from: %s", ", ".join(dead))
     return 1 if failed_posts or dead else 0
