@@ -21,6 +21,28 @@ topic_tags:
     - iaec
     - palamur
     - non-animal method
+    - committee for control and supervision of experiments on animals
+    - animal experimentation
+    - animal research
+    - experiments on animals
+    - laboratory animals rules
+    - lab animal rules
+    - animal testing rules
+    - gsr 864
+    - gsr 864e
+    - gsr864
+    - 864(e)
+    - institutional animal ethics committee
+    - animal ethics committee
+    - breeding and trading of laboratory animals
+    - new approach methodologies
+    - '#ccsea'
+    - '#gsr864e'
+    - '#labanimalrules'
+    - gsr 864 e
+    - cpcsea-mef
+    - animal testing bill
+    - draft prevention of cruelty to animals 2026
     hold:
     - laboratory animals\)? rules,? 2026
     unless:
@@ -939,13 +961,17 @@ keywords_v2:
   variants: []
   roles:
   - search
+  - press
   lang: en
   searches:
   - feed: gnews-kw-animal-experimentation-rules-2026
     q: animal experimentation rules 2026
-  categories: []
+  categories:
+  - animal-experimentation
   sections:
   - aw_news
+  queries:
+  - animal experimentation rules 2026
 - id: 187
   label: street dogs
   variants: []
@@ -961,18 +987,23 @@ keywords_v2:
   variants: []
   roles:
   - search
+  - press
   lang: en
   searches:
   - feed: gnews-kw-gsr-864e
     q: gsr 864e
-  categories: []
+  categories:
+  - animal-experimentation
   sections:
   - aw_news
+  queries:
+  - gsr 864e
 - id: 274
   label: ccsea
   variants: []
   roles:
   - include
+  - press
   - category
   lang: en
   searches:
@@ -982,6 +1013,8 @@ keywords_v2:
   - animal-experimentation
   sections:
   - aw_news
+  queries:
+  - ccsea
 - id: 278
   label: draft rules on animal experimentation 2026
   variants: []
@@ -1006,6 +1039,18 @@ keywords_v2:
   categories: []
   sections:
   - aw_news
+- id: 649
+  label: gsr864e
+  variants: []
+  roles:
+  - press
+  lang: en
+  searches: []
+  categories:
+  - animal-experimentation
+  sections: []
+  queries:
+  - gsr864e
 - id: 665
   label: iaec
   variants: []
@@ -1210,6 +1255,18 @@ keywords_v2:
   categories:
   - animal-experimentation
   sections: []
+- id: 4420
+  label: animal testing rules india
+  variants: []
+  roles:
+  - press
+  lang: en
+  searches: []
+  categories:
+  - animal-experimentation
+  sections: []
+  queries:
+  - animal testing rules india
 - id: 4485
   label: judgments
   variants:
@@ -2850,6 +2907,66 @@ keywords_v2:
   categories:
   - animal-experimentation
   sections: []
+- id: 4854
+  label: draft rules on animal experimentation
+  variants: []
+  roles:
+  - press
+  lang: en
+  searches: []
+  categories:
+  - animal-experimentation
+  sections: []
+  queries:
+  - draft rules on animal experimentation
+- id: 7238
+  label: laboratory animals rules 2026
+  variants: []
+  roles:
+  - press
+  lang: en
+  searches: []
+  categories:
+  - animal-experimentation
+  sections: []
+  queries:
+  - laboratory animals rules 2026
+- id: 7239
+  label: IAEC approval draft rules
+  variants: []
+  roles:
+  - press
+  lang: en
+  searches: []
+  categories:
+  - animal-experimentation
+  sections: []
+  queries:
+  - IAEC approval draft rules
+- id: 7240
+  label: object to draft lab animal rules
+  variants: []
+  roles:
+  - press
+  lang: en
+  searches: []
+  categories:
+  - animal-experimentation
+  sections: []
+  queries:
+  - object to draft lab animal rules
+- id: 7241
+  label: '#AnimalTestingIndia'
+  variants: []
+  roles:
+  - press
+  lang: en
+  searches: []
+  categories:
+  - animal-experimentation
+  sections: []
+  queries:
+  - '#AnimalTestingIndia'
 sections_v2:
 - post_type: aw_news
   label: News
