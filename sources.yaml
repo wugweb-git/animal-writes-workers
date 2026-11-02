@@ -28,6 +28,15 @@ topic_tags:
     - objection
     - comments
     hold_reason: final lab animal rules may have been notified; check and update the campaign page
+  campaign-diwali-firecrackers-2026:
+    any:
+    - diwali
+    - firecracker
+    - firecrackers
+    - crackers
+    - fireworks
+    hold: []
+    unless: []
 category_names:
   adoption: Adoption
   animal-birth-control: Animal Birth Control
@@ -925,6 +934,18 @@ keywords_v2:
   categories:
   - animal-experimentation
   sections: []
+- id: 151
+  label: animal experimentation rules 2026
+  variants: []
+  roles:
+  - search
+  lang: en
+  searches:
+  - feed: gnews-kw-animal-experimentation-rules-2026
+    q: animal experimentation rules 2026
+  categories: []
+  sections:
+  - aw_news
 - id: 187
   label: street dogs
   variants: []
@@ -935,26 +956,70 @@ keywords_v2:
   categories:
   - community-dogs
   sections: []
+- id: 268
+  label: gsr 864e
+  variants: []
+  roles:
+  - search
+  lang: en
+  searches:
+  - feed: gnews-kw-gsr-864e
+    q: gsr 864e
+  categories: []
+  sections:
+  - aw_news
 - id: 274
   label: ccsea
   variants: []
   roles:
+  - include
   - category
   lang: en
-  searches: []
+  searches:
+  - feed: gnews-kw-ccsea
+    q: ccsea
   categories:
   - animal-experimentation
-  sections: []
+  sections:
+  - aw_news
+- id: 278
+  label: draft rules on animal experimentation 2026
+  variants: []
+  roles:
+  - search
+  lang: en
+  searches:
+  - feed: gnews-kw-draft-rules-on-animal-experimentation-2026
+    q: draft rules on animal experimentation 2026
+  categories: []
+  sections:
+  - aw_news
+- id: 433
+  label: animal testing in india
+  variants: []
+  roles:
+  - search
+  lang: en
+  searches:
+  - feed: gnews-kw-animal-testing-in-india
+    q: animal testing in india
+  categories: []
+  sections:
+  - aw_news
 - id: 665
   label: iaec
   variants: []
   roles:
+  - include
   - category
   lang: en
-  searches: []
+  searches:
+  - feed: gnews-kw-iaec
+    q: iaec
   categories:
   - animal-experimentation
-  sections: []
+  sections:
+  - aw_news
 - id: 737
   label: notification
   variants: []
@@ -965,6 +1030,18 @@ keywords_v2:
   categories:
   - laws-rules
   sections: []
+- id: 891
+  label: new animal testing laws
+  variants: []
+  roles:
+  - search
+  lang: en
+  searches:
+  - feed: gnews-kw-new-animal-testing-laws
+    q: new animal testing laws
+  categories: []
+  sections:
+  - aw_news
 - id: 898
   label: gsr 864
   variants:
