@@ -65,7 +65,7 @@ Notes:
 
 ## Search Insights: rising terms
 `search-insights.yml` runs `aw_workers/search_insights.py` (Search Insights plan §5.3, phase 3). Free sources only:
-- daily 08:10 IST: Google Trends "Trending now" RSS (India; kept only when the term or its news names one of the site's keywords, topics or species), Wikipedia pageviews for a watchlist (2× the 30-day average; at most one request a second, user-agent with a contact), GDELT timelines of Indian news (3× the 14-day average; 5 s between requests);
+- daily 08:10 IST: Google Trends "Trending now" RSS (India; kept only when the term or its news names one of the site's keywords, topics or species), Wikipedia pageviews for a watchlist (2× the 30-day average; at most one request a second, user-agent with a contact); GDELT timelines of Indian news (3× the 14-day average; 5 s between requests) left the daily job on 2 Nov 2026 and run only by name (`--only gdelt`); a refusal (HTTP 403/429, Google's /sorry/ page) is reported to the site and does not fail the run;
 - weekly, Monday 08:30 IST: Google autocomplete in English, gl=in (2–4 s between requests; snapshots in `.state/search-insights/`, a new suggestion is rising), Trends rising related queries;
 - monthly, the 1st, 09:00 IST: Trends interest over 12 months, "animal welfare" = 100.
 
