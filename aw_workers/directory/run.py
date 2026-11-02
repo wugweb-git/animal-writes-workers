@@ -50,9 +50,17 @@ def file_leads(listing_id: int) -> dict:
         return {}
 
 
+# Answers to enrich/results that mean "the site is busy or mid-deploy", not "this listing is wrong": tried once more.
+# 404: the route is not registered for that one request. The site's handler never answers 404 (a bad listing is 400);
+# a deploy checking out animal-writes-core.php leaves AW_CORE_DIR undefined, so aw-sourcing returns before it adds the
+# enrich routes (1 Nov 2026 02:42:23 UTC, 11 s after the 02:42:12 deploy: "404 ... /wp-json/aw/v1/enrich/results").
+RESULTS_RETRY_STATUS = (404, 502, 503, 504)
+
+
 def save_results(client, body: dict):
     """POST aw/v1/enrich/results; a gateway timeout (502/503/504, 27 and 28 Oct 2026: one slow listing stopped the whole
-    run) or a client timeout is tried once more; None when the second try fails too (the listing is skipped)."""
+    run), a missing route while the site deploys (404, 1 Nov 2026) or a client timeout is tried once more; None when the
+    second try fails too (the listing is skipped and comes back next run)."""
     import requests
 
     for attempt in (1, 2):
@@ -61,7 +69,7 @@ def save_results(client, body: dict):
         except (requests.Timeout, requests.ConnectionError) as exc:
             err = str(exc)[:120]
         except requests.HTTPError as exc:
-            if getattr(exc.response, "status_code", 0) not in (502, 503, 504):
+            if getattr(exc.response, "status_code", 0) not in RESULTS_RETRY_STATUS:
                 raise
             err = f"HTTP {exc.response.status_code}"
         log.warning("%s: results not saved (%s)%s", body["listing_id"], err, ", trying once more" if attempt == 1 else ", skipped")

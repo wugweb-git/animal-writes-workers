@@ -289,6 +289,13 @@ def test_a_results_timeout_is_tried_once_more_then_skipped(monkeypatch):
     assert run.save_results(gone, {"listing_id": 2}) is None and gone.calls == 2
     with pytest.raises(requests.HTTPError):
         run.save_results(Site([500]), {"listing_id": 3})  # not a timeout: a real error still stops the run
+    # 1 Nov 2026: a deploy 11 s earlier left the enrich routes unregistered for one request (404) and stopped the run.
+    deploy = Site([404, {"queued": ["address"]}])
+    assert run.save_results(deploy, {"listing_id": 4}) == {"queued": ["address"]} and deploy.calls == 2
+    missing = Site([404, 404])
+    assert run.save_results(missing, {"listing_id": 5}) is None and missing.calls == 2
+    with pytest.raises(requests.HTTPError):
+        run.save_results(Site([400]), {"listing_id": 6})  # "Not a listing": the site's own answer still stops the run
 
 
 def test_a_listing_not_saved_is_not_offered_again_in_the_same_run(monkeypatch, tmp_path):
