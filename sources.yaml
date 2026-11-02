@@ -43,6 +43,8 @@ topic_tags:
     - cpcsea-mef
     - animal testing bill
     - draft prevention of cruelty to animals 2026
+    - withdrawanimaltestingrules
+    - animalfreescience
     hold:
     - laboratory animals\)? rules,? 2026
     unless:
@@ -2967,6 +2969,63 @@ keywords_v2:
   sections: []
   queries:
   - '#AnimalTestingIndia'
+- id: 7242
+  label: WithdrawAnimalTestingRules
+  variants: []
+  roles:
+  - press
+  lang: en
+  searches: []
+  categories:
+  - animal-experimentation
+  sections: []
+  queries:
+  - WithdrawAnimalTestingRules
+- id: 7243
+  label: AnimalFreeScience
+  variants: []
+  roles:
+  - press
+  lang: en
+  searches: []
+  categories:
+  - animal-experimentation
+  sections: []
+  queries:
+  - AnimalFreeScience
+- id: 7244
+  label: new approach methods
+  variants: []
+  roles:
+  - search
+  lang: en
+  searches:
+  - feed: gnews-kw-new-approach-methods
+    q: new approach methods
+  categories: []
+  sections: []
+- id: 7245
+  label: organ-on-chip India
+  variants: []
+  roles:
+  - search
+  lang: en
+  searches:
+  - feed: gnews-kw-organ-on-chip-india
+    q: organ-on-chip India
+  categories: []
+  sections: []
+- id: 7246
+  label: animal-free science India
+  variants: []
+  roles:
+  - search
+  lang: en
+  searches:
+  - feed: gnews-kw-animal-free-science-india
+    q: animal-free science India
+  categories: []
+  sections: []
 sections_v2:
 - post_type: aw_news
   label: News
