@@ -33,6 +33,7 @@ jobs:
       # is written and the job ends well before timeout-minutes (2 Nov 2026: cancelled at 120 with no report).
       AW_RESEARCH_PAPER_MIN: "6"
       AW_RESEARCH_RUN_MIN: "100"
+      AW_RESEARCH_HEADLINE_MIN: "2.5"
       WP_BASE_URL: ${{ secrets.WP_BASE_URL }}
       WP_INGEST_USER: ${{ secrets.WP_INGEST_USER }}
       WP_INGEST_APP_PASSWORD: ${{ secrets.WP_INGEST_APP_PASSWORD }}

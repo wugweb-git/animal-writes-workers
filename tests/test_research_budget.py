@@ -135,7 +135,7 @@ def run(monkeypatch, tmp_path, clock):
     `hang` keeps failing until its time is spent."""
     monkeypatch.chdir(tmp_path)
     for k, v in {"DRY_RUN": "false", "WP_BASE_URL": "https://x.test", "WP_INGEST_USER": "u", "WP_INGEST_APP_PASSWORD": "p",
-                 "AW_RESEARCH_DAYS": "30", "AW_RESEARCH_PAPER_MIN": "6", "AW_RESEARCH_RUN_MIN": "20"}.items():
+                 "AW_RESEARCH_DAYS": "30", "AW_RESEARCH_PAPER_MIN": "6", "AW_RESEARCH_RUN_MIN": "20", "AW_RESEARCH_HEADLINE_MIN": "1"}.items():
         monkeypatch.setenv(k, v)
     monkeypatch.delenv("GITHUB_STEP_SUMMARY", raising=False)
     monkeypatch.delenv("RUNNER_TEMP", raising=False)
@@ -147,7 +147,7 @@ def run(monkeypatch, tmp_path, clock):
     monkeypatch.setattr(summarise, "pick_categories", lambda *a, **k: [])
     monkeypatch.setattr(research, "headline_fields",
                         lambda s, p, summary: {"title": "Rabies in Kerala dogs", "seo_title": "Rabies", "focus_keyword": "rabies", "slug": "rabies"})
-    state = {"hang": set(), "papers": papers(10)}
+    state = {"hang": set(), "papers": papers(10), "summary_min": 3}
 
     class FakeSummariser:
         def __init__(self, backends):
@@ -158,7 +158,7 @@ def run(monkeypatch, tmp_path, clock):
                 while not summarise.out_of_time(self):
                     clock.t += 60  # every provider times out
                 raise summarise.OutOfTime("slow0: Read timed out | time spent after 6 tries")
-            clock.t += 3 * 60
+            clock.t += state["summary_min"] * 60
             return "A summary."
 
     monkeypatch.setattr(summarise, "Summariser", FakeSummariser)
@@ -171,7 +171,7 @@ def run(monkeypatch, tmp_path, clock):
 def test_the_run_deadline_stops_new_papers_writes_the_report_and_exits_0(run, tmp_path):
     assert research.main() == 0
     report = json.loads((tmp_path / "research-report.json").read_text())
-    # papers start at 0, 3, 6, 9 and 12 minutes (12 + 6 <= 20); at 15, 15 + 6 > 20: not started
+    # papers start at 0, 3, 6, 9 and 12 minutes (12 + 6 + 1 <= 20); at 15, 15 + 7 > 20: not started
     assert report["counts"]["sent"] == 5
     assert report["counts"]["not reached"] == 5
     assert [r["result"] for r in report["deferred"]] == ["not reached"] * 5
@@ -200,3 +200,32 @@ def test_the_job_summary_shows_the_deferred_counts(run, tmp_path, monkeypatch):
     text = out.read_text()
     assert "not reached (run time limit): 5" in text
     assert "Skipped (over 6 min each): 0" in text
+
+
+def test_a_summary_that_uses_the_whole_paper_budget_still_gets_its_headline_and_is_sent(run, monkeypatch, clock):
+    # run 41505586844 (2 Nov 2026): 5 summaries written, then lost to "time spent before the headline"
+    run["papers"] = papers(1)
+    run["summary_min"] = 6  # the summary takes all of the paper's 6 minutes
+    seen = []
+
+    def headline(s, p, summary):
+        seen.append(summarise.out_of_time(s))
+        return {"title": "Rabies in Kerala dogs", "seo_title": "Rabies", "focus_keyword": "rabies", "slug": "rabies"}
+
+    monkeypatch.setattr(research, "headline_fields", headline)
+    assert research.main() == 0
+    assert seen == [False]  # the headline had time of its own
+    assert len(run["client"].posted) == 1 and not run["client"].posted[0].get("hold")
+
+
+def test_a_headline_that_does_not_come_in_its_time_is_held_for_a_person_not_lost(run, monkeypatch, clock):
+    run["papers"] = papers(1)
+
+    def no_headline(s, p, summary):
+        clock.t += 2 * 60  # longer than its 1 minute
+        return {}
+
+    monkeypatch.setattr(research, "headline_fields", no_headline)
+    assert research.main() == 0
+    posted = run["client"].posted
+    assert len(posted) == 1 and research.NO_HEADLINE in posted[0]["hold"]

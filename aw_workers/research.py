@@ -37,7 +37,11 @@ _STARTED = time.monotonic()  # the run's clock starts with the process (the sear
 # and the next run tries it again. The 30-try cap (AW_MAX_TRIES_PER_ITEM) stays as an upper bound.
 # AW_RESEARCH_RUN_MIN: minutes from the start after which no new paper is started (the workflow sets it below its
 # timeout-minutes); a paper is started only when its whole budget fits before then. The rest wait for the next run.
+# AW_RESEARCH_HEADLINE_MIN (3 Nov 2026): once the summary is written, the categories and headline get this much time of
+# their own (run 41505586844 wrote 5 summaries and lost them all to the 6 minutes running out before the headline). A
+# headline that still does not come is held for a person (NO_HEADLINE), as before the time limits: the summary is kept.
 PAPER_MIN_DEFAULT = 6.0
+HEADLINE_MIN_DEFAULT = 2.5
 RUN_MIN_DEFAULT = 100.0
 SKIPPED = "skipped after {min:g} min; the next run tries again"
 NOT_REACHED = "not reached; the next run tries again"
@@ -381,9 +385,10 @@ def main() -> int:
                     "rejected": 0, "classifier unavailable": 0, "skipped": 0, "not reached": 0}, []
     paper_min = _minutes(os.environ, "AW_RESEARCH_PAPER_MIN", PAPER_MIN_DEFAULT)
     run_end = _STARTED + _minutes(os.environ, "AW_RESEARCH_RUN_MIN", RUN_MIN_DEFAULT) * 60
+    headline_min = _minutes(os.environ, "AW_RESEARCH_HEADLINE_MIN", HEADLINE_MIN_DEFAULT)
     deferred: list[dict] = []  # skipped or not reached: not marked known, so the next run tries them again
     for n, p in enumerate(todo):
-        if time.monotonic() + paper_min * 60 > run_end:
+        if time.monotonic() + (paper_min + headline_min) * 60 > run_end:
             for q in todo[n:]:
                 log.info("research: %s %s", NOT_REACHED, q["url"])
                 deferred.append({"date": q["date"], "title": q["title"], "url": q["url"], "result": "not reached"})
@@ -402,15 +407,14 @@ def main() -> int:
         try:
             summary = summariser.summarise(item)
             counts["summarised"] += 1
+            summariser.deadline = time.monotonic() + headline_min * 60  # categories and headline: their own time
             ai_cat = gate.category_slug(verdict.category) if verdict is not None and hasattr(gate, "category_slug") else ""
             cats = summarise.pick_categories(summariser, item, summary, sources.allowed_categories("research"),
                                              ai_choice=ai_cat)
             payload = dict(ingest.build_payload(item, summary, cats), backfill=True, study_title=p["title"],
                            authors=p.get("authors") or [], journal=p.get("journal") or "")  # the study's credit (Sources block)
             fields = {} if summarise.out_of_time(summariser) else headline_fields(summariser, p, summary)
-            if not fields and summarise.out_of_time(summariser):  # wait for the next run rather than hold it untitled
-                raise summarise.OutOfTime("time spent before the headline")
-            with_headline(payload, fields)
+            with_headline(payload, fields)  # no headline in its time: held for a person, the summary is kept
             if p.get("possible_duplicate"):  # same title and year, authors missing on one side (owner, 24 Oct 2026)
                 payload["hold"] = "; ".join(filter(None, [payload.get("hold", ""), possible_duplicate_hold(p["possible_duplicate"])]))
             if doubt:  # India not confirmed: sent for review, never published by itself (owner, 20 Oct 2026)
