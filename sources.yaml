@@ -938,6 +938,20 @@ keywords_v2:
   categories:
   - animal-birth-control
   sections: []
+- id: 50
+  label: supreme court stray dogs
+  variants: []
+  roles:
+  - search
+  - category
+  lang: en
+  searches:
+  - feed: gnews-kw-supreme-court-stray-dogs
+    q: supreme court stray dogs
+  categories:
+  - community-dogs
+  - courts-judgments
+  sections: []
 - id: 131
   label: dog bite
   variants: []
@@ -1202,6 +1216,19 @@ keywords_v2:
   lang: en
   searches: []
   categories: []
+  sections: []
+- id: 3340
+  label: feeding stray dogs
+  variants: []
+  roles:
+  - search
+  - category
+  lang: en
+  searches:
+  - feed: gnews-kw-feeding-stray-dogs
+    q: feeding stray dogs
+  categories:
+  - feeders-caregivers
   sections: []
 - id: 3396
   label: supreme court
@@ -3025,6 +3052,19 @@ keywords_v2:
   - feed: gnews-kw-animal-free-science-india
     q: animal-free science India
   categories: []
+  sections: []
+- id: 9786
+  label: anti-rabies vaccine india
+  variants: []
+  roles:
+  - search
+  - category
+  lang: en
+  searches:
+  - feed: gnews-kw-anti-rabies-vaccine-india
+    q: anti-rabies vaccine india
+  categories:
+  - rabies-public-health
   sections: []
 sections_v2:
 - post_type: aw_news
