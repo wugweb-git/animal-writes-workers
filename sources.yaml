@@ -1458,9 +1458,7 @@ keywords_v2:
   - search
   - category
   lang: en
-  searches:
-  - feed: gnews-kw-anti-rabies-vaccine
-    q: anti rabies vaccine
+  searches: []
   categories:
   - rabies-public-health
   sections: []
