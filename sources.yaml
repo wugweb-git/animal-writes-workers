@@ -752,9 +752,7 @@ keywords_v2:
   roles:
   - include
   lang: en
-  searches:
-  - feed: gnews-kw-world-animal-day-2026
-    q: world animal day 2026
+  searches: []
   categories: []
   sections:
   - aw_news
@@ -942,6 +940,7 @@ keywords_v2:
   label: supreme court stray dogs
   variants: []
   roles:
+  - include
   - search
   - category
   lang: en
@@ -951,6 +950,17 @@ keywords_v2:
   categories:
   - community-dogs
   - courts-judgments
+  sections: []
+- id: 64
+  label: pet shop rules
+  variants: []
+  roles:
+  - include
+  - category
+  lang: en
+  searches: []
+  categories:
+  - laws-rules
   sections: []
 - id: 131
   label: dog bite
@@ -962,10 +972,22 @@ keywords_v2:
   categories:
   - rabies-public-health
   sections: []
+- id: 136
+  label: ngo darpan
+  variants: []
+  roles:
+  - include
+  - category
+  lang: en
+  searches: []
+  categories:
+  - policy-government
+  sections: []
 - id: 145
   label: cpcsea
   variants: []
   roles:
+  - include
   - category
   lang: en
   searches: []
@@ -988,6 +1010,16 @@ keywords_v2:
   - aw_news
   queries:
   - animal experimentation rules 2026
+- id: 152
+  label: world animal day
+  variants: []
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - campaigns-civic-action
+  sections: []
 - id: 187
   label: street dogs
   variants: []
@@ -998,22 +1030,64 @@ keywords_v2:
   categories:
   - community-dogs
   sections: []
-- id: 268
-  label: gsr 864e
+- id: 257
+  label: world rabies day
   variants: []
   roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - rabies-public-health
+  sections: []
+- id: 262
+  label: bezubaan saathi
+  variants: []
+  roles:
+  - include
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 263
+  label: animotel care trust
+  variants: []
+  roles:
+  - include
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 265
+  label: sans animal welfare trust
+  variants: []
+  roles:
+  - include
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 268
+  label: gsr 864e
+  variants:
+  - g.s.r. 864(e)
+  roles:
+  - include
   - search
   - press
   lang: en
   searches:
   - feed: gnews-kw-gsr-864e
     q: gsr 864e
+  - feed: gnews-kw-g-s-r-864-e
+    q: g.s.r. 864(e)
   categories:
   - animal-experimentation
   sections:
   - aw_news
   queries:
   - gsr 864e
+  - g.s.r. 864(e)
 - id: 274
   label: ccsea
   variants: []
@@ -1055,6 +1129,24 @@ keywords_v2:
   categories: []
   sections:
   - aw_news
+- id: 470
+  label: besant memorial animal dispensary
+  variants: []
+  roles:
+  - include
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 508
+  label: cupa
+  variants: []
+  roles:
+  - include
+  lang: en
+  searches: []
+  categories: []
+  sections: []
 - id: 649
   label: gsr864e
   variants: []
@@ -1081,6 +1173,15 @@ keywords_v2:
   - animal-experimentation
   sections:
   - aw_news
+- id: 681
+  label: jagriti gaushala
+  variants: []
+  roles:
+  - include
+  lang: en
+  searches: []
+  categories: []
+  sections: []
 - id: 737
   label: notification
   variants: []
@@ -1090,6 +1191,34 @@ keywords_v2:
   searches: []
   categories:
   - laws-rules
+  sections: []
+- id: 786
+  label: saahas for animals
+  variants:
+  - sahas for animals
+  roles:
+  - include
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 795
+  label: sawo
+  variants: []
+  roles:
+  - include
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 824
+  label: spca
+  variants: []
+  roles:
+  - include
+  lang: en
+  searches: []
+  categories: []
   sections: []
 - id: 891
   label: new animal testing laws
@@ -1124,6 +1253,24 @@ keywords_v2:
   categories:
   - animal-experimentation
   sections: []
+- id: 1179
+  label: dog rescue team
+  variants: []
+  roles:
+  - include
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 1248
+  label: heaven for animals
+  variants: []
+  roles:
+  - include
+  lang: en
+  searches: []
+  categories: []
+  sections: []
 - id: 1301
   label: laboratory animals
   variants:
@@ -1144,6 +1291,15 @@ keywords_v2:
   searches: []
   categories:
   - animal-experimentation
+  sections: []
+- id: 1378
+  label: pyaar foundation
+  variants: []
+  roles:
+  - include
+  lang: en
+  searches: []
+  categories: []
   sections: []
 - id: 1644
   label: community animals
@@ -1217,6 +1373,28 @@ keywords_v2:
   searches: []
   categories: []
   sections: []
+- id: 3225
+  label: dog breeding and marketing rules
+  variants: []
+  roles:
+  - include
+  - category
+  lang: en
+  searches: []
+  categories:
+  - laws-rules
+  sections: []
+- id: 3226
+  label: transport of animals rules
+  variants: []
+  roles:
+  - include
+  - category
+  lang: en
+  searches: []
+  categories:
+  - laws-rules
+  sections: []
 - id: 3340
   label: feeding stray dogs
   variants: []
@@ -1271,6 +1449,20 @@ keywords_v2:
   searches: []
   categories:
   - animal-experimentation
+  sections: []
+- id: 3980
+  label: anti rabies vaccine
+  variants: []
+  roles:
+  - include
+  - search
+  - category
+  lang: en
+  searches:
+  - feed: gnews-kw-anti-rabies-vaccine
+    q: anti rabies vaccine
+  categories:
+  - rabies-public-health
   sections: []
 - id: 4373
   label: animal experiments
@@ -2936,6 +3128,16 @@ keywords_v2:
   categories:
   - animal-experimentation
   sections: []
+- id: 4851
+  label: dolphin day
+  variants: []
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - wildlife
+  sections: []
 - id: 4854
   label: draft rules on animal experimentation
   variants: []
@@ -2948,6 +3150,27 @@ keywords_v2:
   sections: []
   queries:
   - draft rules on animal experimentation
+- id: 5749
+  label: tigers day
+  variants: []
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - wildlife
+  sections: []
+- id: 7055
+  label: animal lab testing bill
+  variants: []
+  roles:
+  - include
+  - category
+  lang: en
+  searches: []
+  categories:
+  - animal-experimentation
+  sections: []
 - id: 7238
   label: laboratory animals rules 2026
   variants: []
@@ -3053,6 +3276,25 @@ keywords_v2:
     q: animal-free science India
   categories: []
   sections: []
+- id: 8108
+  label: kukur tihar
+  variants: []
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - community-dogs
+  sections: []
+- id: 9605
+  label: cow helpline
+  variants: []
+  roles:
+  - include
+  lang: en
+  searches: []
+  categories: []
+  sections: []
 - id: 9786
   label: anti-rabies vaccine india
   variants: []
@@ -3065,6 +3307,229 @@ keywords_v2:
     q: anti-rabies vaccine india
   categories:
   - rabies-public-health
+  sections: []
+- id: 9787
+  label: national rabies control programme
+  variants: []
+  roles:
+  - include
+  - category
+  lang: en
+  searches: []
+  categories:
+  - rabies-public-health
+  sections: []
+- id: 9788
+  label: rabies injection schedule
+  variants: []
+  roles:
+  - include
+  - category
+  lang: en
+  searches: []
+  categories:
+  - rabies-public-health
+  sections: []
+- id: 9789
+  label: bai sakarbai dinshaw petit
+  variants: []
+  roles:
+  - include
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 9790
+  label: gokulesh gaushala
+  variants: []
+  roles:
+  - include
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 9791
+  label: wild animal life rescue centre
+  variants: []
+  roles:
+  - include
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 9792
+  label: kannan animal welfare
+  variants: []
+  roles:
+  - include
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 9793
+  label: tulsi tapovan gaushala
+  variants: []
+  roles:
+  - include
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 9794
+  label: kamdhenu gaushala
+  variants: []
+  roles:
+  - include
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 9795
+  label: kanha gaushala
+  variants: []
+  roles:
+  - include
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 9796
+  label: mansa devi gaushala
+  variants: []
+  roles:
+  - include
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 9797
+  label: shreeji gaushala
+  variants: []
+  roles:
+  - include
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 9798
+  label: surshyam gaushala
+  variants: []
+  roles:
+  - include
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 9799
+  label: swami amardev gaushala
+  variants: []
+  roles:
+  - include
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 9800
+  label: street dogs complaint
+  variants: []
+  roles:
+  - include
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 9801
+  label: cpcsea form b
+  variants: []
+  roles:
+  - include
+  - category
+  lang: en
+  searches: []
+  categories:
+  - animal-experimentation
+  sections: []
+- id: 9802
+  label: animal welfare day
+  variants: []
+  roles:
+  - category
+  lang: en
+  searches: []
+  categories:
+  - campaigns-civic-action
+  sections: []
+- id: 9803
+  label: texas
+  variants: []
+  roles:
+  - exclude
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 9804
+  label: california
+  variants: []
+  roles:
+  - exclude
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 9805
+  label: florida
+  variants: []
+  roles:
+  - exclude
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 9806
+  label: bungou stray dogs
+  variants: []
+  roles:
+  - exclude
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 9807
+  label: dog bite in dream
+  variants: []
+  roles:
+  - exclude
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 9808
+  label: tiktok
+  variants: []
+  roles:
+  - exclude
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 9809
+  label: tata power share
+  variants: []
+  roles:
+  - exclude
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 9810
+  label: nauheed cyrusi
+  variants: []
+  roles:
+  - exclude
+  lang: en
+  searches: []
+  categories: []
   sections: []
 sections_v2:
 - post_type: aw_news
