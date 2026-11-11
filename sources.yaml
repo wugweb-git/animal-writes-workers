@@ -985,7 +985,9 @@ keywords_v2:
   sections: []
 - id: 145
   label: cpcsea
-  variants: []
+  variants:
+  - cpcsea-mef@gov.in
+  - cpcsea-mer@gov.in
   roles:
   - include
   - category
@@ -1117,6 +1119,24 @@ keywords_v2:
   categories: []
   sections:
   - aw_news
+- id: 284
+  label: treat on street bharatpur
+  variants: []
+  roles:
+  - include
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 306
+  label: aman's animal rehabilitation center
+  variants: []
+  roles:
+  - include
+  lang: en
+  searches: []
+  categories: []
+  sections: []
 - id: 433
   label: animal testing in india
   variants: []
@@ -1129,9 +1149,20 @@ keywords_v2:
   categories: []
   sections:
   - aw_news
+- id: 453
+  label: apna foundation
+  variants: []
+  roles:
+  - include
+  lang: en
+  searches: []
+  categories: []
+  sections: []
 - id: 470
   label: besant memorial animal dispensary
-  variants: []
+  variants:
+  - besant animal dispensary
+  - besant memorial
   roles:
   - include
   lang: en
@@ -1141,6 +1172,16 @@ keywords_v2:
 - id: 508
   label: cupa
   variants: []
+  roles:
+  - include
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 516
+  label: district legal service authority
+  variants:
+  - dlsa
   roles:
   - include
   lang: en
@@ -1159,6 +1200,24 @@ keywords_v2:
   sections: []
   queries:
   - gsr864e
+- id: 651
+  label: hands that heal
+  variants: []
+  roles:
+  - include
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 657
+  label: help animals & birds hospital
+  variants: []
+  roles:
+  - include
+  lang: en
+  searches: []
+  categories: []
+  sections: []
 - id: 665
   label: iaec
   variants: []
@@ -1182,6 +1241,24 @@ keywords_v2:
   searches: []
   categories: []
   sections: []
+- id: 687
+  label: jb foundation aizawl
+  variants: []
+  roles:
+  - include
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 701
+  label: krupa animal centre
+  variants: []
+  roles:
+  - include
+  lang: en
+  searches: []
+  categories: []
+  sections: []
 - id: 737
   label: notification
   variants: []
@@ -1191,6 +1268,24 @@ keywords_v2:
   searches: []
   categories:
   - laws-rules
+  sections: []
+- id: 747
+  label: pashuholic
+  variants: []
+  roles:
+  - include
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 772
+  label: probably paradise
+  variants: []
+  roles:
+  - include
+  lang: en
+  searches: []
+  categories: []
   sections: []
 - id: 786
   label: saahas for animals
@@ -1213,6 +1308,24 @@ keywords_v2:
   sections: []
 - id: 824
   label: spca
+  variants: []
+  roles:
+  - include
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 837
+  label: surabhi shodh sansthan
+  variants: []
+  roles:
+  - include
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 887
+  label: zigly foundation
   variants: []
   roles:
   - include
@@ -1243,6 +1356,24 @@ keywords_v2:
   categories:
   - animal-experimentation
   sections: []
+- id: 932
+  label: ahimsa animal care trust
+  variants: []
+  roles:
+  - include
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 939
+  label: animal abuse complaint
+  variants: []
+  roles:
+  - include
+  lang: en
+  searches: []
+  categories: []
+  sections: []
 - id: 1043
   label: animal testing
   variants: []
@@ -1253,6 +1384,15 @@ keywords_v2:
   categories:
   - animal-experimentation
   sections: []
+- id: 1098
+  label: blue cross tirupur
+  variants: []
+  roles:
+  - include
+  lang: en
+  searches: []
+  categories: []
+  sections: []
 - id: 1179
   label: dog rescue team
   variants: []
@@ -1262,8 +1402,35 @@ keywords_v2:
   searches: []
   categories: []
   sections: []
+- id: 1220
+  label: gorakshan
+  variants: []
+  roles:
+  - include
+  lang: en
+  searches: []
+  categories: []
+  sections: []
 - id: 1248
   label: heaven for animals
+  variants: []
+  roles:
+  - include
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 1251
+  label: himadri foundation
+  variants: []
+  roles:
+  - include
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 1262
+  label: humane world for animals india
   variants: []
   roles:
   - include
@@ -1281,6 +1448,15 @@ keywords_v2:
   searches: []
   categories:
   - animal-experimentation
+  sections: []
+- id: 1335
+  label: neighborhood woof
+  variants: []
+  roles:
+  - include
+  lang: en
+  searches: []
+  categories: []
   sections: []
 - id: 1357
   label: palamur
@@ -1301,6 +1477,15 @@ keywords_v2:
   searches: []
   categories: []
   sections: []
+- id: 1402
+  label: shree ajit seva trust
+  variants: []
+  roles:
+  - include
+  lang: en
+  searches: []
+  categories: []
+  sections: []
 - id: 1644
   label: community animals
   variants: []
@@ -1310,6 +1495,33 @@ keywords_v2:
   searches: []
   categories:
   - community-dogs
+  sections: []
+- id: 1784
+  label: jain bird hospital shahdara
+  variants: []
+  roles:
+  - include
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 1786
+  label: jeev daya
+  variants: []
+  roles:
+  - include
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 2128
+  label: pancha mitra
+  variants: []
+  roles:
+  - include
+  lang: en
+  searches: []
+  categories: []
   sections: []
 - id: 2163
   label: slaughter
@@ -1322,6 +1534,15 @@ keywords_v2:
   searches: []
   categories:
   - transport-slaughter
+  sections: []
+- id: 2362
+  label: sophie memorial animal relief trust
+  variants: []
+  roles:
+  - include
+  lang: en
+  searches: []
+  categories: []
   sections: []
 - id: 2501
   label: performing animals
@@ -3148,6 +3369,51 @@ keywords_v2:
   sections: []
   queries:
   - draft rules on animal experimentation
+- id: 4883
+  label: hope and beyond
+  variants: []
+  roles:
+  - include
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 4884
+  label: hope for animals rescue shelter
+  variants: []
+  roles:
+  - include
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 5293
+  label: arrc rescue
+  variants: []
+  roles:
+  - include
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 5557
+  label: paradise shelter kadav
+  variants: []
+  roles:
+  - include
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 5706
+  label: kalote animal trust
+  variants: []
+  roles:
+  - include
+  lang: en
+  searches: []
+  categories: []
+  sections: []
 - id: 5749
   label: tigers day
   variants: []
@@ -3157,6 +3423,15 @@ keywords_v2:
   searches: []
   categories:
   - wildlife
+  sections: []
+- id: 5992
+  label: kapila park goshala
+  variants: []
+  roles:
+  - include
+  lang: en
+  searches: []
+  categories: []
   sections: []
 - id: 7055
   label: animal lab testing bill
@@ -3330,7 +3605,9 @@ keywords_v2:
   sections: []
 - id: 9789
   label: bai sakarbai dinshaw petit
-  variants: []
+  variants:
+  - sakarbai animal hospital
+  - the bai sakarbai
   roles:
   - include
   lang: en
@@ -3525,6 +3802,43 @@ keywords_v2:
   variants: []
   roles:
   - exclude
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 9811
+  label: houston
+  variants: []
+  roles:
+  - exclude
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 9812
+  label: dallas
+  variants: []
+  roles:
+  - exclude
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 9813
+  label: san antonio
+  variants: []
+  roles:
+  - exclude
+  lang: en
+  searches: []
+  categories: []
+  sections: []
+- id: 9814
+  label: awbi vacancy
+  variants:
+  - animal welfare board of india vacancy
+  roles:
+  - include
   lang: en
   searches: []
   categories: []
