@@ -21,7 +21,7 @@ Each run reports `fetched / new / duplicate / failed` in the job summary. A reje
 ## Secrets (Settings → Secrets and variables → Actions)
 | Secret | Value |
 |---|---|
-| `WP_BASE_URL` | Site address, e.g. `https://slategray-donkey-829925.hostingersite.com` |
+| `WP_BASE_URL` | Site address, e.g. `https://animalwrites.in` |
 | `WP_INGEST_USER` | The `ingest` WordPress user (Editor role) |
 | `WP_INGEST_APP_PASSWORD` | That user's Application Password |
 | `ANTHROPIC_API_KEY` | Not used: paid models only (owner, 25 Oct 2026: no paid AI models) |
