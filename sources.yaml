@@ -79,6 +79,7 @@ category_names:
   pets-breeding: Pets, Breeding and Pet Shops
   policy-government: Policy and Government
   rabies-public-health: Rabies and Public Health
+  uncategorized: Uncategorized
   veterinary-care: Veterinary Care
   wildlife: Wildlife
 schema:
@@ -4027,6 +4028,13 @@ sections_v2:
   - sterilisation
   - treatment
   - vaccination
+  tag_rules: []
+  summary: aw_news
+- post_type: web-story
+  label: Stories
+  worker_type: ''
+  categories: []
+  tags: []
   tag_rules: []
   summary: aw_news
 - post_type: aw_press

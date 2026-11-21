@@ -205,6 +205,14 @@
       "attribution": "Attribute every claim, allegation and number to whoever made it: police said, the court held, the ministry said, the NGO alleged. Name the publisher only when the report is its own finding (its investigation, survey or data); otherwise the source row credits it. Never write 'according to reports' or 'the report says'.",
       "inherit": "aw_news"
     },
+    "web-story": {
+      "label": "Stories",
+      "min_words": 100,
+      "max_words": 200,
+      "structure": "Sentence 1, the lead: what happened, to which animals, and where, so it can stand alone as the search description. Then who acted or is responsible (police, court, civic body, forest department, NGO, residents), where exactly (district and state as the source names them), and when, only if the source gives the date of the event. Then why it matters (the law, rule, risk or number involved, as the source states it) and what happens next (a hearing, a deadline, an investigation), when the source says so.",
+      "attribution": "Attribute every claim, allegation and number to whoever made it: police said, the court held, the ministry said, the NGO alleged. Name the publisher only when the report is its own finding (its investigation, survey or data); otherwise the source row credits it. Never write 'according to reports' or 'the report says'.",
+      "inherit": "aw_news"
+    },
     "aw_press": {
       "label": "Press coverage",
       "min_words": 100,
