@@ -4030,13 +4030,6 @@ sections_v2:
   - vaccination
   tag_rules: []
   summary: aw_news
-- post_type: web-story
-  label: Stories
-  worker_type: ''
-  categories: []
-  tags: []
-  tag_rules: []
-  summary: aw_news
 - post_type: aw_press
   label: Press coverage
   worker_type: press
