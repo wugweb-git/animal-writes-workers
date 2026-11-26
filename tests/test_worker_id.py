@@ -66,3 +66,9 @@ def test_firecrawl_omits_worker_param_without_id():
     s = _Session({"tools": []})
     firecrawl.site_key(SITE, session=s)
     assert "?" not in s.calls[0][0] and not s.calls[0][1].get("params")
+
+
+def test_job_param_is_sent_only_when_asked():
+    from aw_workers.worker_id import ai_keys_params
+    assert ai_keys_params({"AW_WORKER_ID": "sourcing", "AW_AI_JOB": "relevance"}) == {"worker": "sourcing", "job": "relevance"}
+    assert ai_keys_params({"AW_WORKER_ID": "sourcing"}) == {"worker": "sourcing"}

@@ -21,6 +21,12 @@ def worker_id(env=os.environ) -> str:
 
 
 def ai_keys_params(env=os.environ) -> dict:
-    """Query parameters for aw/v1/ai-keys: {'worker': id}, or {} when the id is unknown."""
+    """Query parameters for aw/v1/ai-keys: {'worker': id}, or {} when the id is unknown. AW_AI_JOB (relevance, summary,
+    rewrite, titles, search) asks for the keys best suited to that job first; without it the site picks the job from the
+    worker."""
     wid = worker_id(env)
-    return {"worker": wid} if wid else {}
+    out = {"worker": wid} if wid else {}
+    job = (env.get("AW_AI_JOB") or "").strip()
+    if job:
+        out["job"] = job
+    return out
