@@ -3844,6 +3844,50 @@ keywords_v2:
   searches: []
   categories: []
   sections: []
+- id: 10021
+  label: nawabi tails rescue
+  variants: []
+  roles:
+  - include
+  lang: en
+  searches:
+  - feed: gnews-kw-nawabi-tails-rescue
+    q: nawabi tails rescue
+  categories: []
+  sections: []
+- id: 14837
+  label: Vishakha Shukla
+  variants: []
+  roles:
+  - include
+  lang: en
+  searches:
+  - feed: gnews-kw-vishakha-shukla
+    q: Vishakha Shukla
+  categories: []
+  sections: []
+- id: 14838
+  label: Nawabi Tails Rescue Foundation
+  variants: []
+  roles:
+  - include
+  lang: en
+  searches:
+  - feed: gnews-kw-nawabi-tails-rescue-foundation
+    q: Nawabi Tails Rescue Foundation
+  categories: []
+  sections: []
+- id: 14839
+  label: Lucknow women feeders
+  variants: []
+  roles:
+  - include
+  lang: en
+  searches:
+  - feed: gnews-kw-lucknow-women-feeders
+    q: Lucknow women feeders
+  categories: []
+  sections: []
 sections_v2:
 - post_type: aw_news
   label: News
