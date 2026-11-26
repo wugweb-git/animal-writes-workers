@@ -61,6 +61,15 @@ topic_tags:
     - fireworks
     hold: []
     unless: []
+  campaign-rabies-india:
+    any:
+    - rabies
+    - anti-rabies
+    - dog bite
+    - rabies vaccine
+    - rabies immunoglobulin
+    - nrcp
+    - रेबीज
 category_names:
   adoption: Adoption
   animal-birth-control: Animal Birth Control
