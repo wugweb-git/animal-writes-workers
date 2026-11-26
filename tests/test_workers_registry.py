@@ -62,7 +62,7 @@ def test_every_workflow_reports_start_and_end():
         steps = [s for s in job["steps"] if s.get("uses") == "./.github/actions/report"]
         phases = [s["with"]["phase"] for s in steps]
         assert phases[-1] == "end" and steps[-1].get("if") == "always()", f
-        assert f == "wp-cron.yml" or phases[0] == "start", f
+        assert phases[0] == "start", f
         main = steps[-1]["with"]["main"]
         assert any(s.get("id") == main for s in job["steps"]), f
 
